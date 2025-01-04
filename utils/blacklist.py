@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -10,14 +11,12 @@ from .errors import (
 )
 from .types import BlacklistBase
 
-__all__ = ('Blacklist',)
-
 if TYPE_CHECKING:
-    import datetime
-
     from bot import Mafuyu
 
     from .context import Context
+
+__all__ = ('Blacklist',)
 
 
 class Blacklist:
@@ -56,7 +55,7 @@ class Blacklist:
         ctx : Context
             The commands.Context from the check
         user : discord.User | discord.Member
-            The blacklisted user
+            The blacklisted User
         data : BlacklistBase
             The data of the blacklisted users i.e. reason, lasts_until & blacklist_type
 
@@ -96,9 +95,9 @@ class Blacklist:
         Parameters
         ----------
         ctx : Context | None
-            The context from the check. Will be optional when used in the event.
+            The commands.Context from the check. Will be optional when used in the event.
         guild : discord.Guild
-            The blacklisted guild
+            The blacklisted Guild
         data : BlacklistBase
             The data of the blacklisted users i.e. reason, lasts_until & blacklist_type
 
@@ -122,7 +121,27 @@ class Blacklist:
         if channel:
             await channel.send(content=content)
 
-        await guild.leave()
+    async def _pre_check(self, snowflake: discord.User | discord.Member | discord.Guild, data: BlacklistBase) -> bool:
+        """
+        Check(not to be confused with command check) to make sure user is actually still blacklisted.
+
+        Parameters
+        ----------
+        snowflake : discord.User | discord.Member | discord.Guild
+            The snowflake being checked
+        data : BlacklistBase
+            Blacklist data of the snowflake
+
+        Returns
+        -------
+        bool
+            If user is still blacklisted
+
+        """
+        if data.lasts_until and datetime.datetime.now() > data.lasts_until:
+            await self.remove(snowflake)
+            return True
+        return False
 
     async def check(self, ctx: Context) -> bool:
         """
@@ -131,7 +150,7 @@ class Blacklist:
         Parameters
         ----------
         ctx : Context
-            The context of the check
+            The commands.Context from the check
 
         Returns
         -------
@@ -140,10 +159,14 @@ class Blacklist:
 
         """
         if data := self.is_blacklisted(ctx.author):
+            if not await self._pre_check(ctx.author, data):
+                return True
             await self.handle_user_blacklist(ctx, ctx.author, data)
             return False
 
         if ctx.guild and (data := self.is_blacklisted(ctx.guild)):
+            if not await self._pre_check(ctx.guild, data):
+                return True
             await self.handle_guild_blacklist(ctx, ctx.guild, data)
             return False
 
@@ -170,13 +193,13 @@ class Blacklist:
         self,
         snowflake: discord.User | discord.Member | discord.Guild,
         *,
-        reason: str = 'No reason provided',
+        reason: str,
         lasts_until: datetime.datetime | None = None,
     ) -> dict[int, BlacklistBase]:
         """
         Add an entry to the blacklist.
 
-        Adds the entry to the database as well as the cache
+        This adds the entry to the database as well as cache
 
         Parameters
         ----------
@@ -202,8 +225,9 @@ class Blacklist:
         entry = self.is_blacklisted(snowflake)
 
         if entry:
-            raise AlreadyBlacklistedError(snowflake, reason=entry.reason, until=entry.lasts_until)
-
+            check = await self._pre_check(snowflake, entry)
+            if check:
+                raise AlreadyBlacklistedError(snowflake, reason=entry.reason, until=entry.lasts_until)
         blacklist_type = 'user' if isinstance(snowflake, discord.User | discord.Member) else 'guild'
 
         await self.bot.pool.execute(
@@ -228,9 +252,7 @@ class Blacklist:
         """
         Remove an entry from the blacklist.
 
-        Removes the entry from the database as well as cache
-
-        Removes
+        This removes the entry from the database as well as cache
 
         Parameters
         ----------
@@ -260,7 +282,7 @@ class Blacklist:
         return {snowflake.id: item_removed}
 
     def _timestamp_wording(self, dt: datetime.datetime | None) -> str:
-        return f'until {dt}' if dt else 'permanently'
+        return f'until {discord.utils.format_dt(dt, "f")}' if dt else 'permanently'
 
     def __repr__(self) -> str:
         return str(self.blacklist_cache)

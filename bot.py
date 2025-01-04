@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from pkgutil import iter_modules
-from typing import TYPE_CHECKING, overload, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import aiohttp
 import asyncpg
@@ -50,6 +49,7 @@ class Mafuyu(commands.Bot):
     def __init__(self) -> None:
         intents: discord.Intents = discord.Intents.all()
         allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=True)
+
         super().__init__(
             command_prefix=config.DEFAULT_PREFIX,
             case_insensitive=True,
