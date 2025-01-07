@@ -79,6 +79,12 @@ class Mafuyu(commands.Bot):
         self.colour = self.color = BASE_COLOUR
         self.initial_extensions = extensions
 
+    async def _setup_prefix(self) -> None:
+        prefixes = await self.pool.fetch("""SELECT guild, array_agg(prefix) as prefix_list FROM Prefixes GROUP BY guild""")
+        for prefix in prefixes:
+            self.prefixes[prefix['guild']] = prefix['prefix_list']
+        log.info('Prefixes setup successfully')
+
     async def setup_hook(self) -> None:
         credentials: dict[str, Any] = config.DATABASE_CRED
         pool = await asyncpg.create_pool(**credentials)
@@ -92,6 +98,7 @@ class Mafuyu(commands.Bot):
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
         self.blacklist = await Blacklist.setup(self)
+        await self._setup_prefix()
 
         for cog in self.initial_extensions:
             try:

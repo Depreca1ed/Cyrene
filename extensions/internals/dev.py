@@ -63,11 +63,14 @@ class Developer(BaseCog):
     async def blacklist_add(
         self,
         ctx: Context,
-        user: discord.User | discord.Member | discord.Guild,
+        snowflake: discord.User | discord.Member | discord.Guild,
         until: str | None,
         *,
         reason: str = 'No reason provided',
     ) -> None:
+        if snowflake.id in WHITELISTED_GUILDS:
+            msg = 'You cannot blacklist this guilld.'
+            raise commands.CheckFailure(msg)
         bl_until = None
         if until:
             bl_until = await self._handle_datetime_argument(ctx, until)
@@ -75,7 +78,7 @@ class Developer(BaseCog):
                 return
 
         try:
-            await self.bot.blacklist.add(user, lasts_until=bl_until, reason=reason)
+            await self.bot.blacklist.add(snowflake, lasts_until=bl_until, reason=reason)
 
         except AlreadyBlacklistedError as err:
             content = str(err)
@@ -85,9 +88,9 @@ class Developer(BaseCog):
         return
 
     @blacklist_cmd.command(name='remove', help='Remove a user from blacklist')
-    async def blacklist_remove(self, ctx: Context, user: discord.User | discord.Member | discord.Guild) -> None:
+    async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild) -> None:
         try:
-            await self.bot.blacklist.remove(user)
+            await self.bot.blacklist.remove(snowflake)
 
         except NotBlacklistedError as err:
             content = str(err)
