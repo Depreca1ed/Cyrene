@@ -17,7 +17,6 @@ from utils import BASE_COLOUR, Context
 if TYPE_CHECKING:
     from discord.ext.commands._types import ContextT  # pyright: ignore[reportMissingTypeStubs]
 
-import sys
 
 __all__ = ('Mafuyu',)
 
@@ -124,6 +123,10 @@ class Mafuyu(commands.Bot):
     async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
         file = mystbin.File(filename=filename, content=content)
         return await self.mystbin.create_paste(files=[file])
+
+    @property
+    def owner(self) -> discord.User:
+        return self.appinfo.owner
 
     @discord.utils.copy_doc(commands.Bot.is_owner)
     async def is_owner(self, user: discord.abc.User) -> bool:

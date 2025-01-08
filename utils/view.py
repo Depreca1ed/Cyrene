@@ -5,7 +5,6 @@ import traceback
 from typing import TYPE_CHECKING, Any
 
 import discord
-import mystbin
 
 from utils import Embed, better_string
 
@@ -37,15 +36,7 @@ class BaseView(discord.ui.View):
         func = interaction.followup.send if interaction.response.is_done() else interaction.response.send_message
         await func(content=str(error) + '\n-# Developers have been informed')
         exc = f"```py\n{''.join(traceback.format_exception(type(error), error, error.__traceback__))}```"
-        exc_link = (
-            await interaction.client.mystbin_cli.create_paste(
-                files=[
-                    mystbin.File(filename='error', content=exc),
-                ],
-            )
-            if len(exc) > CHAR_LIMIT
-            else None
-        )
+        exc_link = await interaction.client.create_paste(filename='error', content=exc) if len(exc) > CHAR_LIMIT else None
 
         embed = Embed(
             title=error.__class__.__name__,

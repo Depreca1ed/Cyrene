@@ -13,11 +13,7 @@ if TYPE_CHECKING:
     from bot import Mafuyu
 
 
-__all__ = (
-    'SafebooruPokemonView',
-    'WaifuSearchView',
-    'WaifuView',
-)
+__all__ = ('WaifuSearchView',)
 
 
 class SmashOrPass(BaseView):
@@ -195,30 +191,6 @@ class SmashOrPass(BaseView):
         return True
 
 
-class WaifuView(SmashOrPass):
-    async def request(self) -> WaifuResult:
-        waifu = await self.session.get(
-            'https://api.waifu.im/search',
-            params={
-                'is_nsfw': 'false' if self.nsfw is False else 'null',
-                'token': self.token,
-            },
-        )
-
-        data = await waifu.json()
-        data = data['images'][0]
-        current = WaifuResult(
-            name=self.query,
-            image_id=data['image_id'],
-            source=data['source'],
-            dominant_color=data['dominant_color'],
-            url=data['url'],
-        )
-        self.current = current
-
-        return self.current
-
-
 class WaifuSearchView(SmashOrPass):
     async def request(self) -> WaifuResult:
         waifu = await self.session.get(
@@ -227,7 +199,7 @@ class WaifuSearchView(SmashOrPass):
                 'tags': better_string(
                     [
                         'solo',
-                        self.query,
+                        self.query or '',
                         'rating:'
                         + (
                             better_string(['explicit', 'questionable', 'sensitive'], seperator=',')
@@ -243,39 +215,6 @@ class WaifuSearchView(SmashOrPass):
         success = 200
         if waifu.status != success or not data:
             raise WaifuNotFoundError(self.query)
-        current = WaifuResult(
-            name=self.query,
-            image_id=data['id'],
-            dominant_color=None,
-            source=data['source'],
-            url=data['file_url'],
-        )
-        self.current = current
-
-        return self.current
-
-
-class SafebooruPokemonView(SmashOrPass):
-    async def request(self) -> WaifuResult:
-        waifu = await self.session.get(
-            'https://danbooru.donmai.us/posts/random.json',
-            params={
-                'tags': better_string(
-                    [
-                        'solo',
-                        'pokemon_(creature)',
-                        'rating:'
-                        + (
-                            better_string(['explicit', 'questionable', 'sensitive'], seperator=',')
-                            if self.nsfw is True
-                            else 'general'
-                        ),
-                    ],
-                    seperator=' ',
-                ),
-            },
-        )
-        data = await waifu.json()
         current = WaifuResult(
             name=self.query,
             image_id=data['id'],

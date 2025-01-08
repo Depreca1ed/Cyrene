@@ -5,10 +5,10 @@ import importlib.metadata
 import platform
 
 import discord
-import humanize
 import psutil
 from discord import app_commands
 from discord.ext import commands
+from jishaku.math import natural_size
 
 from utils import BaseCog, Context, Embed, better_string
 
@@ -18,9 +18,27 @@ except ImportError:
     from importlib_metadata import distribution, packages_distributions
 
 import importlib
+import pathlib
+
+import git
 
 
 class BotInformation(BaseCog):
+    def get_commits(self, count: int = 5) -> list[git.Commit]:
+        repo = git.Repo(pathlib.Path.cwd())
+        return list(repo.iter_commits(repo.active_branch, max_count=count))
+
+    def format_commit(self, commit: git.Commit) -> str:
+        sha1 = commit.hexsha[:7]
+        message = (
+            commit.message.split('\n')[0] if isinstance(commit.message, str) else 'No message found.'
+        )  # to stop ugly red line
+        time = datetime.datetime.fromtimestamp(commit.committed_date, tz=datetime.UTC)
+
+        time = round(time.timestamp())
+
+        return f'[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha}) {message}'
+
     @commands.hybrid_command(
         name='about',
         aliases=['info'],
@@ -30,10 +48,14 @@ class BotInformation(BaseCog):
     @app_commands.allowed_installs(guilds=True, users=False)
     async def botinfo(self, ctx: Context) -> None:
         bot = self.bot
-        embed = Embed(title=str(bot.user.name), description=bot.description, ctx=ctx)
+
+        embed = Embed(
+            title=str(bot.user.name), description='\n'.join([self.format_commit(c) for c in self.get_commits()]), ctx=ctx
+        )
+
         embed.set_author(
-            name=f'Made by {bot.appinfo.owner}',
-            icon_url=bot.appinfo.owner.display_avatar.url,
+            name=f'Made by {bot.owner}',
+            icon_url=bot.owner.display_avatar.url,
         )
         embed.add_field(
             name='General Statistics',
@@ -64,15 +86,9 @@ class BotInformation(BaseCog):
         proc = psutil.Process()
         with proc.oneshot():
             memory = proc.memory_info().rss
-            uptime = humanize.naturaldelta(
-                datetime.timedelta(seconds=datetime.datetime.now(datetime.UTC).timestamp() - bot.start_time.timestamp())
-            )
-            memory_usage = (
-                str(round((memory / 1024) / 1024))
-                + '/'
-                + str(round(((psutil.virtual_memory().total) / 1024) / 1024))
-                + ' MB'
-            )
+            uptime = discord.utils.format_dt(bot.start_time, 'R')
+            memory_usage = natural_size(memory)
+
             embed.add_field(
                 name='System Statistics',
                 value=better_string(
@@ -98,7 +114,7 @@ class BotInformation(BaseCog):
                         else None
                     ),
                     '-# [Invite the bot](https://discord.com/oauth2/authorize?client_id=1260312970890842182)',
-                    '-# [Support Server](https://discord.gg/mtWF6sWMex)',
+                    f'-# [Support Server]({bot.support_invite})',
                 ],
                 seperator='\n',
             ),
