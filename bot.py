@@ -12,7 +12,7 @@ import mystbin
 from discord.ext import commands
 
 import config
-from utils import BASE_COLOUR, Blacklist, Context
+from utils import BASE_COLOUR, Context
 
 if TYPE_CHECKING:
     from discord.ext.commands._types import ContextT  # pyright: ignore[reportMissingTypeStubs]
@@ -97,7 +97,6 @@ class Mafuyu(commands.Bot):
         self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
-        self.blacklist = await Blacklist.setup(self)
         await self._setup_prefix()
 
         for cog in self.initial_extensions:
@@ -129,13 +128,17 @@ class Mafuyu(commands.Bot):
             cls = Context  # pyright: ignore[reportAssignmentType]
         return await super().get_context(origin, cls=cls)
 
+    async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
+        file = mystbin.File(filename=filename, content=content)
+        return await self.mystbin.create_paste(files=[file])
+
     @discord.utils.copy_doc(commands.Bot.is_owner)
     async def is_owner(self, user: discord.abc.User) -> bool:
         return bool(user.id in config.OWNERS_ID)
 
     @discord.utils.cached_property
     def logger_webhook(self) -> discord.Webhook:
-        return discord.Webhook.from_url(str(self.config.get('bot', 'webhook')), session=self.session, bot_token=self.token)
+        return discord.Webhook.partial(config.WEBHOOK[0], config.WEBHOOK[1], session=self.session)
 
     @discord.utils.cached_property
     def guild(self) -> discord.Guild:
@@ -154,8 +157,7 @@ class Mafuyu(commands.Bot):
             await self.pool.close()
         if hasattr(self, 'session'):
             await self.session.close()
-        if hasattr(self, 'topgg'):
-            await self.topgg.close()
-        if hasattr(self, 'topggwebhook'):
-            await self.topggwebhook.close()
-        await super().close()
+
+    @property
+    def config(self):  # noqa: ANN201
+        return __import__('config')

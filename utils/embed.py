@@ -56,6 +56,4 @@ class Embed(discord.Embed):
             The generated embed
 
         """
-        embed = cls(title=title, description=description, ctx=ctx, colour=ERROR_COLOUR)
-        embed.set_thumbnail(url=ctx.bot.bot_emojis['MafuyuUnamused2'].url if ctx else None)
-        return embed
+        return cls(title=title, description=description, ctx=ctx, colour=ERROR_COLOUR)

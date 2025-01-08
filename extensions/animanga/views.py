@@ -56,7 +56,7 @@ class SmashOrPass(BaseView):
             source=source,
             query=query,
         )
-        inst.token = ctx.bot.config.get('bot', 'waifu')
+        inst.token = ctx.bot.config.WAIFU_TOKEN
         inst.ctx = ctx
         data = await inst.request()
 

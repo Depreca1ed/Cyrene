@@ -1,6 +1,5 @@
 from .basecog import BaseCog
-from .blacklist import Blacklist
-from .constants import BASE_COLOUR, BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, ERROR_COLOUR
+from .constants import BASE_COLOUR, BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, CHAR_LIMIT, ERROR_COLOUR
 from .context import Context
 from .embed import Embed
 from .errors import (
@@ -14,7 +13,7 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
-from .helper_functions import ActivityHandler, better_string
+from .helper_functions import ActivityHandler, better_string, clean_error, generate_error_objects
 from .pagination import Paginator
 from .types import BlacklistBase, WaifuResult
 from .view import BaseView
@@ -24,12 +23,12 @@ __all__ = (
     'BLACKLIST_COLOUR',
     'BOT_FARM_COLOUR',
     'BOT_THRESHOLD',
+    'CHAR_LIMIT',
     'ERROR_COLOUR',
     'ActivityHandler',
     'AlreadyBlacklistedError',
     'BaseCog',
     'BaseView',
-    'Blacklist',
     'BlacklistBase',
     'Context',
     'Embed',
@@ -44,4 +43,6 @@ __all__ = (
     'WaifuNotFoundError',
     'WaifuResult',
     'better_string',
+    'clean_error',
+    'generate_error_objects',
 )

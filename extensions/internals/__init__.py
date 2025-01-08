@@ -10,12 +10,13 @@ import contextlib
 import discord
 from discord.ext import commands
 
+from .blacklist import Blacklist
 from .dev import Developer
 from .error_handler import ErrorHandler
 from .guild import Guild
 
 
-class Internals(Developer, ErrorHandler, Guild, name='Internals'):
+class Internals(Developer, ErrorHandler, Guild, Blacklist, name='Internals'):
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
         return await self.bot.is_owner(ctx.author)

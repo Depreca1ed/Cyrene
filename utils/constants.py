@@ -14,3 +14,5 @@ ERROR_COLOUR = discord.Colour.from_str('#E07889')
 BOT_THRESHOLD = 80
 BLACKLIST_COLOUR = discord.Colour.from_str('#ccaa88')
 BOT_FARM_COLOUR = discord.Colour.from_str('#fff5e8')
+
+CHAR_LIMIT = 2000
