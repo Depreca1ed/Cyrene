@@ -150,6 +150,7 @@ class Mafuyu(commands.Bot):
             await self.pool.close()
         if hasattr(self, 'session'):
             await self.session.close()
+        await super().close()
 
     @property
     def config(self):  # noqa: ANN201
