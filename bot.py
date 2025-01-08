@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, overload
 import aiohttp
 import asyncpg
 import discord
-import jishaku
 import mystbin
 from discord.ext import commands
 
@@ -22,11 +21,6 @@ __all__ = ('Mafuyu',)
 
 log: logging.Logger = logging.getLogger(__name__)
 
-jishaku.Flags.FORCE_PAGINATOR = True
-jishaku.Flags.HIDE = True
-jishaku.Flags.NO_DM_TRACEBACK = True
-jishaku.Flags.NO_UNDERSCORE = True
-
 
 extensions = [
     'extensions.animanga',
@@ -39,6 +33,11 @@ except ImportError:
     pass
 else:
     extensions.append('jishaku')
+
+    jishaku.Flags.FORCE_PAGINATOR = True
+    jishaku.Flags.HIDE = True
+    jishaku.Flags.NO_DM_TRACEBACK = True
+    jishaku.Flags.NO_UNDERSCORE = True
 
 
 class Mafuyu(commands.Bot):
