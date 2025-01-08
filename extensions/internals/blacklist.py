@@ -78,7 +78,7 @@ class Blacklist(BaseCog):
             content = str(err)
             await ctx.reply(content)
 
-        await ctx.message.add_reaction(self.bot.bot_emojis['green_tick'])
+        await ctx.message.add_reaction(self.bot.bot_emojis['greentick'])
         return
 
     @blacklist_cmd.command(name='remove', help='Remove a user from blacklist')
@@ -91,7 +91,7 @@ class Blacklist(BaseCog):
             await ctx.reply(content)
             return
 
-        await ctx.message.add_reaction(self.bot.bot_emojis['green_tick'])
+        await ctx.message.add_reaction(self.bot.bot_emojis['greentick'])
 
     async def bot_check_once(self, ctx: Context) -> bool:
         """

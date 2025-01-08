@@ -86,7 +86,7 @@ class MissingArgumentHandler(BaseView):
         self.error = error
         self.ctx = ctx
         super().__init__(timeout=timeout)
-        self.argument_button.emoji = ctx.bot.bot_emojis['green_tick']
+        self.argument_button.emoji = ctx.bot.bot_emojis['greentick']
         self.argument_button.label = f'Add {(self.error.param.displayed_name or self.error.param.name).title()}'
 
     @discord.ui.button(style=discord.ButtonStyle.grey)
