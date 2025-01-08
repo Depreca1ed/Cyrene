@@ -81,17 +81,11 @@ class Mafuyu(commands.Bot):
             msg = 'Failed to setup PostgreSQL. Shutting down.'
             raise RuntimeError(msg)
 
+        self.pool = pool
         self.session = aiohttp.ClientSession(
-            headers={
-                'User-Agent': (
-                    f'Mafuyu Python/{sys.version_info[0]}.{sys.version_info[1]}'
-                    f'.{sys.version_info[2]} aiohttp/{aiohttp.__version__}'
-                )
-            },
             timeout=aiohttp.ClientTimeout(total=60),
         )
         self.mystbin = mystbin.Client(session=self.session)
-        self.pool = pool
         self.appinfo = await self.application_info()
         self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
