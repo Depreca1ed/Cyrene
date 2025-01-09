@@ -29,7 +29,7 @@ class FeatureDisabledError(commands.CheckFailure, MafuyuError):
         super().__init__('This feature is not enabled in this server.')
 
 
-class PrefixNotInitialisedError(commands.CommandError, MafuyuError):
+class PrefixNotInitialisedError(MafuyuError):
     def __init__(self, guild: discord.Guild) -> None:
         super().__init__(f'Prefixes were not initialised for {guild.id}')
 

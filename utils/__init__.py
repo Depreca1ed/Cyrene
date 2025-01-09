@@ -13,7 +13,7 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
-from .helper_functions import ActivityHandler, better_string, clean_error, generate_error_objects
+from .helper_functions import better_string, clean_error, generate_error_objects, generate_timestamp_string
 from .pagination import Paginator
 from .types import BlacklistBase, WaifuResult
 from .view import BaseView
@@ -25,7 +25,6 @@ __all__ = (
     'BOT_THRESHOLD',
     'CHAR_LIMIT',
     'ERROR_COLOUR',
-    'ActivityHandler',
     'AlreadyBlacklistedError',
     'BaseCog',
     'BaseView',
@@ -45,4 +44,5 @@ __all__ = (
     'better_string',
     'clean_error',
     'generate_error_objects',
+    'generate_timestamp_string',
 )

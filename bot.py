@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, overload
 import aiohttp
 import asyncpg
 import discord
+import jishaku
 import mystbin
 from discord.ext import commands
 
@@ -27,17 +28,23 @@ extensions = [
     'extensions.internals',
     'extensions.meta',
 ]
-try:
-    import jishaku
-except ImportError:
-    pass
-else:
-    extensions.append('jishaku')
 
-    jishaku.Flags.FORCE_PAGINATOR = True
-    jishaku.Flags.HIDE = True
-    jishaku.Flags.NO_DM_TRACEBACK = True
-    jishaku.Flags.NO_UNDERSCORE = True
+jishaku.Flags.FORCE_PAGINATOR = True
+jishaku.Flags.HIDE = True
+jishaku.Flags.NO_DM_TRACEBACK = True
+jishaku.Flags.NO_UNDERSCORE = True
+
+
+async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
+    base = commands.when_mentioned(bot, message)
+
+    if not message.guild:
+        base.append(config.DEFAULT_PREFIX)
+
+    else:
+        base.extend(bot.get_guild_prefixes(message.guild))
+
+    return base
 
 
 class Mafuyu(commands.Bot):
@@ -49,12 +56,13 @@ class Mafuyu(commands.Bot):
         allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=True)
 
         super().__init__(
-            command_prefix=config.DEFAULT_PREFIX,
+            command_prefix=_callable_prefix,
             case_insensitive=True,
             strip_after_prefix=True,
             intents=intents,
             max_messages=5000,
             allowed_mentions=allowed_mentions,
+            help_command=commands.MinimalHelpCommand(),
         )
 
         self.token = config.TOKEN
@@ -68,8 +76,10 @@ class Mafuyu(commands.Bot):
 
     async def _setup_prefix(self) -> None:
         prefixes = await self.pool.fetch("""SELECT guild, array_agg(prefix) as prefix_list FROM Prefixes GROUP BY guild""")
+
         for prefix in prefixes:
             self.prefixes[prefix['guild']] = prefix['prefix_list']
+
         log.info('Prefixes setup successfully')
 
     async def setup_hook(self) -> None:
@@ -80,12 +90,15 @@ class Mafuyu(commands.Bot):
             raise RuntimeError(msg)
 
         self.pool = pool
+
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=60),
         )
         self.mystbin = mystbin.Client(session=self.session)
+
         self.appinfo = await self.application_info()
         self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
         await self._setup_prefix()
@@ -101,6 +114,10 @@ class Mafuyu(commands.Bot):
                 )
             else:
                 log.info('Successfully loaded %s', cog)
+        await self.load_extension('jishaku')
+
+    def get_guild_prefixes(self, guild: discord.Guild) -> list[str]:
+        return self.prefixes.get(guild.id, [config.DEFAULT_PREFIX])
 
     @overload
     async def get_context(self, origin: discord.Interaction | discord.Message, /) -> Context: ...

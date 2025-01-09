@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class Meta(Avatar, BotInformation, RoleInfo, Userinfo, ServerInfo, name='Meta'):
-    """For everything related to Discord."""
+    """For everything related to Discord or Mafuyu."""
 
 
 async def setup(bot: Mafuyu) -> None:
