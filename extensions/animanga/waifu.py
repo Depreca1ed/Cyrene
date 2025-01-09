@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
@@ -94,7 +94,6 @@ class Waifu(BaseCog):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def pokemon(self, ctx: Context) -> None:
-        ctx.channel = cast(discord.TextChannel, ctx.channel)
         view = WaifuSearchView(
             self.bot.session,
             for_user=ctx.author.id,
