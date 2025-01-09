@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import TYPE_CHECKING, Any, overload
+from typing import Any, Self, TypeVar
 
 import aiohttp
 import asyncpg
@@ -13,10 +13,6 @@ from discord.ext import commands
 
 import config
 from utils import BASE_COLOUR, Context
-
-if TYPE_CHECKING:
-    from discord.ext.commands._types import ContextT  # pyright: ignore[reportMissingTypeStubs]
-
 
 __all__ = ('Mafuyu',)
 
@@ -33,6 +29,8 @@ jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
 jishaku.Flags.NO_DM_TRACEBACK = True
 jishaku.Flags.NO_UNDERSCORE = True
+
+C = TypeVar('C', bound='Context')
 
 
 async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
@@ -73,6 +71,7 @@ class Mafuyu(commands.Bot):
         self.start_time = datetime.datetime.now()
         self.colour = self.color = BASE_COLOUR
         self.initial_extensions = extensions
+        self.context_class: type[commands.Context[Self]] = commands.Context
 
     async def _setup_prefix(self) -> None:
         prefixes = await self.pool.fetch("""SELECT guild, array_agg(prefix) as prefix_list FROM Prefixes GROUP BY guild""")
@@ -119,22 +118,9 @@ class Mafuyu(commands.Bot):
     def get_guild_prefixes(self, guild: discord.Guild) -> list[str]:
         return self.prefixes.get(guild.id, [config.DEFAULT_PREFIX])
 
-    @overload
-    async def get_context(self, origin: discord.Interaction | discord.Message, /) -> Context: ...
-
-    @overload
-    async def get_context(self, origin: discord.Interaction | discord.Message, /, *, cls: type[ContextT]) -> ContextT: ...
-
-    async def get_context(
-        self,
-        origin: discord.Interaction | discord.Message,
-        /,
-        *,
-        cls: type[ContextT] = discord.utils.MISSING,
-    ) -> ContextT:
-        if cls is discord.utils.MISSING:
-            cls = Context  # pyright: ignore[reportAssignmentType]
-        return await super().get_context(origin, cls=cls)
+    async def get_context(self, message: discord.Message, *, cls: type[C] | None = None) -> Context | commands.Context[Self]:
+        new_cls = cls or self.context_class
+        return await super().get_context(message, cls=new_cls)
 
     async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
         file = mystbin.File(filename=filename, content=content)
