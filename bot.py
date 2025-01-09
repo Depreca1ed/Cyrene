@@ -19,18 +19,18 @@ __all__ = ('Mafuyu',)
 log: logging.Logger = logging.getLogger(__name__)
 
 
+extensions = [
+    'extensions.animanga',
+    'extensions.internals',
+    'extensions.meta',
+]
+
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
 jishaku.Flags.NO_DM_TRACEBACK = True
 jishaku.Flags.NO_UNDERSCORE = True
 
 C = TypeVar('C', bound='Context')
-
-extensions = [
-    'extensions.animanga',
-    'extensions.internals',
-    'extensions.meta',
-]
 
 
 async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
