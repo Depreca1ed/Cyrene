@@ -5,7 +5,14 @@ from typing import TYPE_CHECKING, Self
 import discord
 from asyncpg.exceptions import UniqueViolationError
 
-from utils import BaseView, Context, Embed, WaifuNotFoundError, WaifuResult, better_string
+from utils import (
+    BaseView,
+    Context,
+    Embed,
+    WaifuNotFoundError,
+    WaifuResult,
+    better_string,
+)
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -46,9 +53,14 @@ class SmashOrPass(BaseView):
         inst = cls(
             ctx.bot.session,
             for_user=ctx.author.id,
-            nsfw=ctx.channel.is_nsfw()
-            if not isinstance(ctx.channel, discord.DMChannel | discord.GroupChannel | discord.PartialMessageable)
-            else False,
+            nsfw=(
+                ctx.channel.is_nsfw()
+                if not isinstance(
+                    ctx.channel,
+                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
+                )
+                else False
+            ),
             source=source,
             query=query,
         )

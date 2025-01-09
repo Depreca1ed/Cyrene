@@ -77,12 +77,14 @@ class Waifu(BaseCog):
         view = WaifuSearchView(
             self.bot.session,
             for_user=ctx.author.id,
-            nsfw=ctx.channel.is_nsfw()
-            if not isinstance(
-                ctx.channel,
-                discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
-            )
-            else False,
+            nsfw=(
+                ctx.channel.is_nsfw()
+                if not isinstance(
+                    ctx.channel,
+                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
+                )
+                else False
+            ),
             source='waifusearch',
             query=waifu,
         )
@@ -96,9 +98,14 @@ class Waifu(BaseCog):
         view = WaifuSearchView(
             self.bot.session,
             for_user=ctx.author.id,
-            nsfw=ctx.channel.is_nsfw()
-            if not isinstance(ctx.channel, discord.DMChannel | discord.GroupChannel | discord.PartialMessageable)
-            else False,
+            nsfw=(
+                ctx.channel.is_nsfw()
+                if not isinstance(
+                    ctx.channel,
+                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
+                )
+                else False
+            ),
             source='waifusearch',
             query='pokemon_(creature)',
         )

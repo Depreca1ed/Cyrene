@@ -15,12 +15,18 @@ if TYPE_CHECKING:
 
 class Avatar(BaseCog):
     @commands.hybrid_command(
-        name='avatar', help="Get your or user's displayed avatar. By default, returns your server avatar", aliases=['av']
+        name='avatar',
+        help="Get your or user's displayed avatar. By default, returns your server avatar",
+        aliases=['av'],
     )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def avatar(
-        self, ctx: Context, user: discord.User | discord.Member = commands.Author, *, server_avatar: bool = True
+        self,
+        ctx: Context,
+        user: discord.User | discord.Member = commands.Author,
+        *,
+        server_avatar: bool = True,
     ) -> discord.Message:
         avatar = user.display_avatar if server_avatar is True else user.avatar or user.default_avatar
 

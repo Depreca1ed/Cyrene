@@ -60,7 +60,7 @@ class Userinfo(BaseCog):
             )
 
             member_listing = [
-                f'- **Joined:** {generate_timestamp_string(user.joined_at)}' if user.joined_at else None,
+                (f'- **Joined:** {generate_timestamp_string(user.joined_at)}' if user.joined_at else None),
                 f'- **Roles: ** {roles_string}' if valid_roles else None,
             ]
             if member_listing:

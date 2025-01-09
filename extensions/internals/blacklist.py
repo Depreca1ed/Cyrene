@@ -6,7 +6,13 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utils import AlreadyBlacklistedError, BaseCog, BlacklistBase, Context, NotBlacklistedError
+from utils import (
+    AlreadyBlacklistedError,
+    BaseCog,
+    BlacklistBase,
+    Context,
+    NotBlacklistedError,
+)
 
 if TYPE_CHECKING:
     from bot import Mafuyu
@@ -122,7 +128,11 @@ class Blacklist(BaseCog):
 
         return True
 
-    async def _pre_check(self, snowflake: discord.User | discord.Member | discord.Guild, data: BlacklistBase) -> bool:
+    async def _pre_check(
+        self,
+        snowflake: discord.User | discord.Member | discord.Guild,
+        data: BlacklistBase,
+    ) -> bool:
         """
         Check(not to be confused with command check) to make sure user is actually still blacklisted.
 

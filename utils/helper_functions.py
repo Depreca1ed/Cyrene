@@ -51,12 +51,14 @@ def clean_error(objects: list[str] | str, *, seperator: str, prefix: str) -> str
 
 
 def generate_error_objects(
-    error: commands.MissingPermissions
-    | commands.BotMissingPermissions
-    | commands.MissingAnyRole
-    | commands.MissingRole
-    | commands.BotMissingAnyRole
-    | commands.BotMissingRole,
+    error: (
+        commands.MissingPermissions
+        | commands.BotMissingPermissions
+        | commands.MissingAnyRole
+        | commands.MissingRole
+        | commands.BotMissingAnyRole
+        | commands.BotMissingRole
+    ),
 ) -> list[str] | str:
     """
     Generate a list or string of given objects from the error.

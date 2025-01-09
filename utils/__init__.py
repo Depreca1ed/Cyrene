@@ -1,5 +1,12 @@
 from .basecog import BaseCog
-from .constants import BASE_COLOUR, BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, CHAR_LIMIT, ERROR_COLOUR
+from .constants import (
+    BASE_COLOUR,
+    BLACKLIST_COLOUR,
+    BOT_FARM_COLOUR,
+    BOT_THRESHOLD,
+    CHAR_LIMIT,
+    ERROR_COLOUR,
+)
 from .context import Context
 from .embed import Embed
 from .errors import (
@@ -13,7 +20,12 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
-from .helper_functions import better_string, clean_error, generate_error_objects, generate_timestamp_string
+from .helper_functions import (
+    better_string,
+    clean_error,
+    generate_error_objects,
+    generate_timestamp_string,
+)
 from .pagination import Paginator
 from .types import BlacklistBase, WaifuResult
 from .view import BaseView

@@ -28,7 +28,7 @@ class Embed(discord.Embed):
             title=title,
             url=url,
             description=description,
-            colour=colour if colour and colour != discord.Colour.default() else BASE_COLOUR,
+            colour=(colour if colour and colour != discord.Colour.default() else BASE_COLOUR),
             **kwargs,
         )
 
@@ -36,7 +36,13 @@ class Embed(discord.Embed):
         return super().add_field(name=name, value=value, inline=inline)
 
     @classmethod
-    def error_embed(cls, *, title: str | None = None, description: str | None = None, ctx: Context | None = None) -> Self:
+    def error_embed(
+        cls,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        ctx: Context | None = None,
+    ) -> Self:
         """
         Generate an embed for error handler responses.
 

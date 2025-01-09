@@ -81,7 +81,11 @@ class Internals(Developer, ErrorHandler, Blacklist, name='Internals'):
             embed.add_field(
                 value=better_string(
                     (
-                        '- This guild is blacklisted. I have left the server automatically' if blacklisted is True else None,
+                        (
+                            '- This guild is blacklisted. I have left the server automatically'
+                            if blacklisted is True
+                            else None
+                        ),
                         '- This guild is a bot farm' if bot_farm is True else None,
                     ),
                     seperator='\n',

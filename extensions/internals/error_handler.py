@@ -121,8 +121,14 @@ class ErrorView(BaseView):
                 f'in the **{self.error["command"]}** command and **{is_fixed}** fixed'
             )
         )
-        embed.set_footer(text=f'Requested by {interaction.user}', icon_url=interaction.user.display_avatar.url)
-        embed.set_author(name=f"Error #{self.error['id']}", icon_url=self.ctx.bot.bot_emojis['redtick'].url)
+        embed.set_footer(
+            text=f'Requested by {interaction.user}',
+            icon_url=interaction.user.display_avatar.url,
+        )
+        embed.set_author(
+            name=f"Error #{self.error['id']}",
+            icon_url=self.ctx.bot.bot_emojis['redtick'].url,
+        )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
@@ -141,7 +147,8 @@ class ErrorView(BaseView):
                 interaction.user.id,
             )
             await interaction.response.send_message(
-                'You will no longer be notified when this error is fixed.', ephemeral=True
+                'You will no longer be notified when this error is fixed.',
+                ephemeral=True,
             )
             return
 
@@ -177,9 +184,11 @@ async def logger_embed(bot: Mafuyu, record: asyncpg.Record) -> Embed:
 
     logger_embed = Embed(
         title=f'Error #{record["id"]}',
-        description=f"""```py\n{record['full_error']}```"""
-        if len(record['full_error']) < CHAR_LIMIT
-        else 'Error message was too long to be shown',
+        description=(
+            f"""```py\n{record['full_error']}```"""
+            if len(record['full_error']) < CHAR_LIMIT
+            else 'Error message was too long to be shown'
+        ),
         colour=0xFF0000 if record['fixed'] is False else 0x00FF00,
         url=error_link.url,
     )
@@ -187,10 +196,10 @@ async def logger_embed(bot: Mafuyu, record: asyncpg.Record) -> Embed:
     logger_embed.add_field(
         value=better_string(
             (
-                f'- **Command:** `{record['command']}`',
-                f'- **User:** {bot.get_user(record['user_id'])}',
+                f"- **Command:** `{record['command']}`",
+                f"- **User:** {bot.get_user(record['user_id'])}",
                 f'- **Guild:** {bot.get_guild(record['guild']) if record['guild'] else "N/A"}',
-                f'- **URL: ** [Jump to message]({record['message_url']})',
+                f"- **URL: ** [Jump to message]({record['message_url']})",
                 f'- **Occured: ** {discord.utils.format_dt(record['occured_when'], "f")}',
             ),
             seperator='\n',
