@@ -6,13 +6,7 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utils import (
-    AlreadyBlacklistedError,
-    BaseCog,
-    BlacklistBase,
-    Context,
-    NotBlacklistedError,
-)
+from utils import AlreadyBlacklistedError, BaseCog, BlacklistBase, Context, NotBlacklistedError
 
 if TYPE_CHECKING:
     from bot import Mafuyu

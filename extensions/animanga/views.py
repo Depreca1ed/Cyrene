@@ -5,14 +5,7 @@ from typing import TYPE_CHECKING, Self
 import discord
 from asyncpg.exceptions import UniqueViolationError
 
-from utils import (
-    BaseView,
-    Context,
-    Embed,
-    WaifuNotFoundError,
-    WaifuResult,
-    better_string,
-)
+from utils import BaseView, Context, Embed, WaifuNotFoundError, WaifuResult, better_string
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
