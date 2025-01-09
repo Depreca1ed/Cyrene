@@ -35,7 +35,7 @@ class BaseView(discord.ui.View):
     ) -> None:
         func = interaction.followup.send if interaction.response.is_done() else interaction.response.send_message
         await func(content=str(error) + '\n-# Developers have been informed')
-        exc = f"```py\n{''.join(traceback.format_exception(type(error), error, error.__traceback__))}```"
+        exc = f'```py\n{"".join(traceback.format_exception(type(error), error, error.__traceback__))}```'
         exc_link = await interaction.client.create_paste(filename='error', content=exc) if len(exc) > CHAR_LIMIT else None
 
         embed = Embed(
@@ -48,7 +48,7 @@ class BaseView(discord.ui.View):
             value=better_string(
                 [
                     f'> - **User: **{interaction.user!s}',
-                    f"> - **Server: **{interaction.guild.name if interaction.guild else 'No guild'!s}",
+                    f'> - **Server: **{interaction.guild.name if interaction.guild else "No guild"!s}',
                     f'> - **View: **{self.__class__.__name__}',
                 ],
                 seperator='\n',

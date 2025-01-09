@@ -19,14 +19,14 @@ class RoleInfo(BaseCog):
     @commands.guild_only()
     async def roleinfo(self, ctx: Context, role: discord.Role) -> discord.Message:
         embed = Embed(
-            title=f"{role.name} {role.unicode_emoji or ''}",
+            title=f'{role.name} {role.unicode_emoji or ""}',
             colour=role.colour,
             ctx=ctx,
         )
         embed.description = better_string(
             (
                 f'- **ID:** {role.id}',
-                f"- **Created:** {discord.utils.format_dt(role.created_at, 'D')} ({discord.utils.format_dt(role.created_at, 'R')})",  # noqa: E501
+                f'- **Created:** {discord.utils.format_dt(role.created_at, "D")} ({discord.utils.format_dt(role.created_at, "R")})',  # noqa: E501
                 (f'> `{len(role.members)}` users have this role.' if role.members else None),
             ),
             seperator='\n',

@@ -7,9 +7,11 @@
 [tool.ruff]
 target-version = "py312"
 line-length = 125
+preview = true
 
 [tool.ruff.format]
 quote-style = "single"
+preview = true
 
 [tool.ruff.lint]
 select = ["ALL"]

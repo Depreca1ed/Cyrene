@@ -29,9 +29,9 @@ class ServerInfo(BaseCog):
         embed.add_field(
             value=better_string(
                 [
-                    f"- **Owner:** {guild.owner.mention if guild.owner else f'<@{guild.owner_id}>'} (`{guild.owner_id}`)",
+                    f'- **Owner:** {guild.owner.mention if guild.owner else f"<@{guild.owner_id}>"} (`{guild.owner_id}`)',
                     f'- **ID: ** {guild.id}',
-                    f"- **Created:** {discord.utils.format_dt(guild.created_at, 'D')} ({discord.utils.format_dt(guild.created_at, 'R')})",  # noqa: E501
+                    f'- **Created:** {discord.utils.format_dt(guild.created_at, "D")} ({discord.utils.format_dt(guild.created_at, "R")})',  # noqa: E501
                 ],
                 seperator='\n',
             ),
@@ -50,8 +50,8 @@ class ServerInfo(BaseCog):
                     (
                         better_string(
                             [
-                                f"- **Roles: ** {', '.join(valid_roles) if len(valid_roles) <= base_show_count else ', '.join(valid_roles[:3]) + f' + {len(valid_roles) - base_show_count} roles'}",  # noqa: E501
-                                f"- **Emojis: ** {' '.join(emojis) if len(emojis) <= base_show_count else ' '.join(emojis[:3]) + f' + {len(emojis) - 3} emojis'} (`{len(guild.emojis)}/{guild.emoji_limit}`)",  # noqa: E501
+                                f'- **Roles: ** {", ".join(valid_roles) if len(valid_roles) <= base_show_count else ", ".join(valid_roles[:3]) + f" + {len(valid_roles) - base_show_count} roles"}',  # noqa: E501
+                                f'- **Emojis: ** {" ".join(emojis) if len(emojis) <= base_show_count else " ".join(emojis[:3]) + f" + {len(emojis) - 3} emojis"} (`{len(guild.emojis)}/{guild.emoji_limit}`)',  # noqa: E501
                             ],
                             seperator='\n',
                         )
@@ -83,7 +83,7 @@ class ServerInfo(BaseCog):
                             else None
                         ),
                         (
-                            f"- **Boosters: ** {', '.join(boosters) if len(boosters) <= base_show_count else ', '.join(boosters[:3]) + f' + {len(boosters) - base_show_count} boosters'}"  # noqa: E501
+                            f'- **Boosters: ** {", ".join(boosters) if len(boosters) <= base_show_count else ", ".join(boosters[:3]) + f" + {len(boosters) - base_show_count} boosters"}'  # noqa: E501
                             if valid_roles
                             else None
                         ),

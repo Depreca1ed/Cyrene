@@ -49,12 +49,12 @@ class Blacklist(BaseCog):
         help='The command which handles bot blacklists',
     )
     async def blacklist_cmd(self, ctx: Context) -> None:
-        bl_guild_count = len(
-            [entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'guild']
-        )
-        bl_user_count = len(
-            [entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'user']
-        )
+        bl_guild_count = len([
+            entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'guild'
+        ])
+        bl_user_count = len([
+            entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'user'
+        ])
 
         content = f'Currently, `{bl_guild_count}` servers and `{bl_user_count}` users are blacklisted.'
         await ctx.reply(content=content)

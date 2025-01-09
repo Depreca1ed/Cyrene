@@ -126,7 +126,7 @@ class ErrorView(BaseView):
             icon_url=interaction.user.display_avatar.url,
         )
         embed.set_author(
-            name=f"Error #{self.error['id']}",
+            name=f'Error #{self.error["id"]}',
             icon_url=self.ctx.bot.bot_emojis['redtick'].url,
         )
 
@@ -196,11 +196,11 @@ async def logger_embed(bot: Mafuyu, record: asyncpg.Record) -> Embed:
     logger_embed.add_field(
         value=better_string(
             (
-                f"- **Command:** `{record['command']}`",
-                f"- **User:** {bot.get_user(record['user_id'])}",
-                f'- **Guild:** {bot.get_guild(record['guild']) if record['guild'] else "N/A"}',
-                f"- **URL: ** [Jump to message]({record['message_url']})",
-                f'- **Occured: ** {discord.utils.format_dt(record['occured_when'], "f")}',
+                f'- **Command:** `{record["command"]}`',
+                f'- **User:** {bot.get_user(record["user_id"])}',
+                f'- **Guild:** {bot.get_guild(record["guild"]) if record["guild"] else "N/A"}',
+                f'- **URL: ** [Jump to message]({record["message_url"]})',
+                f'- **Occured: ** {discord.utils.format_dt(record["occured_when"], "f")}',
             ),
             seperator='\n',
         )
@@ -478,7 +478,7 @@ class ErrorHandler(BaseCog):
             users = [_ for _ in [self.bot.get_user(user['user_id']) for user in notifiers] if _]
             for user in users:
                 try:
-                    await user.send(f"Hey! Error `#{data['id']}` in the `{data['command']}` command has been fixed.")
+                    await user.send(f'Hey! Error `#{data["id"]}` in the `{data["command"]}` command has been fixed.')
                 except discord.errors.Forbidden:
                     continue
             # Assuming all goes fine

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from bot import Mafuyu
     from utils import Context
+
 import contextlib
 
 import discord
@@ -21,9 +22,9 @@ def guild_embed(guild: discord.Guild, event_type: Literal['Joined', 'Left']) -> 
     return Embed(
         description=better_string(
             [
-                f"- **Owner:** {guild.owner.mention if guild.owner else f'<@{guild.owner_id}>'} (`{guild.owner_id}`)",
+                f'- **Owner:** {guild.owner.mention if guild.owner else f"<@{guild.owner_id}>"} (`{guild.owner_id}`)',
                 f'- **ID: ** {guild.id}',
-                f"- **Created:** {discord.utils.format_dt(guild.created_at, 'D')} ({discord.utils.format_dt(guild.created_at, 'R')})",  # noqa: E501
+                f'- **Created:** {discord.utils.format_dt(guild.created_at, "D")} ({discord.utils.format_dt(guild.created_at, "R")})',  # noqa: E501
                 f'- **Member Count:** `{guild.member_count}`',
             ],
             seperator='\n',
