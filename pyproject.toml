@@ -13,6 +13,7 @@ exclude = ['config.py']
 [tool.ruff.format]
 quote-style = "single"
 preview = true
+exclude = ['config.py']
 
 [tool.ruff.lint]
 select = ["ALL"]
