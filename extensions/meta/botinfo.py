@@ -37,7 +37,7 @@ class BotInformation(BaseCog):
 
         time = round(time.timestamp())
 
-        return f'[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha}) {message}'
+        return f'**[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})** **>** {message}'
 
     @commands.hybrid_command(
         name='about',

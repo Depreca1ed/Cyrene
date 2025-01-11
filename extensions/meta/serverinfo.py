@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Embed, better_string
+from utils import BaseCog, Embed, better_string, generate_timestamp_string
 
 if TYPE_CHECKING:
     from utils import Context
@@ -23,15 +23,15 @@ class ServerInfo(BaseCog):
             raise commands.GuildNotFound(msg)
         guild = ctx.guild
 
-        embed = Embed(description=guild.description or None, ctx=ctx)
-        embed.set_author(name=guild.name, icon_url=guild.icon.url if guild.icon else None)
+        embed = Embed(title=guild.name, description=guild.description or None, ctx=ctx)
+        embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
 
         embed.add_field(
             value=better_string(
                 [
                     f'- **Owner:** {guild.owner.mention if guild.owner else f"<@{guild.owner_id}>"} (`{guild.owner_id}`)',
-                    f'- **ID: ** {guild.id}',
-                    f'- **Created:** {discord.utils.format_dt(guild.created_at, "D")} ({discord.utils.format_dt(guild.created_at, "R")})',  # noqa: E501
+                    f'- **ID: ** `{guild.id}`',
+                    f'- **Created:** {generate_timestamp_string(guild.created_at)}',
                 ],
                 seperator='\n',
             ),
@@ -50,8 +50,12 @@ class ServerInfo(BaseCog):
                     (
                         better_string(
                             [
-                                f'- **Roles: ** {", ".join(valid_roles) if len(valid_roles) <= base_show_count else ", ".join(valid_roles[:3]) + f" + {len(valid_roles) - base_show_count} roles"}',  # noqa: E501
-                                f'- **Emojis: ** {" ".join(emojis) if len(emojis) <= base_show_count else " ".join(emojis[:3]) + f" + {len(emojis) - 3} emojis"} (`{len(guild.emojis)}/{guild.emoji_limit}`)',  # noqa: E501
+                                f'- **Roles: ** {", ".join(valid_roles) if len(valid_roles) <= base_show_count else ", ".join(valid_roles[:3]) + f" + {len(valid_roles) - base_show_count} roles"}'  # noqa: E501
+                                if guild.roles
+                                else None,
+                                f'- **Emojis: ** {" ".join(emojis) if len(emojis) <= base_show_count else " ".join(emojis[:3]) + f" + {len(emojis) - 3} emojis"} (`{len(guild.emojis)}/{guild.emoji_limit}`)'  # noqa: E501
+                                if guild.emojis
+                                else None,
                             ],
                             seperator='\n',
                         )
@@ -96,3 +100,35 @@ class ServerInfo(BaseCog):
         embed.set_image(url=banner_or_splash.url if banner_or_splash else None)
 
         await ctx.send(embed=embed)
+
+    @commands.hybrid_command(name='roleinfo', help='Get information about a role', aliases=['role'])
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @commands.guild_only()
+    async def roleinfo(self, ctx: Context, role: discord.Role) -> discord.Message:
+        embed = Embed(
+            title=f'{role.name} {role.unicode_emoji or ""}',
+            colour=role.colour,
+            ctx=ctx,
+        )
+        embed.description = better_string(
+            (
+                f'- **ID:** {role.id}',
+                f'- **Created:** {discord.utils.format_dt(role.created_at, "D")} ({discord.utils.format_dt(role.created_at, "R")})',  # noqa: E501
+                (f'> `{len(role.members)}` users have this role.' if role.members else None),
+            ),
+            seperator='\n',
+        )
+        embed.set_thumbnail(url=role.icon.url if role.icon else None)
+        if role.is_premium_subscriber() or role.is_integration() or role.is_bot_managed():
+            embed.add_field(
+                value=better_string(
+                    (
+                        ('- This is a **server booster** role' if role.is_premium_subscriber() else None),
+                        ('- This role is managed by an **integration**' if role.is_integration() else None),
+                        ('- This role is for an **app**' if role.is_bot_managed() else None),
+                    ),
+                    seperator='\n',
+                ),
+            )
+        return await ctx.reply(embed=embed)
