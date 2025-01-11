@@ -4,8 +4,6 @@ from discord.ext import commands
 
 from utils import BaseCog, Context, better_string
 
-WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
-
 
 class Developer(BaseCog):
     @commands.command(name='reload', aliases=['re'], hidden=True)

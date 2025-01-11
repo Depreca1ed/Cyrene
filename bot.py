@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any, Self, TypeVar
+from typing import Self, TypeVar
 
 import aiohttp
 import asyncpg
@@ -12,7 +12,7 @@ import mystbin
 from discord.ext import commands
 
 import config
-from utils import BASE_COLOUR, Context
+from utils import BASE_COLOUR, BlacklistBase, Context
 
 __all__ = ('Mafuyu',)
 
@@ -66,6 +66,7 @@ class Mafuyu(commands.Bot):
         self.token = config.TOKEN
 
         self.prefixes: dict[int, list[str]] = {}
+        self.blacklist: dict[int, BlacklistBase] = {}
 
         self.maintenance: bool = False
         self.start_time = datetime.datetime.now()
@@ -73,17 +74,8 @@ class Mafuyu(commands.Bot):
         self.initial_extensions = extensions
         self.context_class: type[commands.Context[Self]] = commands.Context
 
-    async def _setup_prefix(self) -> None:
-        prefixes = await self.pool.fetch("""SELECT guild, array_agg(prefix) as prefix_list FROM Prefixes GROUP BY guild""")
-
-        for prefix in prefixes:
-            self.prefixes[prefix['guild']] = prefix['prefix_list']
-
-        log.info('Prefixes setup successfully')
-
     async def setup_hook(self) -> None:
-        credentials: dict[str, Any] = config.DATABASE_CRED
-        pool = await asyncpg.create_pool(**credentials)
+        pool = await asyncpg.create_pool(config.DATABASE_CRED)
         if not pool or (pool and pool.is_closing()):
             msg = 'Failed to setup PostgreSQL. Shutting down.'
             raise RuntimeError(msg)
@@ -100,8 +92,6 @@ class Mafuyu(commands.Bot):
 
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
-        await self._setup_prefix()
-
         for cog in self.initial_extensions:
             try:
                 await self.load_extension(str(cog))
@@ -117,6 +107,9 @@ class Mafuyu(commands.Bot):
 
     def get_guild_prefixes(self, guild: discord.Guild) -> list[str]:
         return self.prefixes.get(guild.id, [config.DEFAULT_PREFIX])
+
+    def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild) -> BlacklistBase | None:
+        return self.blacklist.get(snowflake.id, None)
 
     async def get_context(self, message: discord.Message, *, cls: type[C] | None = None) -> Context | commands.Context[Self]:
         new_cls = cls or self.context_class

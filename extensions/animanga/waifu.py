@@ -108,4 +108,4 @@ class Waifu(BaseCog):
             source='waifusearch',
             query='pokemon_(creature)',
         )
-        await view.start(ctx, 'pokemon')
+        await view.start(ctx, 'waifusearch')

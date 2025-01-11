@@ -8,6 +8,7 @@
 target-version = "py312"
 line-length = 125
 preview = true
+exclude = ['config.py']
 
 [tool.ruff.format]
 quote-style = "single"
@@ -55,6 +56,7 @@ allow-star-arg-any = true
 inline-quotes = "single"
 
 [tool.pyright]
+ignore = ['config.py']
 useLibraryCodeForTypes = true
 typeCheckingMode = "strict"
 pythonVersion = "3.12"

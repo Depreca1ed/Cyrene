@@ -41,7 +41,10 @@ def bot_farm_check(guild: discord.Guild) -> bool:
 class Internals(Developer, ErrorHandler, Blacklist, name='Internals'):
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
-        return await self.bot.is_owner(ctx.author)
+        if await self.bot.is_owner(ctx.author):
+            return True
+        msg = 'You do not own this bot.'
+        raise commands.NotOwner(msg)
 
     @commands.Cog.listener('on_message_edit')
     async def edit_mechanic(self, _: discord.Message, after: discord.Message) -> None:
@@ -67,7 +70,7 @@ class Internals(Developer, ErrorHandler, Blacklist, name='Internals'):
     async def guild_join(self, guild: discord.Guild) -> None:
         blacklisted = bot_farm = False
         cog = self.bot.get_cog('internals')
-        if cog and self.is_blacklisted(guild):
+        if cog and self.bot.is_blacklisted(guild):
             blacklisted = True
             await guild.leave()
         if bot_farm_check(guild):

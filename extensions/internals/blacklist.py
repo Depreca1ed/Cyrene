@@ -15,20 +15,19 @@ WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
 
 
 class Blacklist(BaseCog):
-    blacklist_cache: dict[int, BlacklistBase]
     _command_attempts: dict[int, int]
 
     def __init__(self, bot: Mafuyu) -> None:
-        self.blacklist_cache = {}
         self._command_attempts = {}
 
         super().__init__(bot)
 
     async def cog_load(self) -> None:
+        self.bot.blacklist = {}
         entries = await self.bot.pool.fetch("""SELECT * FROM Blacklists""")
 
         for entry in entries:
-            self.blacklist_cache[entry['snowflake']] = BlacklistBase(
+            self.bot.blacklist[entry['snowflake']] = BlacklistBase(
                 reason=entry['reason'],
                 lasts_until=entry['lasts_until'],
                 blacklist_type=entry['blacklist_type'],
@@ -42,13 +41,10 @@ class Blacklist(BaseCog):
         invoke_without_command=True,
         help='The command which handles bot blacklists',
     )
+    @commands.is_owner()
     async def blacklist_cmd(self, ctx: Context) -> None:
-        bl_guild_count = len([
-            entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'guild'
-        ])
-        bl_user_count = len([
-            entry for entry in self.blacklist_cache if self.blacklist_cache[entry].blacklist_type == 'user'
-        ])
+        bl_guild_count = len([entry for entry in self.bot.blacklist if self.bot.blacklist[entry].blacklist_type == 'guild'])
+        bl_user_count = len([entry for entry in self.bot.blacklist if self.bot.blacklist[entry].blacklist_type == 'user'])
 
         content = f'Currently, `{bl_guild_count}` servers and `{bl_user_count}` users are blacklisted.'
         await ctx.reply(content=content)
@@ -108,13 +104,13 @@ class Blacklist(BaseCog):
             If the command should be run
 
         """
-        if data := self.is_blacklisted(ctx.author):
+        if data := self.bot.is_blacklisted(ctx.author):
             if not await self._pre_check(ctx.author, data):
                 return True
             await self.handle_user_blacklist(ctx, ctx.author, data)
             return False
 
-        if ctx.guild and (data := self.is_blacklisted(ctx.guild)):
+        if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
             if not await self._pre_check(ctx.guild, data):
                 return True
             await self.handle_guild_blacklist(ctx, ctx.guild, data)
@@ -273,7 +269,7 @@ class Blacklist(BaseCog):
             This is handled by the command executing this function
 
         """
-        entry = self.is_blacklisted(snowflake)
+        entry = self.bot.is_blacklisted(snowflake)
 
         if entry:
             check = await self._pre_check(snowflake, entry)
@@ -292,29 +288,12 @@ class Blacklist(BaseCog):
             blacklist_type,
         )
 
-        self.blacklist_cache[snowflake.id] = BlacklistBase(
+        self.bot.blacklist[snowflake.id] = BlacklistBase(
             reason=reason,
             lasts_until=lasts_until,
             blacklist_type=blacklist_type,
         )
-        return {snowflake.id: self.blacklist_cache[snowflake.id]}
-
-    def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild) -> BlacklistBase | None:
-        """
-        Get item function which gets the item from the cache.
-
-        Parameters
-        ----------
-        snowflake : discord.User | discord.Member | discord.Guild
-            The snowflake item being checked
-
-        Returns
-        -------
-        BlacklistBase | None
-            Blacklist data of the snowflake if any
-
-        """
-        return self.blacklist_cache.get(snowflake.id, None)
+        return {snowflake.id: self.bot.blacklist[snowflake.id]}
 
     async def remove(self, snowflake: discord.User | discord.Member | discord.Guild) -> dict[int, BlacklistBase]:
         """
@@ -338,7 +317,7 @@ class Blacklist(BaseCog):
             Raised when the snowflake is not blacklisted to begin with
 
         """
-        if not self.is_blacklisted(snowflake):
+        if not self.bot.is_blacklisted(snowflake):
             raise NotBlacklistedError(snowflake)
 
         await self.bot.pool.execute(
@@ -346,7 +325,7 @@ class Blacklist(BaseCog):
             snowflake.id,
         )
 
-        item_removed = self.blacklist_cache.pop(snowflake.id)
+        item_removed = self.bot.blacklist.pop(snowflake.id)
         return {snowflake.id: item_removed}
 
     def _timestamp_wording(self, dt: datetime.datetime | None) -> str:
