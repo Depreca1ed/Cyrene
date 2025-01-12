@@ -49,6 +49,17 @@ class Blacklist(BaseCog):
         content = f'Currently, `{bl_guild_count}` servers and `{bl_user_count}` users are blacklisted.'
         await ctx.reply(content=content)
 
+    @blacklist_cmd.command(name='show', description='Get information about a blacklist entry if any', aliases=['info'])
+    async def blacklist_info(
+        self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild
+    ) -> discord.Message:
+        bl = self.bot.is_blacklisted(snowflake)
+        if not bl:
+            return await ctx.reply(f'{snowflake} is not blacklisted')
+        timestamp_wording = self._timestamp_wording(bl.lasts_until)
+        content = f'`{snowflake}` is blacklisted from using this bot for `{bl.reason}` {timestamp_wording}.'
+        return await ctx.reply(content)
+
     @blacklist_cmd.command(name='add', help='Add a user to the blacklist')
     async def blacklist_add(
         self,

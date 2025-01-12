@@ -72,7 +72,6 @@ class Internals(Developer, ErrorHandler, Blacklist, name='Internals'):
         cog = self.bot.get_cog('internals')
         if cog and self.bot.is_blacklisted(guild):
             blacklisted = True
-            await guild.leave()
         if bot_farm_check(guild):
             bot_farm = True
 

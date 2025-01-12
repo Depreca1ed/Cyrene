@@ -127,7 +127,7 @@ class ErrorView(BaseView):
         )
         embed.set_author(
             name=f'Error #{self.error["id"]}',
-            icon_url=self.ctx.bot.bot_emojis['redtick'].url,
+            icon_url=self.ctx.bot.bot_emojis['redcross'].url,
         )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)

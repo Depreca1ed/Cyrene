@@ -34,7 +34,7 @@ class BaseView(discord.ui.View):
         _: Item[Any],
     ) -> None:
         func = interaction.followup.send if interaction.response.is_done() else interaction.response.send_message
-        await func(content=str(error) + '\n-# Developers have been informed')
+        await func(content=str(error) + '\n-# This incident has been reported')
         exc = f'```py\n{"".join(traceback.format_exception(type(error), error, error.__traceback__))}```'
         exc_link = await interaction.client.create_paste(filename='error', content=exc) if len(exc) > CHAR_LIMIT else None
 

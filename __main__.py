@@ -32,7 +32,7 @@ class RemoveNoise(logging.Filter):
 @contextlib.contextmanager
 def setup_logging() -> Generator[Any, Any, Any]:
     discord.utils.setup_logging()
-    logging.getLogger('discord').setLevel(logging.INFO)
+    logging.getLogger('discord').setLevel(logging.WARNING)
     logging.getLogger('discord.http').setLevel(logging.WARNING)
     logging.getLogger('discord.state').addFilter(RemoveNoise())
     yield
