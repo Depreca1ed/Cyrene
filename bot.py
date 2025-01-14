@@ -70,6 +70,7 @@ class Mafuyu(commands.Bot):
 
         self.maintenance: bool = False
         self.start_time = datetime.datetime.now()
+        self.reload_time: datetime.datetime | None = None
         self.colour = self.color = BASE_COLOUR
         self.initial_extensions = extensions
         self.context_class: type[commands.Context[Self]] = commands.Context
@@ -87,10 +88,10 @@ class Mafuyu(commands.Bot):
         )
         self.mystbin = mystbin.Client(session=self.session)
 
-        self.appinfo = await self.application_info()
         self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
 
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
+        self.appinfo = await self.application_info()
 
         for cog in self.initial_extensions:
             try:
@@ -119,6 +120,19 @@ class Mafuyu(commands.Bot):
         file = mystbin.File(filename=filename, content=content)
         return await self.mystbin.create_paste(files=[file])
 
+    async def refresh_bot_variables(self) -> None:
+        self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
+        self.appinfo = await self.application_info()
+
+    async def reload_extension(self, name: str | None, *, package: str | None = None) -> None:
+        if name:
+            await super().reload_extension(name, package=package)
+            return
+        for ext in self.initial_extensions:
+            await super().reload_extension(ext, package=package)  # Not sure what package implies but okay
+        return
+
     @property
     def owner(self) -> discord.User:
         return self.appinfo.owner
@@ -129,7 +143,7 @@ class Mafuyu(commands.Bot):
 
     @discord.utils.cached_property
     def logger_webhook(self) -> discord.Webhook:
-        return discord.Webhook.partial(config.WEBHOOK[0], config.WEBHOOK[1], session=self.session)
+        return discord.Webhook.partial(int(config.WEBHOOK[0]), str(config.WEBHOOK[1]), session=self.session)
 
     @discord.utils.cached_property
     def guild(self) -> discord.Guild:

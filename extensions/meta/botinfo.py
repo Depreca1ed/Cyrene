@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import datetime
-import importlib.metadata
+import pathlib
 import platform
 
 import discord
+import git
 import psutil
 from discord import app_commands
 from discord.ext import commands
@@ -12,15 +13,9 @@ from jishaku.math import natural_size
 
 from utils import BaseCog, Context, Embed, better_string
 
-try:
-    from importlib.metadata import distribution, packages_distributions
-except ImportError:
-    from importlib_metadata import distribution, packages_distributions
 
-import importlib
-import pathlib
-
-import git
+class TrollFlag(commands.FlagConverter, delimiter=' ', prefix='--'):
+    sex: str
 
 
 class BotInformation(BaseCog):
@@ -46,8 +41,29 @@ class BotInformation(BaseCog):
     )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=False)
-    async def botinfo(self, ctx: Context) -> None:
+    async def botinfo(
+        self,
+        ctx: Context,
+        *,
+        flag: str | None = commands.parameter(
+            converter=TrollFlag,
+            default=None,
+            displayed_default='',
+            displayed_name='',
+        ),  # type: ignore
+    ) -> None:
         bot = self.bot
+        if flag:
+            await ctx.reply('Sex')
+            return
+
+        channels = {'voice': 0, 'text': 0, 'total': 0}
+        for channel in bot.get_all_channels():
+            if channel.type in {discord.ChannelType.text, discord.ChannelType.news}:
+                channels['text'] += 1
+            elif channel.type in {discord.ChannelType.voice, discord.ChannelType.stage_voice}:
+                channels['voice'] += 1
+            channels['total'] += 1
 
         embed = Embed(
             title=str(bot.user.name),
@@ -60,49 +76,68 @@ class BotInformation(BaseCog):
             icon_url=bot.owner.display_avatar.url,
         )
         embed.add_field(
-            name='General Statistics',
             value=better_string(
                 [
-                    f'- **Servers :** `{len(bot.guilds)}`',
-                    f'- **Users :** `{len(bot.users)}`',
                     (
-                        f'  - **Installed by :** `{self.bot.appinfo.approximate_user_install_count}` users'
+                        f'> I am in **{len(bot.guilds)} servers** '
+                        f'and can see **{len(bot.users)} users** (`{len([_ for _ in bot.users if _.bot is True])} bots`)'
+                    ),
+                    (
+                        f'> - **Installed by :** {self.bot.appinfo.approximate_user_install_count} users'
                         if self.bot.appinfo.approximate_user_install_count
                         else None
                     ),
+                    (
+                        f'- **Channels :** {channels["total"]}\n'
+                        f'  - -# {channels["text"]} Text & {channels["voice"]} Voice channels'
+                    )
+                    if channels['total'] > 0
+                    else None,
                 ],
                 seperator='\n',
             ),
         )
 
-        distributions: list[str] = [
-            dist
-            for dist in packages_distributions()['discord']
-            if any(file.parts == ('discord', '__init__.py') for file in distribution(dist).files)  # pyright: ignore[reportOptionalIterable]
-        ]
-
-        if distributions:
-            dist_version = f'{distributions[0]} {importlib.metadata.version(distributions[0])}'
-        else:
-            dist_version = f'unknown {discord.__version__}'
         proc = psutil.Process()
         with proc.oneshot():
             memory = proc.memory_info().rss
-            uptime = discord.utils.format_dt(bot.start_time, 'R')
             memory_usage = natural_size(memory)
 
-            embed.add_field(
-                name='System Statistics',
-                value=better_string(
-                    [
-                        f'> Made in `Python {platform.python_version()}` using `{dist_version}`',
-                        f'- **Uptime :** {uptime}',
-                        f'- **Memory :** `{memory_usage}` (`{round(proc.memory_percent(), 2)}%`)',
-                    ],
-                    seperator='\n',
-                ),
-                inline=False,
-            )
+        uptime = discord.utils.format_dt(bot.start_time, 'R')
+        is_loaded = len([_ for _ in bot.initial_extensions if _ in bot.extensions])
+        usable_commands = 0
+        for cog in bot.cogs:
+            cog_resolved = bot.get_cog(cog)
+            if not cog_resolved or cog.lower() == 'jishaku':
+                continue
+            for cmd in cog_resolved.walk_commands():
+                valid = True
+                for check in cmd.checks:
+                    try:
+                        cmd_check = await discord.utils.maybe_coroutine(check, ctx)
+                    except commands.CheckFailure:
+                        cmd_check = False
+                    if cmd_check:
+                        continue
+                    valid = False
+                    break
+                if valid:
+                    usable_commands += 1
+
+        embed.add_field(
+            name='Internal Statistics',
+            value=better_string(
+                [
+                    f'- **Ping :** {bot.latency:.2f}ms',
+                    f'- **Uptime :** {uptime}',
+                    f'- **Memory :** `{memory_usage}` (`{round(proc.memory_percent(), 2)}%`)',
+                    f'- **Categories :** {is_loaded}/{len(bot.initial_extensions)} enabled',
+                    f'  - **Commands :** {usable_commands} usable commands',
+                    # TODO(Depreca1ed): Add command stats data here
+                ],
+                seperator='\n',
+            ),
+        )
 
         embed.add_field(
             value=better_string(
@@ -124,5 +159,6 @@ class BotInformation(BaseCog):
 
         embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else None)
         embed.set_image(url=(bot.user.banner or (await bot.fetch_user(bot.user.id)).banner))
+        embed.set_footer(text=f'Made in Python{platform.python_version()} using discord.py{discord.__version__}')
 
         await ctx.send(embed=embed)
