@@ -132,7 +132,7 @@ class BotInformation(BaseCog):
                         if bot.appinfo.terms_of_service_url and bot.appinfo.privacy_policy_url
                         else None
                     ),
-                    f'-# [Invite the bot]({discord.utils.oauth_url(bot.user.id, scopeless=True)})',
+                    f'-# [Invite the bot]({discord.utils.oauth_url(bot.user.id)})',
                     f'-# [Support Server]({bot.support_invite})',
                 ],
                 seperator='\n',
