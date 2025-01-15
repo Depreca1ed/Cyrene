@@ -1,0 +1,3 @@
+[submodule "extensions/private"]
+	path = extensions/private
+	url = https://github.com/Depreca1ed/private
