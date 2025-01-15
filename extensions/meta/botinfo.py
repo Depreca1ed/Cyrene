@@ -14,10 +14,6 @@ from jishaku.math import natural_size
 from utils import BaseCog, Context, Embed, better_string
 
 
-class TrollFlag(commands.FlagConverter, delimiter=' ', prefix='--'):
-    sex: str
-
-
 class BotInformation(BaseCog):
     def get_commits(self, count: int = 5) -> list[git.Commit]:
         repo = git.Repo(pathlib.Path.cwd())
@@ -34,28 +30,14 @@ class BotInformation(BaseCog):
 
         return f'**[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})** **>** {message}'
 
-    @commands.hybrid_command(
-        name='about',
-        aliases=['info'],
-        help='Get information about this bot',
-    )
+    @commands.hybrid_command(name='about', aliases=['info', 'botinfo'], help='Get information about this bot', usage='')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=False)
     async def botinfo(
         self,
         ctx: Context,
-        *,
-        flag: str | None = commands.parameter(
-            converter=TrollFlag,
-            default=None,
-            displayed_default='',
-            displayed_name='',
-        ),  # type: ignore
     ) -> None:
         bot = self.bot
-        if flag:
-            await ctx.reply('Sex')
-            return
 
         channels = {'voice': 0, 'text': 0, 'total': 0}
         for channel in bot.get_all_channels():
@@ -150,7 +132,7 @@ class BotInformation(BaseCog):
                         if bot.appinfo.terms_of_service_url and bot.appinfo.privacy_policy_url
                         else None
                     ),
-                    '-# [Invite the bot](https://discord.com/oauth2/authorize?client_id=1260312970890842182)',
+                    f'-# [Invite the bot]({discord.utils.oauth_url(bot.user.id, scopeless=True)})',
                     f'-# [Support Server]({bot.support_invite})',
                 ],
                 seperator='\n',

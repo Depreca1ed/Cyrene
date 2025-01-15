@@ -18,7 +18,7 @@ def better_string(data: Iterable[str | Any | None], *, seperator: str) -> str:
 
 
 def generate_timestamp_string(dt: datetime.datetime) -> str:
-    return f'{discord.utils.format_dt(dt, "D")}({discord.utils.format_dt(dt, "R")})'
+    return f'{discord.utils.format_dt(dt, "D")} ({discord.utils.format_dt(dt, "R")})'
 
 
 def clean_error(objects: list[str] | str, *, seperator: str, prefix: str) -> str:
