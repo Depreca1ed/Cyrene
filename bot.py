@@ -143,7 +143,7 @@ class Mafuyu(commands.Bot):
 
     @discord.utils.cached_property
     def logger_webhook(self) -> discord.Webhook:
-        return discord.Webhook.partial(int(config.WEBHOOK[0]), str(config.WEBHOOK[1]), session=self.session)
+        return discord.Webhook.from_url(config.WEBHOOK, session=self.session)
 
     @discord.utils.cached_property
     def guild(self) -> discord.Guild:
