@@ -144,3 +144,7 @@ class BotInformation(BaseCog):
         embed.set_footer(text=f'Made in Python{platform.python_version()} using discord.py{discord.__version__}')
 
         await ctx.send(embed=embed)
+
+    @commands.command(name='support', help='Get invite link to the support server for the bot')
+    async def support(self, ctx: Context) -> None:
+        await ctx.reply(str(self.bot.support_invite))

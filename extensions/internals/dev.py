@@ -20,3 +20,8 @@ class Developer(BaseCog):
                 messages.append(f'Reloaded {ext}')
 
         await ctx.send(content=better_string(messages, seperator='\n'))
+
+    @commands.command(name='eval', aliases=['e'], help='Evaluate code')
+    async def eval(self, ctx: Context, code: str) -> None:
+        result = exec(code)  # noqa: S102
+        await ctx.reply(result)
