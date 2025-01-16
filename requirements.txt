@@ -19,3 +19,4 @@ importlib_metadata
 pre-commit
 configparser
 gitpython
+dotenv
