@@ -11,7 +11,6 @@ WAIFU_TOKEN: str = getenv('WAIFU_TOKEN')
 
 WEBHOOK: str = getenv('WEBHOOK')
 
-
 DATABASE_CRED: str = getenv('POSTGRES_URI')
 
 DEFAULT_PREFIX: str = getenv('DEFAULT_PREFIX')
