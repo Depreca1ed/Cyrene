@@ -23,6 +23,7 @@ extensions = [
     'extensions.animanga',
     'extensions.internals',
     'extensions.meta',
+    'extensions.private',
 ]
 
 jishaku.Flags.FORCE_PAGINATOR = True
