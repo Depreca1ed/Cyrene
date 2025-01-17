@@ -110,7 +110,7 @@ class BotInformation(BaseCog):
             name='Internal Statistics',
             value=better_string(
                 [
-                    f'- **Ping :** {bot.latency:.2f}ms',
+                    f'- **Ping :** {bot.latency:.2f}s',
                     f'- **Uptime :** {uptime}',
                     f'- **Memory :** `{memory_usage}` (`{round(proc.memory_percent(), 2)}%`)',
                     f'- **Categories :** {is_loaded}/{len(bot.initial_extensions)} enabled',
