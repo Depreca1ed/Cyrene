@@ -2,19 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import discord
 from discord.ext import commands
 
 if TYPE_CHECKING:
     from datetime import datetime
 
-    import discord
 
 __all__ = (
     'AlreadyBlacklistedError',
-    'BlacklistedGuildError',
-    'BlacklistedUserError',
-    'DeBotError',
     'FeatureDisabledError',
+    'MafuyuError',
     'NotBlacklistedError',
     'PrefixAlreadyPresentError',
     'PrefixNotInitialisedError',
@@ -23,65 +21,57 @@ __all__ = (
 )
 
 
-class DeBotError(Exception): ...
+class MafuyuError(discord.ClientException): ...
 
 
-class FeatureDisabledError(commands.CheckFailure, DeBotError):
+class FeatureDisabledError(commands.CheckFailure, MafuyuError):
     def __init__(self) -> None:
         super().__init__('This feature is not enabled in this server.')
 
 
-class PrefixNotInitialisedError(commands.CommandError, DeBotError):
+class PrefixNotInitialisedError(MafuyuError):
     def __init__(self, guild: discord.Guild) -> None:
         super().__init__(f'Prefixes were not initialised for {guild.id}')
 
 
-class PrefixAlreadyPresentError(commands.CommandError, DeBotError):
+class PrefixAlreadyPresentError(commands.CommandError, MafuyuError):
     def __init__(self, prefix: str) -> None:
         super().__init__(f"'{prefix} is an already present prefix.'")
 
 
-class PrefixNotPresentError(commands.CommandError, DeBotError):
+class PrefixNotPresentError(commands.CommandError, MafuyuError):
     def __init__(self, prefix: str, guild: discord.Guild) -> None:
         super().__init__(f'{prefix} is not present in guild: {guild.id}')
 
 
-class BlacklistedUserError(commands.CheckFailure, DeBotError):
+class AlreadyBlacklistedError(MafuyuError):
     def __init__(
         self,
-        snowflake: discord.User | discord.Member,
+        snowflake: discord.User | discord.Member | discord.Guild,
+        *,
         reason: str,
         until: datetime | None,
     ) -> None:
-        super().__init__(f'{snowflake} is blacklisted for {reason} until {until}')
+        self.snowflake = snowflake
+        self.reason = reason
+        self.until = until
+        timestamp_wording = f'until {until}' if until else 'permanently'
+        string = f'{snowflake} is already blacklisted for {reason} {timestamp_wording}'
+        super().__init__(string)
 
 
-class BlacklistedGuildError(commands.CheckFailure, DeBotError):
-    def __init__(self, snowflake: discord.Guild, reason: str, until: datetime | None) -> None:
-        super().__init__(f'{snowflake} is blacklisted for {reason} until {until}')
-
-
-class AlreadyBlacklistedError(commands.CommandError, DeBotError):
-    def __init__(
-        self,
-        snowflake: discord.User | discord.Guild,
-        reason: str,
-        until: datetime | None,
-    ) -> None:
-        super().__init__(f'{snowflake} is already blacklisted for {reason} until {until}')
-
-
-class NotBlacklistedError(commands.CommandError, DeBotError):
-    def __init__(self, snowflake: discord.User | discord.Guild) -> None:
+class NotBlacklistedError(MafuyuError):
+    def __init__(self, snowflake: discord.User | discord.Member | discord.Guild) -> None:
+        self.snowflake = snowflake
         super().__init__(f'{snowflake} is not blacklisted.')
 
 
-class UnderMaintenanceError(commands.CheckFailure, DeBotError):
+class UnderMaintenanceError(commands.CheckFailure, MafuyuError):
     def __init__(self) -> None:
         super().__init__('The bot is currently under maintenance.')
 
 
-class WaifuNotFoundError(commands.CommandError, DeBotError):
+class WaifuNotFoundError(commands.CommandError, MafuyuError):
     def __init__(self, waifu: str | None = None) -> None:
         if waifu:
             waifu = waifu.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
@@ -90,4 +80,4 @@ class WaifuNotFoundError(commands.CommandError, DeBotError):
             super().__init__(message='Could not find any results')
 
 
-# TODO(Depreca1ed): All of these are not supposed to be CommandError. Change them to actual errors  # noqa: FIX002, TD003
+# TODO(Depreca1ed): All of these are not supposed to be CommandError. Change them to actual errors

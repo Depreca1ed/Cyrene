@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 import discord
 
-from bot import DeBot
+from bot import Mafuyu
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -32,7 +32,7 @@ class RemoveNoise(logging.Filter):
 @contextlib.contextmanager
 def setup_logging() -> Generator[Any, Any, Any]:
     discord.utils.setup_logging()
-    logging.getLogger('discord').setLevel(logging.INFO)
+    logging.getLogger('discord').setLevel(logging.WARNING)
     logging.getLogger('discord.http').setLevel(logging.WARNING)
     logging.getLogger('discord.state').addFilter(RemoveNoise())
     yield
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     with setup_logging():
 
         async def run_bot() -> None:
-            async with DeBot() as bot:
+            async with Mafuyu() as bot:
                 await bot.start(bot.token)
 
         asyncio.run(run_bot())

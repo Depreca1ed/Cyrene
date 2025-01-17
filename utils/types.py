@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Literal, NamedTuple, TypedDict
+from typing import Literal, NamedTuple
 
 __all__ = ('BlacklistBase', 'WaifuResult')
 
 
-class BlacklistBase(TypedDict):
+class BlacklistBase(NamedTuple):
     reason: str
     lasts_until: datetime | None
     blacklist_type: Literal['guild', 'user']

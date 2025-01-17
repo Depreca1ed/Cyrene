@@ -1,5 +1,4 @@
 discord.py @ git+https://github.com/rapptz/discord.py
-git+https://github.com/InterStella0/starlight-dpy
 git+https://github.com/rapptz/discord-ext-menus
 git+https://github.com/gorialis/jishaku
 cachetools
@@ -19,3 +18,5 @@ pillow
 importlib_metadata
 pre-commit
 configparser
+gitpython
+python-dotenv

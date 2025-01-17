@@ -5,28 +5,32 @@ from typing import TYPE_CHECKING, Self
 import discord
 from asyncpg.exceptions import UniqueViolationError
 
-from utils import BaseView, DeContext, Embed, WaifuNotFoundError, WaifuResult, better_string
+from utils import BaseView, Context, Embed, WaifuNotFoundError, WaifuResult, better_string
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from bot import DeBot
+    from bot import Mafuyu
 
 
-__all__ = (
-    'SafebooruPokemonView',
-    'WaifuSearchView',
-    'WaifuView',
-)
+__all__ = ('WaifuSearchView',)
 
 
 class SmashOrPass(BaseView):
     message: discord.Message | None
-    ctx: DeContext
+    ctx: Context
     current: WaifuResult
     token: str
 
-    def __init__(self, session: ClientSession, *, for_user: int, nsfw: bool, source: str, query: None | str = None) -> None:
+    def __init__(
+        self,
+        session: ClientSession,
+        *,
+        for_user: int,
+        nsfw: bool,
+        source: str,
+        query: None | str = None,
+    ) -> None:
         super().__init__(timeout=500.0)
         self.session = session
         self.for_user = for_user
@@ -38,17 +42,22 @@ class SmashOrPass(BaseView):
         self.passers: set[discord.User | discord.Member] = set()
 
     @classmethod
-    async def start(cls, ctx: DeContext, source: str, *, query: None | str = None) -> Self | None:
+    async def start(cls, ctx: Context, source: str, *, query: None | str = None) -> Self | None:
         inst = cls(
             ctx.bot.session,
             for_user=ctx.author.id,
-            nsfw=ctx.channel.is_nsfw()
-            if not isinstance(ctx.channel, discord.DMChannel | discord.GroupChannel | discord.PartialMessageable)
-            else False,
+            nsfw=(
+                ctx.channel.is_nsfw()
+                if not isinstance(
+                    ctx.channel,
+                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
+                )
+                else False
+            ),
             source=source,
             query=query,
         )
-        inst.token = ctx.bot.config.get('bot', 'waifu')
+        inst.token = ctx.bot.config.WAIFU_TOKEN
         inst.ctx = ctx
         data = await inst.request()
 
@@ -86,7 +95,7 @@ class SmashOrPass(BaseView):
         emoji='<:MafuyuBlush:1314149745794617365>',
         style=discord.ButtonStyle.green,
     )
-    async def smash(self, interaction: discord.Interaction[DeBot], _: discord.ui.Button[Self]) -> None:
+    async def smash(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         if interaction.user in self.smashers:
             try:
                 await interaction.client.pool.execute(
@@ -131,7 +140,7 @@ class SmashOrPass(BaseView):
         emoji='<:MafuyuUnamused:1314149535043293215>',
         style=discord.ButtonStyle.red,
     )
-    async def passbutton(self, interaction: discord.Interaction[DeBot], _: discord.ui.Button[Self]) -> None:
+    async def passbutton(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         if interaction.user in self.passers:
             return await interaction.response.defer()
 
@@ -158,7 +167,7 @@ class SmashOrPass(BaseView):
         return None
 
     @discord.ui.button(emoji='🔁', style=discord.ButtonStyle.grey)
-    async def _next(self, interaction: discord.Interaction[DeBot], _: discord.ui.Button[Self]) -> None:
+    async def _next(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         self.smashers.clear()
         self.passers.clear()
         try:
@@ -187,30 +196,6 @@ class SmashOrPass(BaseView):
         return True
 
 
-class WaifuView(SmashOrPass):
-    async def request(self) -> WaifuResult:
-        waifu = await self.session.get(
-            'https://api.waifu.im/search',
-            params={
-                'is_nsfw': 'false' if self.nsfw is False else 'null',
-                'token': self.token,
-            },
-        )
-
-        data = await waifu.json()
-        data = data['images'][0]
-        current = WaifuResult(
-            name=self.query,
-            image_id=data['image_id'],
-            source=data['source'],
-            dominant_color=data['dominant_color'],
-            url=data['url'],
-        )
-        self.current = current
-
-        return self.current
-
-
 class WaifuSearchView(SmashOrPass):
     async def request(self) -> WaifuResult:
         waifu = await self.session.get(
@@ -219,7 +204,7 @@ class WaifuSearchView(SmashOrPass):
                 'tags': better_string(
                     [
                         'solo',
-                        self.query,
+                        self.query or '',
                         'rating:'
                         + (
                             better_string(['explicit', 'questionable', 'sensitive'], seperator=',')
@@ -235,39 +220,6 @@ class WaifuSearchView(SmashOrPass):
         success = 200
         if waifu.status != success or not data:
             raise WaifuNotFoundError(self.query)
-        current = WaifuResult(
-            name=self.query,
-            image_id=data['id'],
-            dominant_color=None,
-            source=data['source'],
-            url=data['file_url'],
-        )
-        self.current = current
-
-        return self.current
-
-
-class SafebooruPokemonView(SmashOrPass):
-    async def request(self) -> WaifuResult:
-        waifu = await self.session.get(
-            'https://danbooru.donmai.us/posts/random.json',
-            params={
-                'tags': better_string(
-                    [
-                        'solo',
-                        'pokemon_(creature)',
-                        'rating:'
-                        + (
-                            better_string(['explicit', 'questionable', 'sensitive'], seperator=',')
-                            if self.nsfw is True
-                            else 'general'
-                        ),
-                    ],
-                    seperator=' ',
-                ),
-            },
-        )
-        data = await waifu.json()
         current = WaifuResult(
             name=self.query,
             image_id=data['id'],
