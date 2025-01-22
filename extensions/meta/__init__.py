@@ -5,7 +5,6 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 
 import discord
-from discord import app_commands
 from discord.ext import commands
 from jishaku.functools import executor_function
 from PIL import Image
@@ -34,9 +33,7 @@ def make_image(colour: discord.Colour) -> BytesIO:
 class Meta(BotInformation, Userinfo, ServerInfo, name='Meta'):
     """For everything related to Discord or Mafuyu."""
 
-    @commands.hybrid_command(name='colour', aliases=['color'], description='Get information about a certain colour')
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=True)
+    @commands.command(name='colour', aliases=['color'], description='Get information about a certain colour')
     async def colour(self, ctx: Context, *, colour: discord.Colour | None = None) -> None:
         colour = colour or discord.Colour.random()
 
