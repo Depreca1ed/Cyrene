@@ -94,7 +94,7 @@ class Mafuyu(commands.Bot):
         await self.refresh_bot_variables()
 
         self.topgg = DBLClient(self, config.TOPGG, autopost=True, post_shard_count=True)
-        self.topgg_webhook = WebhookManager(self).dbl_webhook('/debotdbl').run(1234)
+        self.topgg_webhook = await WebhookManager(self).dbl_webhook('/debotdbl', auth_key="debotdbl").run(1234)
 
         for cog in self.initial_extensions:
             try:
