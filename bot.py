@@ -10,6 +10,8 @@ import discord
 import jishaku
 import mystbin
 from discord.ext import commands
+from topgg.client import DBLClient
+from topgg.webhook import WebhookManager
 
 import config
 from utils import BASE_COLOUR, BlacklistBase, Context
@@ -89,10 +91,10 @@ class Mafuyu(commands.Bot):
         )
         self.mystbin = mystbin.Client(session=self.session)
 
-        self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
+        await self.refresh_bot_variables()
 
-        self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
-        self.appinfo = await self.application_info()
+        self.topgg = DBLClient(self, config.TOPGG, autopost=True, post_shard_count=True)
+        self.topgg_webhook = WebhookManager(self).dbl_webhook('/debotdbl').run(1234)
 
         for cog in self.initial_extensions:
             try:
@@ -158,11 +160,23 @@ class Mafuyu(commands.Bot):
     def support_invite(self) -> discord.Invite:
         return self._support_invite
 
+    @discord.utils.cached_property
+    def invite_url(self) -> str:
+        return discord.utils.oauth_url(self.user.id, scopes=None)
+
+    @property
+    def topgg_url(self) -> str:
+        return f'https://top.gg/bot/{self.user.id}'
+
     async def close(self) -> None:
         if hasattr(self, 'pool'):
             await self.pool.close()
         if hasattr(self, 'session'):
             await self.session.close()
+        if hasattr(self, 'topgg'):
+            await self.topgg.close()
+        if hasattr(self, 'topgg_webhook'):
+            self.topgg_webhook.cancel()
         await super().close()
 
     @property

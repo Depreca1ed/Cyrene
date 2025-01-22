@@ -32,7 +32,7 @@ class BotInformation(BaseCog):
 
     @commands.hybrid_command(name='about', aliases=['info', 'botinfo'], help='Get information about this bot', usage='')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=False)
+    @app_commands.allowed_installs(guilds=True, users=True)
     async def botinfo(
         self,
         ctx: Context,
@@ -132,7 +132,7 @@ class BotInformation(BaseCog):
                         if bot.appinfo.terms_of_service_url and bot.appinfo.privacy_policy_url
                         else None
                     ),
-                    f'-# [Invite the bot]({discord.utils.oauth_url(bot.user.id)})',
+                    f'-# [Invite the bot]({bot.invite_url})',
                     f'-# [Support Server]({bot.support_invite})',
                 ],
                 seperator='\n',
@@ -145,6 +145,20 @@ class BotInformation(BaseCog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='support', help='Get invite link to the support server for the bot')
+    @commands.hybrid_command(name='support', help='Get invite link to the support server for the bot')
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     async def support(self, ctx: Context) -> None:
         await ctx.reply(str(self.bot.support_invite))
+
+    @commands.hybrid_command(name='invite', help='Get the URL for inviting me to a server or adding it to your account')
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def invite(self, ctx: Context) -> None:
+        await ctx.reply(str(self.bot.invite_url))
+
+    @commands.hybrid_command(name='vote', help='Get the top.gg vote link for the bot')
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def vote(self, ctx: Context) -> None:
+        await ctx.reply(str(self.bot.topgg_url))
