@@ -53,25 +53,13 @@ async def waifu_autocomplete(
 
 
 class Waifu(BaseCog):
-    @commands.hybrid_group(name='waifu', help='Get waifu images with an option to smash or pass')
+    @commands.hybrid_group(name='waifu', help='Get waifu images with an option to smash or pass', fallback='get')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def waifu(self, ctx: Context, waifu: str | None) -> None:
-        await ctx.invoke(self.waifu_show, waifu)
-
-    @waifu.command(name='favourites', with_app_command=False, disabled=True)
-    @commands.is_owner()
-    async def waifu_favourites(self, ctx: Context) -> None:
-        await ctx.reply('test')
-
-    @waifu.command(
-        name='show',
-        hidden=True,
-        help='Get waifu images with an option to smash or pass',
-    )
     @app_commands.autocomplete(waifu=waifu_autocomplete)
-    async def waifu_show(self, ctx: Context, waifu: str | None) -> None:
+    async def waifu(self, ctx: Context, *, waifu: str | None) -> None:
         if waifu:
+            waifu = waifu.replace(' ', '_')
             characters = await get_waifu(ctx.bot.session, waifu)
             waifu = characters[0][1]  # Points to the value of the first result
         view = WaifuSearchView(
@@ -90,22 +78,7 @@ class Waifu(BaseCog):
         )
         await view.start(ctx, 'waifu', query=waifu)
 
-    @commands.hybrid_command(name='pokemon', help='Get pokemon images with an option to smash or pass')
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=True)
-    async def pokemon(self, ctx: Context) -> None:
-        view = WaifuSearchView(
-            self.bot.session,
-            for_user=ctx.author.id,
-            nsfw=(
-                ctx.channel.is_nsfw()
-                if not isinstance(
-                    ctx.channel,
-                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
-                )
-                else False
-            ),
-            source='waifusearch',
-            query='pokemon_(creature)',
-        )
-        await view.start(ctx, 'waifusearch')
+    @waifu.command(name='favourites', with_app_command=False, disabled=True)
+    @commands.is_owner()
+    async def waifu_favourites(self, ctx: Context) -> None:
+        await ctx.reply('test')
