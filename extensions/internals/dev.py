@@ -66,7 +66,7 @@ class Developer(BaseCog):
         code = self._cleanup_code(code)
         code = self._add_return(code)
 
-        the_actual_code = f'async def run_code():\n{textwrap.indent(code, '    ')}'
+        the_actual_code = f'async def run_code():\n{textwrap.indent(code, "    ")}'
 
         try:
             exec(the_actual_code, variables)  # noqa: S102
