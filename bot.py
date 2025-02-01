@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Self, TypeVar
+from typing import TypeVar
 
 import aiohttp
 import asyncpg
@@ -76,7 +76,6 @@ class Mafuyu(commands.Bot):
         self.reload_time: datetime.datetime | None = None
         self.colour = self.color = BASE_COLOUR
         self.initial_extensions = extensions
-        self.context_class: type[commands.Context[Self]] = commands.Context
 
     async def setup_hook(self) -> None:
         pool = await asyncpg.create_pool(config.DATABASE_CRED)
@@ -94,7 +93,8 @@ class Mafuyu(commands.Bot):
         await self.refresh_bot_variables()
 
         self.topgg = DBLClient(self, config.TOPGG, autopost=True, post_shard_count=True)
-        self.topgg_webhook = await WebhookManager(self).dbl_webhook('/debotdbl', auth_key="debotdbl").run(1234)
+        self.topgg_webhook = WebhookManager(self).dbl_webhook('/debotdbl', auth_key='debotdbl')
+        self.topgg_webhook.run(1234)
 
         for cog in self.initial_extensions:
             try:
@@ -115,9 +115,8 @@ class Mafuyu(commands.Bot):
     def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild) -> BlacklistBase | None:
         return self.blacklist.get(snowflake.id, None)
 
-    async def get_context(self, message: discord.Message, *, cls: type[C] | None = None) -> Context | commands.Context[Self]:
-        new_cls = cls or self.context_class
-        return await super().get_context(message, cls=new_cls)
+    async def get_context(self, origin: discord.Message | discord.Interaction, *, cls: type[Context] = Context) -> Context:
+        return await super().get_context(origin, cls=cls)
 
     async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
         file = mystbin.File(filename=filename, content=content)
@@ -176,7 +175,7 @@ class Mafuyu(commands.Bot):
         if hasattr(self, 'topgg'):
             await self.topgg.close()
         if hasattr(self, 'topgg_webhook'):
-            self.topgg_webhook.cancel()
+            await self.topgg_webhook.close()
         await super().close()
 
     @property

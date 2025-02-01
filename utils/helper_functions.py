@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import traceback
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import discord
@@ -8,6 +10,8 @@ from discord.ext import commands
 if TYPE_CHECKING:
     import datetime
     from collections.abc import Iterable
+
+    from bot import Mafuyu
 
 
 __all__ = ('better_string',)
@@ -113,3 +117,9 @@ def generate_error_objects(
         raise ValueError(msg)
 
     return missings
+
+
+def format_tb(bot: Mafuyu, error: Exception) -> str:
+    return ''.join(traceback.format_exception(type(error), error, error.__traceback__)).replace(
+        str(Path.cwd()), f'/{bot.user.name}'
+    )

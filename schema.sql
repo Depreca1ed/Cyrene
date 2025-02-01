@@ -55,4 +55,13 @@ CREATE TABLE IF NOT EXISTS ErrorReminders (
     PRIMARY KEY (id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS CommandStats (
+    count INTEGER NOT NULL,
+    command_name TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    channel_id INTEGER,
+    guild_id INTEGER,
+    PRIMARY KEY (command_name, user_id, channel_id, guild_id)
+);
+
 COMMIT;

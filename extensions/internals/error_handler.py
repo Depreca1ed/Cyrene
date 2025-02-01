@@ -6,8 +6,6 @@ import datetime
 import difflib
 import logging
 import operator
-import traceback
-from pathlib import Path
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -24,6 +22,7 @@ from utils import (
     WaifuNotFoundError,
     better_string,
     clean_error,
+    format_tb,
     generate_error_objects,
 )
 
@@ -228,11 +227,6 @@ class ErrorHandler(BaseCog):
             n=1,
         )
 
-    def _format_tb(self, error: Exception) -> str:
-        return ''.join(traceback.format_exception(type(error), error, error.__traceback__)).replace(
-            str(Path.cwd()), f'/{self.bot.user.name}'
-        )
-
     async def _log_error(
         self,
         error: commands.CommandError,
@@ -242,7 +236,7 @@ class ErrorHandler(BaseCog):
         message: discord.Message,
         guild: discord.Guild | None = None,
     ) -> asyncpg.Record:
-        formatted_error = self._format_tb(error)
+        formatted_error = format_tb(self.bot, error)
         time_occured = datetime.datetime.now()
 
         record = await self.bot.pool.fetchrow(

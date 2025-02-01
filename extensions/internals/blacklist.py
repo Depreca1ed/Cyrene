@@ -60,7 +60,7 @@ class Blacklist(BaseCog):
         content = f'`{snowflake}` is blacklisted from using this bot for `{bl.reason}` {timestamp_wording}.'
         return await ctx.reply(content)
 
-    @blacklist_cmd.command(name='add', help='Add a user to the blacklist')
+    @blacklist_cmd.command(name='add', help='Add a user or server to the blacklist')
     async def blacklist_add(
         self,
         ctx: Context,
@@ -88,7 +88,7 @@ class Blacklist(BaseCog):
         await ctx.message.add_reaction(self.bot.bot_emojis['greentick'])
         return
 
-    @blacklist_cmd.command(name='remove', help='Remove a user from blacklist')
+    @blacklist_cmd.command(name='remove', help='Remove a user or server from blacklist')
     async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild) -> None:
         try:
             await self.remove(snowflake)
