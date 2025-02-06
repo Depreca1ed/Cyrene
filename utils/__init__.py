@@ -13,7 +13,14 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
-from .helper_functions import better_string, clean_error, format_tb, generate_error_objects, generate_timestamp_string
+from .helper_functions import (
+    better_string,
+    clean_error,
+    format_tb,
+    generate_error_objects,
+    generate_timestamp_string,
+    get_command_signature,
+)
 from .pagination import Paginator
 from .types import BlacklistBase, WaifuResult
 from .view import BaseView
@@ -46,4 +53,5 @@ __all__ = (
     'format_tb',
     'generate_error_objects',
     'generate_timestamp_string',
+    'get_command_signature',
 )

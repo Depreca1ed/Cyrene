@@ -13,6 +13,8 @@ if TYPE_CHECKING:
 
     from bot import Mafuyu
 
+    from .context import Context
+
 
 __all__ = ('better_string',)
 
@@ -123,3 +125,37 @@ def format_tb(bot: Mafuyu, error: Exception) -> str:
     return ''.join(traceback.format_exception(type(error), error, error.__traceback__)).replace(
         str(Path.cwd()), f'/{bot.user.name}'
     )
+
+
+def get_command_signature(ctx: Context, command: commands.Command[Any, ..., Any], /) -> str:
+    """
+    Retrieve the signature portion of the help page.
+
+    This is a modified copy of commands.HelpCommand.get_command_signature
+
+    Parameters
+    ----------
+    ctx: :class:`Context`
+        The context for this fetch.
+    command: :class:`Command`
+        The command to get the signature of.
+
+    Returns
+    -------
+    :class:`str`
+        The signature for the command.
+
+    """
+    parent: None | commands.Group[Any, ..., Any] = command.parent  # pyright: ignore[reportAssignmentType]
+    entries: list[str] = []
+    while parent is not None:
+        if not parent.signature or parent.invoke_without_command:
+            entries.append(parent.name)
+        else:
+            entries.append(parent.name + ' ' + parent.signature)
+        parent = parent.parent  # pyright: ignore[reportAssignmentType]
+    parent_sig = ' '.join(reversed(entries))
+
+    alias = command.name if not parent_sig else parent_sig + ' ' + command.name
+
+    return f'{ctx.clean_prefix}{alias} {command.signature}'

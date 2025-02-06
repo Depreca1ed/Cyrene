@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+from pathlib import Path
 from typing import TypeVar
 
 import aiohttp
@@ -84,6 +85,9 @@ class Mafuyu(commands.Bot):
             raise RuntimeError(msg)
 
         self.pool = pool
+
+        with Path('schema.sql').open(encoding='utf-8') as file:  # noqa: ASYNC230
+            await self.pool.execute(file.read())
 
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=60),

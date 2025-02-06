@@ -24,6 +24,7 @@ from utils import (
     clean_error,
     format_tb,
     generate_error_objects,
+    get_command_signature,
 )
 
 if TYPE_CHECKING:
@@ -328,7 +329,7 @@ class ErrorHandler(BaseCog):
                 description=better_string(
                     (
                         f'You did not provide a **__{param_name}__** argument.',
-                        f'> -# `{ctx.clean_prefix}{ctx.command} {ctx.command.signature}`',
+                        f'> -# `{get_command_signature(ctx, ctx.command)}`',
                     ),
                     seperator='\n',
                 ),

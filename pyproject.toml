@@ -8,12 +8,10 @@
 target-version = "py312"
 line-length = 125
 preview = true
-exclude = ['config.py']
 
 [tool.ruff.format]
 quote-style = "single"
 preview = true
-exclude = ['config.py']
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -44,11 +42,6 @@ max-complexity = 15
 [tool.ruff.lint.pylint]
 max-returns = 10
 max-locals = 20
-
-[tool.ruff.lint.isort]
-split-on-trailing-comma = true
-combine-as-imports = true
-
 
 [tool.ruff.lint.flake8-annotations]
 allow-star-arg-any = true
