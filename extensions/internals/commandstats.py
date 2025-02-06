@@ -39,7 +39,7 @@ class CommandStats(BaseCog):
             user.id,
         )
 
-        _data = sorted(
+        data_parsed = sorted(
             [(int(d['usage_count']), str(d['command_name'])) for d in data][:5],
             key=operator.itemgetter(0),
             reverse=True,
@@ -48,7 +48,7 @@ class CommandStats(BaseCog):
         # So i have been wondering... what am i doing...
 
         sorted_commands: dict[str, int] = {}
-        for cmd in _data:
+        for cmd in data_parsed:
             if not sorted_commands.get(cmd[1]):
                 sorted_commands[cmd[1]] = cmd[0]
                 continue
@@ -96,13 +96,13 @@ class CommandStats(BaseCog):
             channel.id,
         )
 
-        _data = sorted(
+        data_parsed = sorted(
             [(int(d['usage_count']), str(d['command_name'])) for d in data],
             key=operator.itemgetter(0),
             reverse=True,
         )
         sorted_commands: dict[str, int] = {}
-        for cmd in _data:
+        for cmd in data_parsed:
             if not sorted_commands.get(cmd[1]):
                 sorted_commands[cmd[1]] = cmd[0]
                 continue
