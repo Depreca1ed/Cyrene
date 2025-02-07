@@ -14,7 +14,6 @@ from discord.ext import commands
 from utils import BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, Embed, better_string
 
 from .blacklist import Blacklist
-from .commandstats import CommandStats
 from .dev import Developer
 from .error_handler import ErrorHandler
 
@@ -39,7 +38,7 @@ def bot_farm_check(guild: discord.Guild) -> bool:
     return (bots / members) * 100 > BOT_THRESHOLD
 
 
-class Internals(Blacklist, CommandStats, Developer, ErrorHandler, name='Internals'):
+class Internals(Blacklist, Developer, ErrorHandler, name='Internals'):
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
         if await self.bot.is_owner(ctx.author):

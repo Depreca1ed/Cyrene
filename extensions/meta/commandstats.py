@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from typing import TYPE_CHECKING, Any
 
 import discord
 from discord import app_commands
@@ -8,6 +9,9 @@ from discord.ext import commands
 
 from utils import BaseCog, Context, Embed
 from utils.helper_functions import better_string
+
+if TYPE_CHECKING:
+    from bot import Mafuyu
 
 
 class CommandStats(BaseCog):
@@ -33,7 +37,14 @@ class CommandStats(BaseCog):
             ctx.guild.id if ctx.guild else 0,
         )
 
-    async def handle_user(self, ctx: Context, user: discord.User | discord.Member, guild: discord.Guild | None) -> None:
+    @commands.Cog.listener('on_app_command_completion')
+    async def command_app_comp_register(
+        self, inter: discord.Interaction[Mafuyu], _: commands.Command[Any, ..., Any]
+    ) -> None:
+        context = await Context.from_interaction(inter)
+        self.bot.dispatch('command_completion', context)
+
+    async def handle_user(self, ctx: Context, user: discord.User | discord.Member, guild: discord.Guild | None) -> Embed:
         data = await self.bot.pool.fetch(
             """SELECT usage_count, command_name, guild_id FROM CommandStats WHERE user_id = $1""",
             user.id,
@@ -88,9 +99,9 @@ class CommandStats(BaseCog):
             glisting.extend([f'{_}. {d[1]} (`{d[0]}` times)' for _, d in enumerate(sorted_guild_commands)])
             embed.add_field(name=f'Command stats inside {guild}', value=better_string(glisting, seperator='\n'))
 
-        await ctx.reply(embed=embed)
+        return embed
 
-    async def handle_channel(self, ctx: Context, channel: discord.abc.GuildChannel) -> None:
+    async def handle_channel(self, ctx: Context, channel: discord.abc.GuildChannel) -> Embed:
         data = await self.bot.pool.fetch(
             """SELECT usage_count, command_name FROM CommandStats WHERE channel_id = $1""",
             channel.id,
@@ -119,32 +130,76 @@ class CommandStats(BaseCog):
         )
 
         embed.set_author(name=channel.name, icon_url=ctx.guild.icon.url if ctx.guild and ctx.guild.icon else None)
-        await ctx.reply(embed=embed)
+        return embed
 
-    @commands.hybrid_command(
+    @commands.command(
         name='commandstats',
         aliases=['stats'],
         help='Get command stats of a user, channel, server or overall.',
-        with_app_command=False,
-        hidden=True,
     )
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=True)
     async def command_stats(
         self,
         ctx: Context,
         entity: discord.User | discord.Member | discord.abc.GuildChannel | discord.Guild | None = None,
-    ) -> None:
+    ) -> discord.Message | None:
         if not ctx.guild and not isinstance(entity, discord.Guild):
             entity = ctx.author
 
         if entity:
             if isinstance(entity, discord.User | discord.Member):
-                return await self.handle_user(ctx, entity, ctx.guild)
+                embed = await self.handle_user(ctx, entity, ctx.guild)
+                return await ctx.reply(embed=embed)
             if isinstance(entity, discord.abc.GuildChannel):
-                return await self.handle_channel(ctx, entity)
+                embed = await self.handle_channel(ctx, entity)
+                return await ctx.reply(embed=embed)
 
-        await self.handle_user(ctx, ctx.author, ctx.guild)
+        embed = await self.handle_user(ctx, ctx.author, ctx.guild)
         # We have handled user and channel and made sure we handle user when theres no guild
 
-        return None
+        return await ctx.reply(embed=embed)
+
+    @app_commands.command(
+        name='commandstats',
+        description='Get command stats of a user, channel, server or overall.',
+    )
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def command_stats_slash(
+        self,
+        interaction: discord.Interaction[Mafuyu],
+        user: discord.User | discord.Member | None,
+        channel: discord.abc.GuildChannel | None,
+        guild: str | None,
+    ) -> None:
+        actual_guild = None
+        if guild:
+            actual_guild = await commands.GuildConverter().convert(await Context.from_interaction(interaction), guild)
+            if not actual_guild.default_role:
+                actual_guild = (
+                    None  # A oddly specific check to make sure this isnt a false guild made by userapp in another guild
+                )
+        entity = user or channel or actual_guild or interaction.user
+
+        if not interaction.guild and not isinstance(entity, discord.Guild):
+            entity = interaction.user
+
+        if entity:
+            if isinstance(entity, discord.User | discord.Member):
+                embed = await self.handle_user(
+                    await Context.from_interaction(interaction),
+                    entity,
+                    interaction.guild if interaction.guild and interaction.guild.default_role else None,
+                )
+                return await interaction.response.send_message(embed=embed)
+            if isinstance(entity, discord.abc.GuildChannel):
+                embed = await self.handle_channel(await Context.from_interaction(interaction), entity)
+                return await interaction.response.send_message(embed=embed)
+
+        embed = await self.handle_user(
+            await Context.from_interaction(interaction),
+            interaction.user,
+            interaction.guild if interaction.guild and interaction.guild.default_role else None,
+        )
+        # We have handled user and channel and made sure we handle user when theres no guild
+
+        return await interaction.response.send_message(embed=embed)
