@@ -51,7 +51,7 @@ class CommandStats(BaseCog):
         )
 
         data_parsed = sorted(
-            [(int(d['usage_count']), str(d['command_name'])) for d in data][:5],
+            [(int(d['usage_count']), str(d['command_name'])) for d in data],
             key=operator.itemgetter(0),
             reverse=True,
         )
@@ -73,7 +73,9 @@ class CommandStats(BaseCog):
         embed.add_field(
             name='Most used commands:',
             value=better_string(
-                [f'{list(sorted_commands.keys()).index(d)}. {d} (`{sorted_commands[d]}` times)' for d in sorted_commands],
+                [f'{list(sorted_commands.keys()).index(d)}. {d} (`{sorted_commands[d]}` times)' for d in sorted_commands][
+                    :5
+                ],
                 seperator='\n',
             ),
         )
@@ -86,7 +88,7 @@ class CommandStats(BaseCog):
                     (int(d['usage_count']), str(d['command_name']))
                     for d in data
                     if d['guild_id'] and d['guild_id'] == guild.id
-                ][:5],
+                ],
                 key=operator.itemgetter(0),
                 reverse=True,
             )
@@ -96,7 +98,7 @@ class CommandStats(BaseCog):
                 f"> **{user}** has used the bot's commands `{sum(_[0] for _ in sorted_guild_commands)}` times in {guild}\n"
             ]
             glisting.append(f'**Most used commands in {guild}**:')
-            glisting.extend([f'{_}. {d[1]} (`{d[0]}` times)' for _, d in enumerate(sorted_guild_commands)])
+            glisting.extend([f'{_}. {d[1]} (`{d[0]}` times)' for _, d in enumerate(sorted_guild_commands)][:5])
             embed.add_field(name=f'Command stats inside {guild}', value=better_string(glisting, seperator='\n'))
 
         return embed
@@ -124,7 +126,9 @@ class CommandStats(BaseCog):
         embed.add_field(
             name='Most used commands:',
             value=better_string(
-                [f'{list(sorted_commands.keys()).index(d)}. {d} (`{sorted_commands[d]}` times)' for d in sorted_commands],
+                [f'{list(sorted_commands.keys()).index(d)}. {d} (`{sorted_commands[d]}` times)' for d in sorted_commands][
+                    :5
+                ],
                 seperator='\n',
             ),
         )
