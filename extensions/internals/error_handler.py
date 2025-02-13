@@ -16,7 +16,6 @@ from utils import (
     ERROR_COLOUR,
     BaseCog,
     BaseView,
-    Context,
     Embed,
     Paginator,
     WaifuNotFoundError,
@@ -30,7 +29,7 @@ from utils import (
 if TYPE_CHECKING:
     import asyncpg
 
-    from bot import Mafuyu
+    from utils import Context, Mafuyu
 
 
 class MissingArgumentModal(discord.ui.Modal):
@@ -272,7 +271,7 @@ class ErrorHandler(BaseCog):
 
         embed = await logger_embed(self.bot, record)
 
-        await self.bot.logger_webhook.send(embed=embed)
+        await self.bot.logger.send(embed=embed)
 
         return record
 

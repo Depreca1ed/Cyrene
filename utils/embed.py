@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import discord
 
-from . import BASE_COLOUR, ERROR_COLOUR, Context
+from . import BASE_COLOUR, ERROR_COLOUR
+
+if TYPE_CHECKING:
+    from . import Context
 
 __all__ = ('Embed',)
 
@@ -23,12 +26,16 @@ class Embed(discord.Embed):
         if ctx:
             self.set_footer(
                 text=f'Requested by {ctx.author}',
+                icon_url=ctx.author.display_avatar.url
+                if ctx.author.display_avatar.url not in {self.author.icon_url, self.thumbnail.url}
+                else None,
             )
         super().__init__(
             title=title,
             url=url,
             description=description,
             colour=(colour if colour and colour != discord.Colour.default() else BASE_COLOUR),
+            timestamp=discord.utils.utcnow(),
             **kwargs,
         )
 

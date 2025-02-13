@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Context, Embed, better_string, generate_timestamp_string
+from utils import BaseCog, Embed, better_string, generate_timestamp_string
+
+if TYPE_CHECKING:
+    from utils import Context
 
 
 class Userinfo(BaseCog):

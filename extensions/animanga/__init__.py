@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from .waifu import Waifu
 
 if TYPE_CHECKING:
-    from bot import Mafuyu
+    from utils import Mafuyu
 
 
 class AniManga(Waifu, name='Anime & Manga'):

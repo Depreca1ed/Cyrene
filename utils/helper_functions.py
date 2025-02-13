@@ -11,9 +11,7 @@ if TYPE_CHECKING:
     import datetime
     from collections.abc import Iterable
 
-    from bot import Mafuyu
-
-    from .context import Context
+    from . import Context, Mafuyu
 
 
 __all__ = ('better_string',)

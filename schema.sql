@@ -20,21 +20,19 @@ CREATE TABLE IF NOT EXISTS Prefixes (
     PRIMARY KEY (guild, prefix)
 );
 
+CREATE TABLE IF NOT EXISTS Waifus (
+    id BIGINT PRIMARY KEY,
+    smashes INTEGER NOT NULL DEFAULT 0,
+    passes INTEGER NOT NULL DEFAULT 0,
+    nsfw BOOLEAN NOT NUll
+);
+
 CREATE TABLE IF NOT EXISTS WaifuFavourites (
-    waifu_url TEXT NOT NULL,
+    id BIGINT references Waifus (id),
     user_id BIGINT NOT NULL,
     nsfw BOOLEAN NOT NULL,
     tm TIMESTAMP NOT NULL,
-    PRIMARY KEY (user_id, waifu_url)
-);
-
-CREATE TABLE IF NOT EXISTS Waifus (
-    id INTEGER NOT NULL,
-    smashes INTEGER NOT NULL DEFAULT 0,
-    passes INTEGER NOT NULL DEFAULT 0,
-    nsfw BOOLEAN NOT NUll,
-    type WaifuType NOT NULL,
-    PRIMARY KEY (id, type)
+    PRIMARY KEY (id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS Errors (

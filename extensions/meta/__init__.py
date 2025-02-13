@@ -9,7 +9,7 @@ from discord.ext import commands
 from jishaku.functools import executor_function
 from PIL import Image
 
-from utils import Context, Embed, better_string
+from utils import Embed, better_string
 
 from .botinfo import BotInformation
 from .commandstats import CommandStats
@@ -17,7 +17,7 @@ from .serverinfo import ServerInfo
 from .userinfo import Userinfo
 
 if TYPE_CHECKING:
-    from bot import Mafuyu
+    from utils import Context, Mafuyu
 
 THUMBNAIL_SIZE = (128, 128)
 

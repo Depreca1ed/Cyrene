@@ -1,6 +1,12 @@
 from .basecog import BaseCog
-from .constants import BASE_COLOUR, BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, CHAR_LIMIT, ERROR_COLOUR
-from .context import Context
+from .constants import (
+    BASE_COLOUR,
+    BLACKLIST_COLOUR,
+    BOT_FARM_COLOUR,
+    BOT_THRESHOLD,
+    CHAR_LIMIT,
+    ERROR_COLOUR,
+)
 from .embed import Embed
 from .errors import (
     AlreadyBlacklistedError,
@@ -22,7 +28,8 @@ from .helper_functions import (
     get_command_signature,
 )
 from .pagination import Paginator
-from .types import BlacklistBase, WaifuResult
+from .subclass import Context, Mafuyu
+from .types import BlacklistData, WaifuResult
 from .view import BaseView
 
 __all__ = (
@@ -35,10 +42,11 @@ __all__ = (
     'AlreadyBlacklistedError',
     'BaseCog',
     'BaseView',
-    'BlacklistBase',
+    'BlacklistData',
     'Context',
     'Embed',
     'FeatureDisabledError',
+    'Mafuyu',
     'MafuyuError',
     'NotBlacklistedError',
     'Paginator',

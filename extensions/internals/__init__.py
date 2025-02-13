@@ -3,13 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from bot import Mafuyu
-    from utils import Context
+    from utils import Context, Mafuyu
 
 import contextlib
 
 import discord
 from discord.ext import commands
+from topgg.client import DBLClient
+from topgg.webhook import WebhookManager
 
 from utils import BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, Embed, better_string
 
@@ -38,7 +39,20 @@ def bot_farm_check(guild: discord.Guild) -> bool:
     return (bots / members) * 100 > BOT_THRESHOLD
 
 
-class Internals(Blacklist, Developer, ErrorHandler, name='Internals'):
+class Internals(Blacklist, Developer, ErrorHandler, name='Developer'):
+    def __init__(self, bot: Mafuyu) -> None:
+        super().__init__(bot)
+        self.topgg = DBLClient(self.bot, self.bot.config.TOPGG, autopost=True, post_shard_count=True)
+        self.topgg_webhook = WebhookManager(self.bot).dbl_webhook('/debotdbl', auth_key='debotdbl')
+
+    async def cog_load(self) -> None:
+        self.topgg_webhook.run(1234)
+        return await super().cog_load()
+
+    async def cog_unload(self) -> None:
+        await self.topgg_webhook.close()
+        return await super().cog_unload()
+
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
         if await self.bot.is_owner(ctx.author):
@@ -64,7 +78,7 @@ class Internals(Blacklist, Developer, ErrorHandler, name='Internals'):
 
     @commands.Cog.listener('on_dbl_vote')
     async def dbl_vote_handler(self, data: dict[Any, Any]) -> None:
-        await self.bot.logger_webhook.send(content=str(data))
+        await self.bot.logger.send(content=str(data))
 
     @commands.Cog.listener('on_guild_join')
     async def guild_join(self, guild: discord.Guild) -> None:
@@ -95,12 +109,12 @@ class Internals(Blacklist, Developer, ErrorHandler, name='Internals'):
                 )
             )
 
-        await self.bot.logger_webhook.send(embed=embed)
+        await self.bot.logger.send(embed=embed)
 
     @commands.Cog.listener('on_guild_remove')
     async def guild_leave(self, guild: discord.Guild) -> None:
         embed = guild_embed(guild, 'Left')
-        await self.bot.logger_webhook.send(embed=embed)
+        await self.bot.logger.send(embed=embed)
 
 
 async def setup(bot: Mafuyu) -> None:

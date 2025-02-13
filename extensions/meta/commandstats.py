@@ -7,11 +7,10 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Context, Embed
-from utils.helper_functions import better_string
+from utils import BaseCog, Context, Embed, better_string
 
 if TYPE_CHECKING:
-    from bot import Mafuyu
+    from utils import Mafuyu
 
 
 class CommandStats(BaseCog):
@@ -179,9 +178,8 @@ class CommandStats(BaseCog):
         if guild:
             actual_guild = await commands.GuildConverter().convert(await Context.from_interaction(interaction), guild)
             if not actual_guild.default_role:
-                actual_guild = (
-                    None  # A oddly specific check to make sure this isnt a false guild made by userapp in another guild
-                )
+                actual_guild = None  # A oddly specific check to make sure this isnt a
+                # false guild made by userapp in another guild
         entity = user or channel or actual_guild or interaction.user
 
         if not interaction.guild and not isinstance(entity, discord.Guild):

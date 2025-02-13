@@ -1,49 +1,52 @@
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING, Self
 
 import discord
 from asyncpg.exceptions import UniqueViolationError
 
-from utils import BaseView, Context, Embed, WaifuNotFoundError, WaifuResult, better_string
+from utils import BaseView, Embed, WaifuNotFoundError, WaifuResult, better_string
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from bot import Mafuyu
+    from utils import Context, Mafuyu
 
 
 __all__ = ('WaifuSearchView',)
 
 
-class SmashOrPass(BaseView):
-    message: discord.Message | None
+class WaifuBase(BaseView):
     ctx: Context
     current: WaifuResult
-    token: str
 
     def __init__(
         self,
+        ctx: Context,
         session: ClientSession,
         *,
-        for_user: int,
         nsfw: bool,
-        source: str,
+        for_user: int,
         query: None | str = None,
     ) -> None:
         super().__init__(timeout=500.0)
+        self.ctx = ctx
         self.session = session
-        self.for_user = for_user
         self.nsfw = nsfw
-        self.source = source
+        self.for_user = for_user
         self.query = query
 
         self.smashers: set[discord.User | discord.Member] = set()
         self.passers: set[discord.User | discord.Member] = set()
 
+        self.smash_emoji = self.smashbutton.emoji = self.ctx.bot.bot_emojis['SMASH']
+        self.pass_emoji = self.passbutton.emoji = self.ctx.bot.bot_emojis['PASS']
+
     @classmethod
-    async def start(cls, ctx: Context, source: str, *, query: None | str = None) -> Self | None:
+    async def start(cls, ctx: Context, *, query: None | str = None) -> Self | None:
         inst = cls(
+            ctx,
             ctx.bot.session,
             for_user=ctx.author.id,
             nsfw=(
@@ -54,14 +57,13 @@ class SmashOrPass(BaseView):
                 )
                 else False
             ),
-            source=source,
             query=query,
         )
-        inst.token = ctx.bot.config.WAIFU_TOKEN
-        inst.ctx = ctx
         data = await inst.request()
 
         embed = inst.embed(data)
+
+        inst.ctx = ctx
         inst.message = await ctx.reply(embed=embed, view=inst)
 
         return inst
@@ -78,12 +80,14 @@ class SmashOrPass(BaseView):
             description=better_string(
                 [
                     (f'> [#{data.image_id}]({data.source})' if data.image_id and data.source else None),
-                    f'- <:MafuyuBlush:1314149745794617365> **Smashers:** {smasher}',
-                    f'- <:MafuyuUnamused:1314149535043293215> **Passers:** {passer}',
+                    f'- {self.smash_emoji} **Smashers:** {smasher}',
+                    f'- {self.pass_emoji} **Passers:** {passer}',
+                    '',
+                    f'-# Characters: {" ".join(data.parse_string_lists(data.characters))}',
+                    f'-# Copyright: {" ".join(data.parse_string_lists(data.copyright))}',
                 ],
                 seperator='\n',
             ),
-            colour=(discord.Colour.from_str(data.dominant_color) if data.dominant_color else None),
             ctx=self.ctx,
         )
 
@@ -92,17 +96,17 @@ class SmashOrPass(BaseView):
         return embed
 
     @discord.ui.button(
-        emoji='<:MafuyuBlush:1314149745794617365>',
         style=discord.ButtonStyle.green,
     )
-    async def smash(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def smashbutton(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         if interaction.user in self.smashers:
             try:
                 await interaction.client.pool.execute(
-                    """INSERT INTO WaifuFavourites VALUES ($1, $2, $3)""",
-                    self.current.url,
+                    """INSERT INTO WaifuFavourites VALUES ($1, $2, $3, $4)""",
+                    self.current.image_id,
                     interaction.user.id,
                     self.nsfw,
+                    datetime.datetime.now(),
                 )
             except UniqueViolationError:
                 return await interaction.response.send_message(
@@ -110,7 +114,10 @@ class SmashOrPass(BaseView):
                     ephemeral=True,
                 )
             return await interaction.response.send_message(
-                f'Successfully added [#{self.current.image_id}](<{self.current.url}>) to your favourites!',
+                (
+                    f'Successfully added [#{self.current.image_id}]'
+                    f'(<https://danbooru.donmai.us/posts/{self.current.image_id}>) to your favourites!'
+                ),
                 ephemeral=True,
             )
 
@@ -121,29 +128,37 @@ class SmashOrPass(BaseView):
         await interaction.client.pool.execute(
             """
                 INSERT INTO
-                    Waifus (id, smashes, nsfw, type)
+                    Waifus (id, smashes, nsfw)
                 VALUES
-                    ($1, 1, $2, $3)
-                ON CONFLICT (id, type) DO
+                    ($1, 1, $2)
+                ON CONFLICT (id) DO
                 UPDATE
                 SET
                     smashes = Waifus.smashes + 1
             """,
             self.current.image_id,
             self.nsfw,
-            self.source,
         )
         await interaction.response.edit_message(embed=self.embed(self.current))
         return None
 
     @discord.ui.button(
-        emoji='<:MafuyuUnamused:1314149535043293215>',
         style=discord.ButtonStyle.red,
     )
     async def passbutton(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         if interaction.user in self.passers:
-            return await interaction.response.defer()
-
+            results = await interaction.client.pool.fetch(
+                """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
+                self.current.image_id,
+                interaction.user.id,
+            )
+            if results:
+                return await interaction.response.send_message(
+                    (
+                        f'Successfully removed [#{self.current.image_id}]'
+                        f'(<https://danbooru.donmai.us/posts/{self.current.image_id}>) to your favourites!'
+                    ),
+                )
         if interaction.user in self.smashers:
             self.smashers.remove(interaction.user)
 
@@ -151,17 +166,16 @@ class SmashOrPass(BaseView):
         await interaction.client.pool.execute(
             """
                 INSERT INTO
-                    Waifus (id, passes, nsfw, type)
+                    Waifus (id, passes, nsfw)
                 VALUES
-                    ($1, 1, $2, $3)
-                ON CONFLICT (id, type) DO
+                    ($1, 1, $2)
+                ON CONFLICT (id) DO
                 UPDATE
                 SET
                     passes = Waifus.passes + 1
                 """,
             self.current.image_id,
             self.nsfw,
-            self.source,
         )
         await interaction.response.edit_message(embed=self.embed(self.current))
         return None
@@ -196,8 +210,9 @@ class SmashOrPass(BaseView):
         return True
 
 
-class WaifuSearchView(SmashOrPass):
+class WaifuSearchView(WaifuBase):
     async def request(self) -> WaifuResult:
+        rating = better_string(['explicit', 'questionable', 'sensitive'], seperator=',') if self.nsfw is True else 'general'
         waifu = await self.session.get(
             'https://danbooru.donmai.us/posts/random.json',
             params={
@@ -205,27 +220,25 @@ class WaifuSearchView(SmashOrPass):
                     [
                         'solo',
                         self.query or '',
-                        'rating:'
-                        + (
-                            better_string(['explicit', 'questionable', 'sensitive'], seperator=',')
-                            if self.nsfw is True
-                            else 'general'
-                        ),
+                        'rating:' + rating,
                     ],
                     seperator=' ',
                 ),
             },
         )
         data = await waifu.json()
+
         success = 200
         if waifu.status != success or not data:
             raise WaifuNotFoundError(self.query)
+
         current = WaifuResult(
             name=self.query,
             image_id=data['id'],
-            dominant_color=None,
             source=data['source'],
             url=data['file_url'],
+            characters=data['tag_string_character'],
+            copyright=data['tag_string_copyright'],
         )
         self.current = current
 

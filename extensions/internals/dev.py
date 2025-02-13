@@ -48,7 +48,11 @@ class Developer(BaseCog):
 
         await ctx.send(content=better_string(messages, seperator='\n'))
 
-    @commands.command(name='eval', aliases=['e'], help='Attempt at making an eval. Dont fucking use it with yields.')
+    @commands.command(
+        name='eval',
+        aliases=['e'],
+        help='Attempt at making an eval. Dont fucking use it with yields.',
+    )
     async def eval(self, ctx: Context, *, code: str) -> Message | None:
         variables: dict[str, Any] = {
             'bot': self.bot,

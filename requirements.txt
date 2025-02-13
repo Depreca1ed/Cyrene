@@ -13,10 +13,8 @@ psutil
 tabulate
 mystbin.py
 topggpy
-pyright
 pillow
 importlib_metadata
-pre-commit
 configparser
 gitpython
 python-dotenv

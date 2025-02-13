@@ -6,16 +6,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog
-from utils.errors import WaifuNotFoundError
+from utils import BaseCog, WaifuNotFoundError
 
 from .views import WaifuSearchView
 
 if TYPE_CHECKING:
     import aiohttp
 
-    from bot import Mafuyu
-    from utils import Context
+    from utils import Context, Mafuyu
 
 __all__ = ('Waifu',)
 
@@ -62,21 +60,7 @@ class Waifu(BaseCog):
             waifu = waifu.replace(' ', '_')
             characters = await get_waifu(ctx.bot.session, waifu)
             waifu = characters[0][1]  # Points to the value of the first result
-        view = WaifuSearchView(
-            self.bot.session,
-            for_user=ctx.author.id,
-            nsfw=(
-                ctx.channel.is_nsfw()
-                if not isinstance(
-                    ctx.channel,
-                    discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
-                )
-                else False
-            ),
-            source='waifusearch',
-            query=waifu,
-        )
-        await view.start(ctx, 'waifu', query=waifu)
+        await WaifuSearchView.start(ctx, query=waifu)
 
     @waifu.command(name='favourites', with_app_command=False, disabled=True)
     @commands.is_owner()

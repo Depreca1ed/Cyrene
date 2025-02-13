@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utils import AlreadyBlacklistedError, BaseCog, BlacklistBase, Context, NotBlacklistedError
+from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, NotBlacklistedError
 
 if TYPE_CHECKING:
-    from bot import Mafuyu
+    from utils import Context, Mafuyu
 
 WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
 
@@ -23,11 +23,11 @@ class Blacklist(BaseCog):
         super().__init__(bot)
 
     async def cog_load(self) -> None:
-        self.bot.blacklist = {}
+        self.bot.blacklists = {}
         entries = await self.bot.pool.fetch("""SELECT * FROM Blacklists""")
 
         for entry in entries:
-            self.bot.blacklist[entry['snowflake']] = BlacklistBase(
+            self.bot.blacklists[entry['snowflake']] = BlacklistData(
                 reason=entry['reason'],
                 lasts_until=entry['lasts_until'],
                 blacklist_type=entry['blacklist_type'],
@@ -43,8 +43,10 @@ class Blacklist(BaseCog):
     )
     @commands.is_owner()
     async def blacklist_cmd(self, ctx: Context) -> None:
-        bl_guild_count = len([entry for entry in self.bot.blacklist if self.bot.blacklist[entry].blacklist_type == 'guild'])
-        bl_user_count = len([entry for entry in self.bot.blacklist if self.bot.blacklist[entry].blacklist_type == 'user'])
+        bl_guild_count = len([
+            entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'guild'
+        ])
+        bl_user_count = len([entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'user'])
 
         content = f'Currently, `{bl_guild_count}` servers and `{bl_user_count}` users are blacklisted.'
         await ctx.reply(content=content)
@@ -132,7 +134,7 @@ class Blacklist(BaseCog):
     async def _pre_check(
         self,
         snowflake: discord.User | discord.Member | discord.Guild,
-        data: BlacklistBase,
+        data: BlacklistData,
     ) -> bool:
         """
         Check(not to be confused with command check) to make sure user is actually still blacklisted.
@@ -141,7 +143,7 @@ class Blacklist(BaseCog):
         ----------
         snowflake : discord.User | discord.Member | discord.Guild
             The snowflake being checked
-        data : BlacklistBase
+        data : BlacklistData
             Blacklist data of the snowflake
 
         Returns
@@ -155,7 +157,7 @@ class Blacklist(BaseCog):
             return True
         return False
 
-    async def handle_user_blacklist(self, ctx: Context, user: discord.User | discord.Member, data: BlacklistBase) -> None:
+    async def handle_user_blacklist(self, ctx: Context, user: discord.User | discord.Member, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted user.
 
@@ -165,7 +167,7 @@ class Blacklist(BaseCog):
             The commands.Context from the check
         user : discord.User | discord.Member
             The blacklisted User
-        data : BlacklistBase
+        data : BlacklistData
             The data of the blacklisted users i.e. reason, lasts_until & blacklist_type
 
         """
@@ -193,7 +195,7 @@ class Blacklist(BaseCog):
 
         return
 
-    async def handle_guild_blacklist(self, ctx: Context | None, guild: discord.Guild, data: BlacklistBase) -> None:
+    async def handle_guild_blacklist(self, ctx: Context | None, guild: discord.Guild, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted guild.
 
@@ -206,7 +208,7 @@ class Blacklist(BaseCog):
             The commands.Context from the check. Will be optional when used in the event.
         guild : discord.Guild
             The blacklisted Guild
-        data : BlacklistBase
+        data : BlacklistData
             The data of the blacklisted users i.e. reason, lasts_until & blacklist_type
 
         """
@@ -253,7 +255,7 @@ class Blacklist(BaseCog):
         *,
         reason: str,
         lasts_until: datetime.datetime | None = None,
-    ) -> dict[int, BlacklistBase]:
+    ) -> dict[int, BlacklistData]:
         """
         Add an entry to the blacklist.
 
@@ -270,7 +272,7 @@ class Blacklist(BaseCog):
 
         Returns
         -------
-        dict[int, BlacklistBase]
+        dict[int, BlacklistData]
             Returns a dict of the snowflake and the data as stored in the cache
 
         Raises
@@ -299,14 +301,14 @@ class Blacklist(BaseCog):
             blacklist_type,
         )
 
-        self.bot.blacklist[snowflake.id] = BlacklistBase(
+        self.bot.blacklists[snowflake.id] = BlacklistData(
             reason=reason,
             lasts_until=lasts_until,
             blacklist_type=blacklist_type,
         )
-        return {snowflake.id: self.bot.blacklist[snowflake.id]}
+        return {snowflake.id: self.bot.blacklists[snowflake.id]}
 
-    async def remove(self, snowflake: discord.User | discord.Member | discord.Guild) -> dict[int, BlacklistBase]:
+    async def remove(self, snowflake: discord.User | discord.Member | discord.Guild) -> dict[int, BlacklistData]:
         """
         Remove an entry from the blacklist.
 
@@ -319,7 +321,7 @@ class Blacklist(BaseCog):
 
         Returns
         -------
-        dict[int, BlacklistBase]
+        dict[int, BlacklistData]
             A dict of the snowflake and the data as was in the cache beforehand
 
         Raises
@@ -336,7 +338,7 @@ class Blacklist(BaseCog):
             snowflake.id,
         )
 
-        item_removed = self.bot.blacklist.pop(snowflake.id)
+        item_removed = self.bot.blacklists.pop(snowflake.id)
         return {snowflake.id: item_removed}
 
     def _timestamp_wording(self, dt: datetime.datetime | None) -> str:

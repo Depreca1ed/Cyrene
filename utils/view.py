@@ -11,7 +11,7 @@ from utils import Embed, better_string
 if TYPE_CHECKING:
     from discord.ui.item import Item
 
-    from bot import Mafuyu
+    from . import Mafuyu
 
 __all__ = ('BaseView',)
 
@@ -54,4 +54,4 @@ class BaseView(discord.ui.View):
                 seperator='\n',
             ),
         )
-        return await interaction.client.logger_webhook.send(embed=embed)
+        return await interaction.client.logger.send(embed=embed)
