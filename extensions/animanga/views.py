@@ -158,6 +158,7 @@ class WaifuBase(BaseView):
                         f'Successfully removed [#{self.current.image_id}]'
                         f'(<https://danbooru.donmai.us/posts/{self.current.image_id}>) to your favourites!'
                     ),
+                    ephemeral=True,
                 )
         if interaction.user in self.smashers:
             self.smashers.remove(interaction.user)
