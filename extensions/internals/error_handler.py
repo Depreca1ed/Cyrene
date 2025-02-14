@@ -99,6 +99,9 @@ class MissingArgumentHandler(BaseView):
         modal.prev_message = self.prev_message
         await interaction.response.send_modal(modal)
 
+    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
+        return interaction.user == self.ctx.author
+
 
 class ErrorView(BaseView):
     def __init__(self, error: asyncpg.Record, ctx: Context, *, timeout: float | None = 180) -> None:
@@ -385,7 +388,7 @@ class ErrorHandler(BaseCog):
 
         if isinstance(error, defaults):
             embed = Embed.error_embed(
-                title='Command failed',
+                title='Cannot run command',
                 description=str(error),
                 ctx=ctx,
             )

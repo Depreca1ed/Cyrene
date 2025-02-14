@@ -65,4 +65,5 @@ class Embed(discord.Embed):
             The generated embed
 
         """
+        title = f'{ctx.bot.bot_emojis["redcross"]} | {title}' if ctx else title
         return cls(title=title, description=description, ctx=ctx, colour=ERROR_COLOUR)

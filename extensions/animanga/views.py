@@ -7,12 +7,12 @@ import discord
 from asyncpg.exceptions import UniqueViolationError
 from discord.ext import menus
 
-from utils import BaseView, Embed, WaifuNotFoundError, WaifuResult, better_string, generate_timestamp_string
+from utils import BaseView, Embed, Paginator, WaifuNotFoundError, WaifuResult, better_string, generate_timestamp_string
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from utils import Context, Mafuyu, Paginator, WaifuFavouriteEntry
+    from utils import Context, Mafuyu, WaifuFavouriteEntry
 
 
 __all__ = ('WaifuSearchView',)
@@ -288,3 +288,35 @@ class WaifuPageSource(menus.ListPageSource):
         embed.set_image(url=post.url)
         embed.set_thumbnail(url=entry.user_id.display_avatar.url)
         return embed
+
+
+class RemoveFavButton(discord.ui.Button[Paginator]):
+    view: Paginator
+
+    def __init__(
+        self,
+        ctx: Context,
+        *,
+        style: discord.ButtonStyle = discord.ButtonStyle.red,
+    ) -> None:
+        super().__init__(style=style, emoji=ctx.bot.bot_emojis['redcross'])
+
+    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
+        item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        await interaction.client.pool.execute(
+            """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
+            item.id,  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+            interaction.user.id,
+        )
+        if hasattr(self.view.source, 'entries'):
+            self.view.source.entries.pop(self.view.current_page)  # type: ignore  # noqa: PGH003
+
+            if self.view.source.entries:  # type: ignore  # noqa: PGH003
+                self.view.clear_items()
+                self.view.fill_items()
+                self.view.add_item(self)
+
+                await self.view.show_checked_page(interaction, self.view.current_page)
+                return
+        await interaction.response.edit_message(content='No waifu favourite entries', embed=None, view=None)
+        self.view.stop()

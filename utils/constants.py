@@ -9,7 +9,7 @@ __ALL__ = (
 )
 
 BASE_COLOUR = discord.Colour.from_str('#4B506F')
-ERROR_COLOUR = discord.Colour.from_str('#E07889')
+ERROR_COLOUR = discord.Colour.from_str('#bb6688')
 
 BOT_THRESHOLD = 80
 BLACKLIST_COLOUR = discord.Colour.from_str('#ccaa88')

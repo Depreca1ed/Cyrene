@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from utils import BaseCog, Paginator, WaifuFavouriteEntry, WaifuNotFoundError
 
-from .views import WaifuPageSource, WaifuSearchView
+from .views import WaifuPageSource, WaifuSearchView, RemoveFavButton
 
 if TYPE_CHECKING:
     import aiohttp
@@ -88,4 +88,5 @@ class Waifu(BaseCog):
         fav_parsed = [WaifuFavouriteEntry(id=e['id'], user_id=user, nsfw=e['nsfw'], tm=e['tm']) for e in fav_entries]
 
         paginate = Paginator(WaifuPageSource(self.bot, entries=fav_parsed), ctx=ctx)
+        paginate.add_item(RemoveFavButton(ctx))
         await paginate.start()
