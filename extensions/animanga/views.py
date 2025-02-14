@@ -5,13 +5,14 @@ from typing import TYPE_CHECKING, Self
 
 import discord
 from asyncpg.exceptions import UniqueViolationError
+from discord.ext import menus
 
-from utils import BaseView, Embed, WaifuNotFoundError, WaifuResult, better_string
+from utils import BaseView, Embed, WaifuNotFoundError, WaifuResult, better_string, generate_timestamp_string
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from utils import Context, Mafuyu
+    from utils import Context, Mafuyu, Paginator, WaifuFavouriteEntry
 
 
 __all__ = ('WaifuSearchView',)
@@ -75,19 +76,25 @@ class WaifuBase(BaseView):
         smasher = better_string([user.mention for user in self.smashers], seperator=', ') or discord.utils.MISSING
         passer = better_string([user.mention for user in self.passers], seperator=', ') or discord.utils.MISSING
 
+        total = len(self.passers) + len(self.smashers)
+
+        r = round((len(self.passers) / total) * 255) if self.passers and total else 0
+        g = round((len(self.smashers) / total) * 255) if self.smashers and total else 0
+        colour = discord.Colour.from_rgb(r=r, g=g, b=0)
+
         embed = Embed(
-            title='Smash or Pass',
+            title=f'#{data.image_id}',
+            url=f'https://danbooru.donmai.us/posts/{self.current.image_id}',
             description=better_string(
                 [
-                    (f'> [#{data.image_id}]({data.source})' if data.image_id and data.source else None),
                     f'- {self.smash_emoji} **Smashers:** {smasher}',
                     f'- {self.pass_emoji} **Passers:** {passer}',
-                    '',
-                    f'-# Characters: {" ".join(data.parse_string_lists(data.characters))}',
-                    f'-# Copyright: {" ".join(data.parse_string_lists(data.copyright))}',
+                    f'-# **Characters:** {", ".join(data.parse_string_lists(data.characters))}',
+                    f'-# **Copyright:** {", ".join(data.parse_string_lists(data.copyright))}',
                 ],
                 seperator='\n',
             ),
+            colour=colour,
             ctx=self.ctx,
         )
 
@@ -189,8 +196,8 @@ class WaifuBase(BaseView):
             data = await self.request()
         except KeyError:
             await interaction.response.send_message('Hey! Slow down.', ephemeral=True)
-        else:
-            await interaction.response.edit_message(embed=self.embed(data))
+            return
+        await interaction.response.edit_message(embed=self.embed(data))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not self.for_user:
@@ -220,7 +227,7 @@ class WaifuSearchView(WaifuBase):
                 'tags': better_string(
                     [
                         'solo',
-                        self.query or '',
+                        self.query or '1girl',
                         'rating:' + rating,
                     ],
                     seperator=' ',
@@ -236,7 +243,6 @@ class WaifuSearchView(WaifuBase):
         current = WaifuResult(
             name=self.query,
             image_id=data['id'],
-            source=data['source'],
             url=data['file_url'],
             characters=data['tag_string_character'],
             copyright=data['tag_string_copyright'],
@@ -244,3 +250,41 @@ class WaifuSearchView(WaifuBase):
         self.current = current
 
         return self.current
+
+
+class WaifuPageSource(menus.ListPageSource):
+    def __init__(self, bot: Mafuyu, entries: list[WaifuFavouriteEntry]) -> None:
+        self.bot = bot
+        super().__init__(entries, per_page=1)
+
+    async def format_page(self, _: Paginator, entry: WaifuFavouriteEntry) -> Embed:
+        post_url = f'https://danbooru.donmai.us/posts/{entry.id}.json'
+        post_res = await self.bot.session.get(post_url)
+        post_data = await post_res.json()
+
+        post = WaifuResult(
+            image_id=post_data['id'],
+            url=post_data['file_url'],
+            characters=post_data['tag_string_character'],
+            copyright=post_data['tag_string_copyright'],
+        )
+
+        # We have the post and user's favourite data, basically everything
+
+        embed = Embed(
+            title=f'#{post.image_id} {"[NSFW]" if entry.nsfw is True else ""}',
+            url=post_url,
+            description=better_string(
+                [
+                    f'- **Favourited by:** {entry.user_id.mention}',
+                    f'- **Favourited on:** {generate_timestamp_string(entry.tm)}',
+                    f'-# **Characters:** {", ".join(post.parse_string_lists(post.characters))}' if post.characters else None,
+                    f'-# **Copyright:** {", ".join(post.parse_string_lists(post.copyright))}' if post.copyright else None,
+                ],
+                seperator='\n',
+            ),
+            ctx=_.ctx,
+        )
+        embed.set_image(url=post.url)
+        embed.set_thumbnail(url=entry.user_id.display_avatar.url)
+        return embed

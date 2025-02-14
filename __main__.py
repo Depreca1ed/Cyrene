@@ -61,7 +61,6 @@ if __name__ == '__main__':
                 'extensions.animanga',
                 'extensions.internals',
                 'extensions.meta',
-                'extensions.private',
             ]
 
             async with Mafuyu(

@@ -6,9 +6,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, WaifuNotFoundError
+from utils import BaseCog, Paginator, WaifuFavouriteEntry, WaifuNotFoundError
 
-from .views import WaifuSearchView
+from .views import WaifuPageSource, WaifuSearchView
 
 if TYPE_CHECKING:
     import aiohttp
@@ -62,7 +62,30 @@ class Waifu(BaseCog):
             waifu = characters[0][1]  # Points to the value of the first result
         await WaifuSearchView.start(ctx, query=waifu)
 
-    @waifu.command(name='favourites', with_app_command=False, disabled=True)
-    @commands.is_owner()
-    async def waifu_favourites(self, ctx: Context) -> None:
-        await ctx.reply('test')
+    @waifu.command(name='favourites', help="Get your or user's favourited waifus", aliases=['fav'], with_app_command=True)
+    async def waifu_favourites(self, ctx: Context, user: discord.User = commands.Author) -> None:
+        show_nsfw = (
+            ctx.channel.is_nsfw()
+            if not isinstance(
+                ctx.channel,
+                discord.DMChannel | discord.GroupChannel | discord.PartialMessageable,
+            )
+            else False
+        )
+
+        fav_entries = await self.bot.pool.fetch(
+            """SELECT * FROM WaifuFavourites WHERE user_id = $1 AND nsfw = $2""",
+            user.id,
+            show_nsfw,
+        )
+
+        if not fav_entries:
+            await ctx.reply(
+                'No waifu favourites entry found.\n-# You can favourite a waifu by pressing the smash button twice'
+            )
+            return
+
+        fav_parsed = [WaifuFavouriteEntry(id=e['id'], user_id=user, nsfw=e['nsfw'], tm=e['tm']) for e in fav_entries]
+
+        paginate = Paginator(WaifuPageSource(self.bot, entries=fav_parsed), ctx=ctx)
+        await paginate.start()

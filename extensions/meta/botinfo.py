@@ -28,7 +28,7 @@ class BotInformation(BaseCog):
 
         time = round(time.timestamp())
 
-        return f'**[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})** **>** {message}'
+        return f'**[[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})]**: {message}'
 
     @commands.hybrid_command(name='about', aliases=['info', 'botinfo'], help='Get information about this bot', usage='')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -110,12 +110,10 @@ class BotInformation(BaseCog):
             name='Internal Statistics',
             value=better_string(
                 [
-                    f'- **Ping :** {bot.latency:.2f}s',
                     f'- **Uptime :** {uptime}',
                     f'- **Memory :** `{memory_usage}` (`{round(proc.memory_percent(), 2)}%`)',
                     f'- **Categories :** {is_loaded}/{len(bot.initial_extensions)} enabled',
                     f'  - **Commands :** {usable_commands} usable commands',
-                    # TODO(Depreca1ed): Add command stats data here
                 ],
                 seperator='\n',
             ),

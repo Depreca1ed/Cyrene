@@ -26,9 +26,6 @@ class Embed(discord.Embed):
         if ctx:
             self.set_footer(
                 text=f'Requested by {ctx.author}',
-                icon_url=ctx.author.display_avatar.url
-                if ctx.author.display_avatar.url not in {self.author.icon_url, self.thumbnail.url}
-                else None,
             )
         super().__init__(
             title=title,

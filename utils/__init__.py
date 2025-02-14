@@ -29,7 +29,7 @@ from .helper_functions import (
 )
 from .pagination import Paginator
 from .subclass import Context, Mafuyu
-from .types import BlacklistData, WaifuResult
+from .types import BlacklistData, WaifuFavouriteEntry, WaifuResult
 from .view import BaseView
 
 __all__ = (
@@ -54,6 +54,7 @@ __all__ = (
     'PrefixNotInitialisedError',
     'PrefixNotPresentError',
     'UnderMaintenanceError',
+    'WaifuFavouriteEntry',
     'WaifuNotFoundError',
     'WaifuResult',
     'better_string',
