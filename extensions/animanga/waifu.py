@@ -8,7 +8,7 @@ from discord.ext import commands
 
 from utils import BaseCog, Paginator, WaifuFavouriteEntry, WaifuNotFoundError
 
-from .views import WaifuPageSource, WaifuSearchView, RemoveFavButton
+from .views import RemoveFavButton, WaifuPageSource, WaifuSearchView
 
 if TYPE_CHECKING:
     import aiohttp

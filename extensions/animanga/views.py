@@ -89,8 +89,8 @@ class WaifuBase(BaseView):
                 [
                     f'- {self.smash_emoji} **Smashers:** {smasher}',
                     f'- {self.pass_emoji} **Passers:** {passer}',
-                    f'-# **Characters:** {", ".join(data.parse_string_lists(data.characters))}',
-                    f'-# **Copyright:** {", ".join(data.parse_string_lists(data.copyright))}',
+                    f'-# **Characters:** {", ".join(data.parse_string_lists(data.characters))}' if data.characters else None,
+                    f'-# **Copyright:** {", ".join(data.parse_string_lists(data.copyright))}' if data.copyright else None,
                 ],
                 seperator='\n',
             ),
