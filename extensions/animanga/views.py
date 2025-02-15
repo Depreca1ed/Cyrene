@@ -238,7 +238,7 @@ class WaifuSearchView(WaifuBase):
 
         success = 200
         if waifu.status != success or not data:
-            raise WaifuNotFoundError(self.query)
+            raise WaifuNotFoundError(self.query, json=data)
 
         current = WaifuResult(
             name=self.query,

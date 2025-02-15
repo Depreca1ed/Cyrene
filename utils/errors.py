@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import discord
 from discord.ext import commands
@@ -72,12 +72,12 @@ class UnderMaintenanceError(commands.CheckFailure, MafuyuError):
 
 
 class WaifuNotFoundError(commands.CommandError, MafuyuError):
-    def __init__(self, waifu: str | None = None) -> None:
+    def __init__(self, waifu: str | None = None, json: dict[Any, Any] | str | None = None) -> None:
         if waifu:
             waifu = waifu.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
-            super().__init__(f'Could not find any results for {waifu}')
+            super().__init__(f'Could not find any results for {waifu}\n{json}')
         else:
-            super().__init__(message='Could not find any results')
+            super().__init__(message=f'Could not find any results\n{json}')
 
 
 # TODO(Depreca1ed): All of these are not supposed to be CommandError. Change them to actual errors
