@@ -14,7 +14,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=harmony
+      - POSTGRES_DB=mafuyu
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:
