@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Waifu',)
 
-CHARACTER_ID = 4
+TAG_ALLOWED_TYPES = [3,4]
 
 
 async def get_waifu(session: aiohttp.ClientSession, waifu: str) -> list[tuple[str, str]]:
@@ -32,7 +32,7 @@ async def get_waifu(session: aiohttp.ClientSession, waifu: str) -> list[tuple[st
     characters = [
         (str(obj['label']), str(obj['value']))
         for obj in data
-        if obj['type'] == 'tag-word' and obj.get('category') == CHARACTER_ID
+        if obj['type'] == 'tag-word' and obj.get('category') in TAG_ALLOWED_TYPES
     ]
     if req.status != 200 or not data or not characters:
         raise WaifuNotFoundError(waifu)
