@@ -75,7 +75,7 @@ class Developer(BaseCog):
         try:
             exec(the_actual_code, variables)  # noqa: S102
         except Exception as err:  # noqa: BLE001
-            err_str = format_tb(self.bot, err)
+            err_str = format_tb(err)
             return await ctx.reply(f'```py\n{err_str}```')
 
         function: Coroutine[Any, Any, Any] | AsyncGenerator[Any, Any] = variables['run_code']
@@ -88,6 +88,6 @@ class Developer(BaseCog):
                 async for ret in function():
                     await ctx.send(ret)
         except Exception as err:  # noqa: BLE001
-            err_str = format_tb(self.bot, err)
+            err_str = format_tb(err)
             return await ctx.reply(f'```py\n{err_str}```')
         return None
