@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import traceback
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import discord
@@ -11,7 +10,7 @@ if TYPE_CHECKING:
     import datetime
     from collections.abc import Iterable
 
-    from . import Context, Mafuyu
+    from . import Context
 
 
 __all__ = ('better_string',)
@@ -119,10 +118,8 @@ def generate_error_objects(
     return missings
 
 
-def format_tb(bot: Mafuyu, error: Exception) -> str:
-    return ''.join(traceback.format_exception(type(error), error, error.__traceback__)).replace(
-        str(Path.cwd()), f'/{bot.user.name}'
-    )
+def format_tb(error: Exception) -> str:
+    return ''.join(traceback.format_exception(type(error), error, error.__traceback__))
 
 
 def get_command_signature(ctx: Context, command: commands.Command[Any, ..., Any], /) -> str:

@@ -239,7 +239,7 @@ class ErrorHandler(BaseCog):
         message: discord.Message,
         guild: discord.Guild | None = None,
     ) -> asyncpg.Record:
-        formatted_error = format_tb(self.bot, error)
+        formatted_error = format_tb(error)
         time_occured = datetime.datetime.now()
 
         record = await self.bot.pool.fetchrow(

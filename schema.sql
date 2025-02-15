@@ -1,7 +1,6 @@
 BEGIN;
 
 DO $$ BEGIN
-        CREATE TYPE WaifuType AS ENUM('pokemon', 'waifu', 'waifusearch');
         CREATE TYPE BlacklistTypes AS ENUM('guild', 'user');
 EXCEPTION
         WHEN duplicate_object THEN null;
