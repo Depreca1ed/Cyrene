@@ -14,4 +14,4 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY . .
 
-ENTRYPOINT [ "python3", "." "--production"]
+ENTRYPOINT [ "python3", ".", "--production"]
