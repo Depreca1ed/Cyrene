@@ -20,7 +20,7 @@ import asyncpg
 import click
 import discord
 
-from config import DATABASE_CRED, TOKEN, TEST_TOKEN
+from config import DATABASE_CRED, TEST_TOKEN, TOKEN
 from utils import Mafuyu
 
 if TYPE_CHECKING:
