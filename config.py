@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN: str = getenv('TOKEN')
+TEST_TOKEN: str = getenv('TEST_TOKEN')
 
 WEBHOOK: str = getenv('WEBHOOK')
 

@@ -17,9 +17,10 @@ from typing import TYPE_CHECKING, Any
 
 import aiohttp
 import asyncpg
+import click
 import discord
 
-from config import DATABASE_CRED, TOKEN
+from config import DATABASE_CRED, TOKEN, TEST_TOKEN
 from utils import Mafuyu
 
 if TYPE_CHECKING:
@@ -48,10 +49,13 @@ async def create_bot_pool() -> asyncpg.Pool[asyncpg.Record]:
     return pool
 
 
-if __name__ == '__main__':
+@click.command()
+@click.option('--production', is_flag=True)
+def run(*, production: bool) -> None:
+    token = TOKEN if production else TEST_TOKEN
     with setup_logging():
 
-        async def run_bot() -> None:
+        async def run_bot(token: str) -> None:
             pool = await create_bot_pool()
             allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=False)
             intents = discord.Intents.all()
@@ -70,6 +74,10 @@ if __name__ == '__main__':
                 session=session,
             ) as bot:
                 bot.pool = pool
-                await bot.start(TOKEN)
+                await bot.start(token)
 
-        asyncio.run(run_bot())
+        asyncio.run(run_bot(token=token))
+
+
+if __name__ == '__main__':
+    run()

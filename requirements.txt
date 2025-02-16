@@ -18,3 +18,4 @@ importlib_metadata
 configparser
 gitpython
 python-dotenv
+click

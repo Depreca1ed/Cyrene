@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Waifu',)
 
-TAG_ALLOWED_TYPES = [3,4]
+TAG_ALLOWED_TYPES = [3, 4]
 
 
 async def get_waifu(session: aiohttp.ClientSession, waifu: str) -> list[tuple[str, str]]:

@@ -65,6 +65,8 @@ class WaifuBase(BaseView):
         embed = inst.embed(data)
 
         inst.ctx = ctx
+        if await inst.ctx.bot.is_owner(ctx.author):
+            inst.add_item(APIWaifuAddButton(inst.ctx))
         inst.message = await ctx.reply(embed=embed, view=inst)
 
         return inst
@@ -309,9 +311,9 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
             interaction.user.id,
         )
         if hasattr(self.view.source, 'entries'):
-            self.view.source.entries.pop(self.view.current_page)  # type: ignore  # noqa: PGH003
+            self.view.source.entries.pop(self.view.current_page)  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
 
-            if self.view.source.entries:  # type: ignore  # noqa: PGH003
+            if self.view.source.entries:  # pyright: ignore[reportUnknownMemberType,reportAttributeAccessIssue]
                 self.view.clear_items()
                 self.view.fill_items()
                 self.view.add_item(self)
@@ -320,3 +322,50 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
                 return
         await interaction.response.edit_message(content='No waifu favourite entries', embed=None, view=None)
         self.view.stop()
+
+
+class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
+    view: WaifuBase
+
+    def __init__(
+        self,
+        ctx: Context,
+    ) -> None:
+        self.ctx = ctx
+        super().__init__(label='Add image to API', style=discord.ButtonStyle.blurple)
+
+    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
+        return bool(await self.ctx.bot.is_owner(interaction.user))
+
+    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
+        waifu = self.view.current
+        try:
+            await interaction.client.pool.execute(
+                """INSERT INTO
+                        WaifuAPIEntries (file_url, added_by, nsfw)
+                    VALUES
+                        ($1, $2, $3)
+                        """,
+                waifu.url,
+                interaction.user.id,
+                self.view.nsfw,
+            )
+        except UniqueViolationError:
+            await interaction.client.pool.execute("""DELETE FROM WaifuAPIEntries WHERE file_url = $1""", waifu.url)
+            return await interaction.response.send_message(
+                (
+                    f'Successfully removed [#{waifu.image_id}]'
+                    f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
+                    f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
+                ),
+                ephemeral=True,
+            )
+
+        return await interaction.response.send_message(
+            (
+                f'Successfully added [#{waifu.image_id}]'
+                f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
+                f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
+            ),
+            ephemeral=True,
+        )

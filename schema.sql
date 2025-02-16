@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS WaifuFavourites (
     PRIMARY KEY (id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS WaifuAPIEntries (
+    file_url TEXT PRIMARY KEY,
+    added_by BIGINT NOT NULL,
+    nsfw BOOLEAN NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS Errors (
     id SERIAL PRIMARY KEY,
     command TEXT NOT NULL,
