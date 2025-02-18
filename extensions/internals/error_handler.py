@@ -25,6 +25,7 @@ from utils import (
     generate_error_objects,
     get_command_signature,
 )
+from utils.constants import BotEmojis
 
 if TYPE_CHECKING:
     import asyncpg
@@ -85,7 +86,7 @@ class MissingArgumentHandler(BaseView):
         self.error = error
         self.ctx = ctx
         super().__init__(timeout=timeout)
-        self.argument_button.emoji = ctx.bot.bot_emojis['greentick']
+        self.argument_button.emoji = BotEmojis.GREEN_TICK
         self.argument_button.label = f'Add {(self.error.param.displayed_name or self.error.param.name).title()}'
 
     @discord.ui.button(style=discord.ButtonStyle.grey)
@@ -129,7 +130,7 @@ class ErrorView(BaseView):
         )
         embed.set_author(
             name=f'Error #{self.error["id"]}',
-            icon_url=self.ctx.bot.bot_emojis['redcross'].url,
+            icon_url=BotEmojis.RED_CROSS.url,
         )
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -480,4 +481,4 @@ class ErrorHandler(BaseCog):
                     continue
             # Assuming all goes fine
             await self.bot.pool.execute("""DELETE FROM ErrorReminders WHERE id = $1""", error_id)
-        await ctx.message.add_reaction(str(self.bot.bot_emojis['greentick']))
+        await ctx.message.add_reaction(BotEmojis.GREEN_TICK)

@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, NotBlacklistedError
+from utils.constants import BotEmojis
 
 if TYPE_CHECKING:
     from utils import Context, Mafuyu
@@ -87,7 +88,7 @@ class Blacklist(BaseCog):
             content = str(err)
             await ctx.reply(content)
 
-        await ctx.message.add_reaction(self.bot.bot_emojis['greentick'])
+        await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
         return
 
     @blacklist_cmd.command(name='remove', help='Remove a user or server from blacklist')
@@ -100,7 +101,7 @@ class Blacklist(BaseCog):
             await ctx.reply(content)
             return
 
-        await ctx.message.add_reaction(self.bot.bot_emojis['greentick'])
+        await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
     async def bot_check_once(self, ctx: Context) -> bool:
         """

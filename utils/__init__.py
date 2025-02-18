@@ -1,12 +1,5 @@
 from .basecog import BaseCog
-from .constants import (
-    BASE_COLOUR,
-    BLACKLIST_COLOUR,
-    BOT_FARM_COLOUR,
-    BOT_THRESHOLD,
-    CHAR_LIMIT,
-    ERROR_COLOUR,
-)
+from .constants import BASE_COLOUR, BLACKLIST_COLOUR, BOT_FARM_COLOUR, BOT_THRESHOLD, CHAR_LIMIT, ERROR_COLOUR, BotEmojis
 from .embed import Embed
 from .errors import (
     AlreadyBlacklistedError,
@@ -43,6 +36,7 @@ __all__ = (
     'BaseCog',
     'BaseView',
     'BlacklistData',
+    'BotEmojis',
     'Context',
     'Embed',
     'FeatureDisabledError',

@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any, Self
 
 import discord
 
+from utils.constants import BotEmojis
+
 from . import BASE_COLOUR, ERROR_COLOUR
 
 if TYPE_CHECKING:
@@ -65,5 +67,5 @@ class Embed(discord.Embed):
             The generated embed
 
         """
-        title = f'{ctx.bot.bot_emojis["redcross"]} | {title}' if ctx else title
+        title = f'{BotEmojis.RED_CROSS} | {title}' if ctx else title
         return cls(title=title, description=description, ctx=ctx, colour=ERROR_COLOUR)

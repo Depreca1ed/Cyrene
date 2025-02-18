@@ -7,7 +7,16 @@ import discord
 from asyncpg.exceptions import UniqueViolationError
 from discord.ext import menus
 
-from utils import BaseView, Embed, Paginator, WaifuNotFoundError, WaifuResult, better_string, generate_timestamp_string
+from utils import (
+    BaseView,
+    Embed,
+    Paginator,
+    WaifuNotFoundError,
+    WaifuResult,
+    better_string,
+    generate_timestamp_string,
+    BotEmojis,
+)
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -41,8 +50,8 @@ class WaifuBase(BaseView):
         self.smashers: set[discord.User | discord.Member] = set()
         self.passers: set[discord.User | discord.Member] = set()
 
-        self.smash_emoji = self.smashbutton.emoji = self.ctx.bot.bot_emojis['SMASH']
-        self.pass_emoji = self.passbutton.emoji = self.ctx.bot.bot_emojis['PASS']
+        self.smash_emoji = self.smashbutton.emoji = BotEmojis.SMASH
+        self.pass_emoji = self.passbutton.emoji = BotEmojis.PASS
 
     @classmethod
     async def start(cls, ctx: Context, *, query: None | str = None) -> Self | None:
@@ -297,11 +306,10 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
 
     def __init__(
         self,
-        ctx: Context,
         *,
         style: discord.ButtonStyle = discord.ButtonStyle.red,
     ) -> None:
-        super().__init__(style=style, emoji=ctx.bot.bot_emojis['redcross'])
+        super().__init__(style=style, emoji=BotEmojis.RED_CROSS)
 
     async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
         item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]

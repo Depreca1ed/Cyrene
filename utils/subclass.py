@@ -201,8 +201,6 @@ class Mafuyu(commands.AutoShardedBot):
 
     async def refresh_bot_variables(self) -> None:
         """Set values to some bot constants."""
-        self.bot_emojis = {emoji.name: emoji for emoji in await self.fetch_application_emojis()}
-
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
         self.appinfo = await self.application_info()

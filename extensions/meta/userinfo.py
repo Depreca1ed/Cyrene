@@ -12,19 +12,10 @@ if TYPE_CHECKING:
     from utils import Context
 
 
-class Userinfo(BaseCog):
-    def _get_acknowledgements(self, user: discord.Member) -> list[str]:
-        acknowledgements: list[str] = []
-        if [
-            perm
-            for perm in user.guild_permissions
-            if perm in [subperm for subperm in discord.Permissions.elevated() if subperm[1] is True] and perm[1] is True
-        ]:
-            acknowledgements.append('- **Server Staff**')
-        if user.id == user.guild.owner_id:
-            acknowledgements.append('- **Server Owner**')
-        return acknowledgements
+USER_DATA_OBJECT_COUNT = 5
 
+
+class Userinfo(BaseCog):
     @commands.hybrid_command(name='whois', help='Get information about a user', aliases=['userinfo', 'who'])
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
@@ -39,60 +30,51 @@ class Userinfo(BaseCog):
             ctx=ctx,
         )
 
-        name = f'{user.global_name or user.name} ' + (
-            f'({user.nick} in {user.guild.name})'
-            if isinstance(user, discord.Member) and user.nick and user.guild.name
-            else ''
-        )
+        name = f'{user.global_name or user.name} '
 
-        embed.set_author(
-            name=name,
-            icon_url=user.avatar.url if user.avatar else user.default_avatar.url,
-        )
-
-        basic_user_listing: list[str | None] = [
+        user_info: list[str | None] = [
+            f'-# **Mutual Servers:** {len(user.mutual_guilds)}' if user.mutual_guilds else None,
             f'- **ID:** `{user.id}`',
             f'- **Created:** {generate_timestamp_string(user.created_at)}',
         ]
 
-        base_shown_count = 5
-        acknoledgements: list[str] | None = None
-
         if isinstance(user, discord.Member):
+            is_guild_ok = bool(user.guild and user.guild.roles)  # When the guild is there, the guild will have @everyone
+
+            if is_guild_ok:
+                name += f'({user.nick} in {user.guild.name})'
+
             valid_roles = [role.mention for role in user.roles if role is not user.guild.default_role]
             valid_roles.reverse()
 
             roles_string = (
-                ', '.join(valid_roles)
-                if len(valid_roles) <= base_shown_count
-                else ', '.join(valid_roles[:base_shown_count]) + f' + {len(valid_roles) - base_shown_count} roles'
+                ', '.join(valid_roles[:USER_DATA_OBJECT_COUNT]) + f' + {len(valid_roles) - USER_DATA_OBJECT_COUNT} roles'
+                if len(valid_roles) > USER_DATA_OBJECT_COUNT
+                else ''
             )
 
-            member_listing = [
+            member_info = [
                 (f'- **Joined:** {generate_timestamp_string(user.joined_at)}' if user.joined_at else None),
                 f'- **Roles: ** {roles_string}' if valid_roles else None,
             ]
 
-            if member_listing:
-                basic_user_listing.extend(member_listing)
-
-            if not user.guild_avatar:
-                embed.set_author(name=embed.author.name, icon_url=None)
-
-            acknoledgements = self._get_acknowledgements(user)
+            if member_info:
+                user_info.extend(member_info)
 
         embed.description = better_string(
-            basic_user_listing,
+            user_info,
             seperator='\n',
         )
 
-        if acknoledgements:
-            embed.add_field(name='Acknowledgements', value='\n'.join(acknoledgements), inline=False)
+        embed.set_author(
+            name=name,
+            icon_url=user.guild_avatar.url if isinstance(user, discord.Member) and user.guild_avatar else None,
+        )
 
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.set_image(url=user.banner.url if user.banner else None)
 
-        await ctx.send(embed=embed)
+        await ctx.reply(embed=embed)
 
     @commands.hybrid_command(
         name='avatar',
