@@ -26,6 +26,7 @@ from utils import (
     get_command_signature,
 )
 from utils.constants import BotEmojis
+from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     import asyncpg
@@ -56,7 +57,9 @@ class MissingArgumentModal(discord.ui.Modal):
         self.prev_message = previous_message
         super().__init__(title=title, timeout=timeout)
 
-    async def on_submit(self, interaction: discord.Interaction) -> None:
+    async def on_submit(
+        self, interaction: discord.Interaction[Mafuyu]
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
         cmd = self.ctx.command
         if not cmd:
             await interaction.response.send_message('Something went wrong', ephemeral=True)

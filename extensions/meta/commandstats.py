@@ -8,6 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils import BaseCog, Context, Embed, better_string
+from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from utils import Mafuyu
@@ -173,7 +174,7 @@ class CommandStats(BaseCog):
         user: discord.User | discord.Member | None,
         channel: discord.abc.GuildChannel | None,
         guild: str | None,
-    ) -> None:
+    ) -> discord.InteractionCallbackResponse[Mafuyu]:
         actual_guild = None
         if guild:
             actual_guild = await commands.GuildConverter().convert(await Context.from_interaction(interaction), guild)

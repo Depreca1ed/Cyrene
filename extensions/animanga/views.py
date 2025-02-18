@@ -17,6 +17,7 @@ from utils import (
     better_string,
     generate_timestamp_string,
 )
+from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -116,7 +117,9 @@ class WaifuBase(BaseView):
     @discord.ui.button(
         style=discord.ButtonStyle.green,
     )
-    async def smashbutton(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def smashbutton(
+        self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
         if interaction.user in self.smashers:
             try:
                 await interaction.client.pool.execute(
@@ -163,7 +166,9 @@ class WaifuBase(BaseView):
     @discord.ui.button(
         style=discord.ButtonStyle.red,
     )
-    async def passbutton(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def passbutton(
+        self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
         if interaction.user in self.passers:
             results = await interaction.client.pool.fetch(
                 """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
@@ -345,7 +350,7 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         return bool(await self.ctx.bot.is_owner(interaction.user))
 
-    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
+    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
         waifu = self.view.current
         try:
             await interaction.client.pool.execute(
