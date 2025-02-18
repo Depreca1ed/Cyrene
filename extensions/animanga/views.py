@@ -9,13 +9,13 @@ from discord.ext import menus
 
 from utils import (
     BaseView,
+    BotEmojis,
     Embed,
     Paginator,
     WaifuNotFoundError,
     WaifuResult,
     better_string,
     generate_timestamp_string,
-    BotEmojis,
 )
 
 if TYPE_CHECKING:
