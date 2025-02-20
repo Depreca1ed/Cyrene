@@ -14,6 +14,7 @@ from utils import Embed, better_string
 from .botinfo import BotInformation
 from .commandstats import CommandStats
 from .serverinfo import ServerInfo
+from .snipe import Snipe
 from .userinfo import Userinfo
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ def make_image(colour: discord.Colour) -> BytesIO:
     return buffer
 
 
-class Meta(BotInformation, CommandStats, Userinfo, ServerInfo, name='Meta'):
+class Meta(BotInformation, CommandStats, Snipe, Userinfo, ServerInfo, name='Meta'):
     """For everything related to Discord or Mafuyu."""
 
     @commands.command(name='colour', aliases=['color'], description='Get information about a certain colour')

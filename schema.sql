@@ -1,6 +1,7 @@
 BEGIN;
 
 DO $$ BEGIN
+        CREATE TYPE FeatureTypes AS ENUM('snipe');
         CREATE TYPE BlacklistTypes AS ENUM('guild', 'user');
 EXCEPTION
         WHEN duplicate_object THEN null;
@@ -65,6 +66,13 @@ CREATE TABLE IF NOT EXISTS CommandStats (
     channel_id BIGINT DEFAULT 0,
     guild_id BIGINT DEFAULT 0,
     PRIMARY KEY (command_name, user_id, channel_id, guild_id)
+);
+
+CREATE TABLE IF NOT EXISTS Feature (
+    feature_type FeatureTypes NOT NULL,
+    user_id BIGINT,
+    guild_id BIGINT,
+    allowed BOOLEAN NOT NULL
 );
 
 COMMIT;
