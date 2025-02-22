@@ -59,15 +59,6 @@ CREATE TABLE IF NOT EXISTS ErrorReminders (
     PRIMARY KEY (id, user_id)
 );
 
-CREATE TABLE IF NOT EXISTS CommandStats (
-    usage_count INTEGER NOT NULL,
-    command_name TEXT NOT NULL,
-    user_id BIGINT NOT NULL,
-    channel_id BIGINT DEFAULT 0,
-    guild_id BIGINT DEFAULT 0,
-    PRIMARY KEY (command_name, user_id, channel_id, guild_id)
-);
-
 CREATE TABLE IF NOT EXISTS Feature (
     feature_type FeatureTypes NOT NULL,
     user_id BIGINT,
