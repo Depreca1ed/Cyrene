@@ -70,7 +70,11 @@ class WaifuBase(BaseView):
             ),
             query=query,
         )
-        data = await inst.request()
+        try:
+            data = await inst.request()
+        except KeyError:
+            await ctx.reply('Hey! The bot got ratelimited by danbooru. Try again')
+            return None
 
         embed = inst.embed(data)
 
