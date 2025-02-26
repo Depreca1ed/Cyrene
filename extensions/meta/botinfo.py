@@ -54,7 +54,7 @@ class BotInformation(BaseCog):
         )
 
         embed.set_author(
-            name=f'Made by {bot.owner}',
+            name=f'Made by {bot.appinfo.team.owner if bot.appinfo.team else bot.owner}',
             icon_url=bot.owner.display_avatar.url,
         )
         embed.add_field(
