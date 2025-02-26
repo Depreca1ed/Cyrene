@@ -53,9 +53,11 @@ class BotInformation(BaseCog):
             ctx=ctx,
         )
 
+        owner = bot.appinfo.team.owner if bot.appinfo.team and bot.appinfo.team.owner else bot.owner
+
         embed.set_author(
-            name=f'Made by {bot.appinfo.team.owner if bot.appinfo.team else bot.owner}',
-            icon_url=bot.owner.display_avatar.url,
+            name=f'Made by {owner}',
+            icon_url=owner.display_avatar.url,
         )
         embed.add_field(
             value=better_string(
