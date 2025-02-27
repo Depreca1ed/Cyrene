@@ -16,6 +16,7 @@ from utils import (
     ERROR_COLOUR,
     BaseCog,
     BaseView,
+    BotEmojis,
     Embed,
     Paginator,
     WaifuNotFoundError,
@@ -25,8 +26,6 @@ from utils import (
     generate_error_objects,
     get_command_signature,
 )
-from utils.constants import BotEmojis
-from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     import asyncpg

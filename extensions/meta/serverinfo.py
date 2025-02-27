@@ -42,7 +42,6 @@ class ServerInfo(BaseCog):
         emojis = [str(emoji) for emoji in guild.emojis]
         base_show_count = 3
         embed.add_field(
-            name='Statistics',
             value=better_string(
                 [
                     f'- **Members:** `{guild.member_count}`',

@@ -206,22 +206,22 @@ class Mafuyu(commands.AutoShardedBot):
         self.appinfo = await self.application_info()
 
     @property
-    def owner(self) -> discord.User:
+    def owner(self) -> discord.TeamMember | discord.User:
         """
         Return the user object of the owner of the bot.
 
         Returns
         -------
-        discord.User
-            The owner's user object
+        discord.TeamMember | discord.User
+            The owner's TeamMember or User object.
 
         """
-        return self.appinfo.owner
+        return self.appinfo.team.owner if self.appinfo.team and self.appinfo.team.owner else self.appinfo.owner
 
     @discord.utils.cached_property
     def logger(self) -> discord.Webhook:
         """
-        Webhook logger used for sending certain logs to a channel.
+        Return webhook logger used for sending certain logs to a channel.
 
         Returns
         -------
@@ -234,7 +234,7 @@ class Mafuyu(commands.AutoShardedBot):
     @property
     def support_invite(self) -> discord.Invite:
         """
-        Invite to the support server.
+        Return invite to the support server.
 
         Returns
         -------
@@ -247,7 +247,7 @@ class Mafuyu(commands.AutoShardedBot):
     @discord.utils.cached_property
     def invite_url(self) -> str:
         """
-        Invite link to invite the bot.
+        Return invite link to invite the bot.
 
         Returns
         -------
@@ -258,8 +258,17 @@ class Mafuyu(commands.AutoShardedBot):
         return discord.utils.oauth_url(self.user.id, scopes=None)
 
     @property
-    def topgg_url(self) -> str:
-        return f'https://top.gg/bot/{self.user.id}'
+    def humanized_start_time(self) -> str:
+        """
+        Return a humanized form of the bot's uptime.
+
+        Returns
+        -------
+        str
+            The humanized uptime
+
+        """
+        return discord.utils.format_dt(self.start_time, 'R')
 
     async def close(self) -> None:
         if hasattr(self, 'pool'):

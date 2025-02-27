@@ -42,7 +42,7 @@ class Developer(BaseCog):
             try:
                 await self.bot.reload_extension(str(ext))
             except commands.ExtensionError as error:
-                messages.append(f'Failed to reload {ext}\n```py{error}```')
+                messages.append(f'Failed to reload {ext}\n```py\n{error}```')
             else:
                 messages.append(f'Reloaded {ext}')
 

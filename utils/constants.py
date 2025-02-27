@@ -1,8 +1,14 @@
-from enum import EnumMeta
-
 import discord
 
-__ALL__ = ('BASE_COLOUR', 'ERROR_COLOUR', 'BOT_THRESHOLD', 'BLACKLIST_COLOUR', 'BOT_FARM_COLOUR', 'BotEmojis')
+__ALL__ = (
+    'BASE_COLOUR',
+    'ERROR_COLOUR',
+    'BOT_THRESHOLD',
+    'BLACKLIST_COLOUR',
+    'BOT_FARM_COLOUR',
+    'BotEmojis',
+    'WebhookThreads',
+)
 
 BASE_COLOUR = discord.Colour.from_str('#4B506F')
 ERROR_COLOUR = discord.Colour.from_str('#bb6688')
@@ -14,7 +20,7 @@ BOT_FARM_COLOUR = discord.Colour.from_str('#fff5e8')
 CHAR_LIMIT = 2000
 
 
-class BotEmojis(EnumMeta):
+class BotEmojis:
     GREY_TICK = discord.PartialEmoji(name='grey_tick', id=1278414780427796631)
     GREEN_TICK = discord.PartialEmoji(name='greentick', id=1297976474141200529, animated=True)
     RED_CROSS = discord.PartialEmoji(name='redcross', id=1315758805585498203, animated=True)
