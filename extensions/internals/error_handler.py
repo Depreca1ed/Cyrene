@@ -26,6 +26,7 @@ from utils import (
     generate_error_objects,
     get_command_signature,
 )
+from utils.errors import MafuyuError
 
 if TYPE_CHECKING:
     import asyncpg
@@ -175,7 +176,6 @@ defaults = (
     commands.NotOwner,
     commands.NSFWChannelRequired,
     commands.TooManyArguments,
-    WaifuNotFoundError,
 )
 
 log = logging.getLogger(__name__)
@@ -305,7 +305,11 @@ class ErrorHandler(BaseCog):
 
     @commands.Cog.listener('on_command_error')
     async def error_handler(self, ctx: Context, error: commands.CommandError) -> None | discord.Message:
-        if (ctx.command and ctx.command.has_error_handler()) or (ctx.cog and ctx.cog.has_error_handler()):
+        if (
+            (ctx.command and ctx.command.has_error_handler())
+            or (ctx.cog and ctx.cog.has_error_handler())
+            or isinstance(error, MafuyuError)
+        ):
             return None
 
         error = getattr(error, 'original', error)
@@ -440,6 +444,24 @@ class ErrorHandler(BaseCog):
                 view=view,
             )
 
+        return None
+
+    @commands.Cog.listener('on_command_error')
+    async def custom_errors_handler(self, ctx: Context, error: MafuyuError | Exception) -> None | discord.Message:
+        if (
+            (ctx.command and ctx.command.has_error_handler())
+            or (ctx.cog and ctx.cog.has_error_handler())
+            or not isinstance(error, MafuyuError)
+        ):
+            return None
+
+        if isinstance(error, WaifuNotFoundError):
+            return await ctx.reply(
+                content=(
+                    f'Cannot find any results for {error.waifu}.\n'
+                    '-# You can only search for a **character** or **franchise/series**.'
+                )
+            )
         return None
 
     @commands.group(

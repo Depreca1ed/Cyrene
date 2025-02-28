@@ -73,8 +73,10 @@ class UnderMaintenanceError(commands.CheckFailure, MafuyuError):
 
 class WaifuNotFoundError(commands.CommandError, MafuyuError):
     def __init__(self, waifu: str | None = None, json: dict[Any, Any] | str | None = None) -> None:
+        waifu = waifu.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere') if waifu else None
+        self.waifu = waifu
+        self.json = json
         if waifu:
-            waifu = waifu.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere')
             super().__init__(f'Could not find any results for {waifu}\n{json}')
         else:
             super().__init__(message=f'Could not find any results\n{json}')
