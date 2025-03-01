@@ -65,6 +65,7 @@ def run(*, production: bool) -> None:
                 'extensions.animanga',
                 'extensions.internals',
                 'extensions.meta',
+                'extensions.utility',
             ]
 
             async with Mafuyu(
