@@ -48,7 +48,7 @@ def clean_error(objects: list[str] | str, *, seperator: str, prefix: str) -> str
             (prefix + f'{(perm.replace("_", " ")).capitalize()}' for perm in objects),
             seperator=seperator,
         )
-        if objects is not str
+        if type(objects) is not str
         else prefix + objects
     )
 
@@ -92,15 +92,15 @@ def generate_error_objects(
         Raised when the string was empty.
 
     """
-    missing_roles = (
-        [str(f'<@&{role_id}>' if role_id is int else role_id) for role_id in error.missing_roles]
-        if isinstance(error, commands.MissingAnyRole | commands.BotMissingAnyRole)
+    missing_role = (
+        str(f'<@&{error.missing_role}>' if type(error.missing_role) is int else error.missing_role)
+        if isinstance(error, commands.MissingRole | commands.BotMissingRole)
         else None
     )
 
-    missing_role = (
-        str(f'<@&{error.missing_role}>' if error.missing_role is int else error.missing_role)
-        if isinstance(error, commands.MissingRole | commands.BotMissingRole)
+    missing_roles = (
+        [str(f'<@&{role_id}>' if role_id is int else role_id) for role_id in error.missing_roles]
+        if isinstance(error, commands.MissingAnyRole | commands.BotMissingAnyRole)
         else None
     )
 

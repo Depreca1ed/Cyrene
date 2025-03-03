@@ -91,3 +91,8 @@ class Developer(BaseCog):
             err_str = format_tb(err)
             return await ctx.reply(f'```py\n{err_str}```')
         return None
+
+    @commands.command(name='test')
+    @commands.has_role(1072260390995628072)
+    async def test(self, ctx: Context):
+        await ctx.send('sad')

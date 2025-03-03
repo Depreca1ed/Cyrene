@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 import contextlib
-import copy
 import datetime
 import difflib
 import logging
 import operator
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import discord
 from discord.ext import commands, menus
 
 from utils import (
-    CHAR_LIMIT,
     ERROR_COLOUR,
     BaseCog,
     BaseView,
     BotEmojis,
     Embed,
+    MafuyuError,
     Paginator,
     WaifuNotFoundError,
     better_string,
@@ -26,12 +25,56 @@ from utils import (
     generate_error_objects,
     get_command_signature,
 )
-from utils.errors import MafuyuError
+from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     import asyncpg
 
     from utils import Context, Mafuyu
+
+
+class CommandInvokeView(BaseView):
+    def __init__(self, *, ctx: Context, command: commands.Command[Any, Any, Any]) -> None:
+        super().__init__(timeout=180.0)
+        self.ctx = ctx
+        self.command = command
+        if self.run_command.label:
+            self.run_command.label += self.command.name
+
+    @discord.ui.button(label='Run ', style=discord.ButtonStyle.gray, emoji=BotEmojis.GREY_TICK)
+    async def run_command(
+        self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
+        can_run = True
+
+        try:
+            self.ctx.command = (
+                self.command
+            )  # Since we have the correct command. Running can_run without giving ctx the command loops the error
+            can_run = await self.ctx.bot.invoke(self.ctx)
+        except commands.CommandError as err:
+            self.ctx.bot.dispatch('command_error', self.ctx, err)
+
+        with contextlib.suppress(discord.HTTPException):
+            if self.message:
+                await self.message.delete()
+
+        if not can_run:
+            return None
+
+        invoked_with: list[Any] = []
+        if self.ctx.invoked_with:
+            for param in self.command.params.values():
+                converted = await commands.run_converters(
+                    self.ctx,
+                    param.converter,
+                    self.ctx.invoked_with,
+                    param,
+                )
+                invoked_with.append(converted)
+
+        await self.ctx.invoke(self.command, *invoked_with)
+        return await interaction.response.defer()
 
 
 class MissingArgumentModal(discord.ui.Modal):
@@ -65,10 +108,18 @@ class MissingArgumentModal(discord.ui.Modal):
             await interaction.response.send_message('Something went wrong', ephemeral=True)
             msg = 'Command not found. This should not happen.'
             raise TypeError(msg)
-        new_context = copy.copy(self.ctx)
-        new_context.message.content = f'{self.ctx.message.content} {self.argument.value}'
 
-        await self.ctx.bot.process_commands(new_context.message)
+        arguments: list[Any] = []
+        for param in cmd.params.values():
+            converted = await commands.run_converters(
+                self.ctx,
+                param.converter,
+                self.argument.value,
+                param,
+            )
+            arguments.append(converted)
+
+        await self.ctx.invoke(cmd, *arguments)
 
         with contextlib.suppress(discord.HTTPException):
             await self.prev_message.delete()
@@ -108,23 +159,23 @@ class MissingArgumentHandler(BaseView):
 
 
 class ErrorView(BaseView):
-    def __init__(self, error: asyncpg.Record, ctx: Context, *, timeout: float | None = 180) -> None:
-        self.error = error  # The wording is strongly terrible here, its a record of error not the error itself
+    def __init__(self, error_record: asyncpg.Record, ctx: Context, *, timeout: float | None = 180) -> None:
+        self.error_record = error_record
         self.ctx = ctx
         super().__init__(timeout=timeout)
 
     @discord.ui.button(label='Wanna know more?', style=discord.ButtonStyle.grey)
     async def inform_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         embed = Embed(
-            description=f'```py\n{self.error["error"]}```',
+            description=f'```py\n{self.error_record["error"]}```',
             colour=ERROR_COLOUR,
         )
-        error_timestamp: datetime.datetime = self.error['occured_when']
-        is_fixed = 'is not' if self.error['fixed'] is False else 'is'
+        error_timestamp: datetime.datetime = self.error_record['occured_when']
+        is_fixed = 'is not' if self.error_record['fixed'] is False else 'is'
         embed.add_field(
             value=(
                 f'The error was discovered **{discord.utils.format_dt(error_timestamp, "R")}** '
-                f'in the **{self.error["command"]}** command and **{is_fixed}** fixed'
+                f'in the **{self.error_record["command"]}** command and **{is_fixed}** fixed'
             )
         )
         embed.set_footer(
@@ -132,7 +183,7 @@ class ErrorView(BaseView):
             icon_url=interaction.user.display_avatar.url,
         )
         embed.set_author(
-            name=f'Error #{self.error["id"]}',
+            name=f'Error #{self.error_record["id"]}',
             icon_url=BotEmojis.RED_CROSS.url,
         )
 
@@ -142,14 +193,14 @@ class ErrorView(BaseView):
     async def notified_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         is_user_present = await interaction.client.pool.fetchrow(
             """SELECT * FROM ErrorReminders WHERE id = $1 AND user_id = $2""",
-            self.error['id'],
+            self.error_record['id'],
             interaction.user.id,
         )
 
         if is_user_present:
             await interaction.client.pool.execute(
                 """DELETE FROM ErrorReminders WHERE id = $1 AND user_id = $2""",
-                self.error['id'],
+                self.error_record['id'],
                 interaction.user.id,
             )
             await interaction.response.send_message(
@@ -160,7 +211,7 @@ class ErrorView(BaseView):
 
         await interaction.client.pool.execute(
             """INSERT INTO ErrorReminders (id, user_id) VALUES ($1, $2)""",
-            self.error['id'],
+            self.error_record['id'],
             interaction.user.id,
         )
         await interaction.response.send_message('You will now be notified when this error is fixed', ephemeral=True)
@@ -181,38 +232,6 @@ defaults = (
 log = logging.getLogger(__name__)
 
 
-async def logger_embed(bot: Mafuyu, record: asyncpg.Record) -> Embed:
-    error_link = await bot.create_paste(
-        filename=f'error{record["id"]}.py',
-        content=record['full_error'],
-    )
-
-    logger_embed = Embed(
-        title=f'Error #{record["id"]}',
-        description=(
-            f"""```py\n{record['full_error']}```"""
-            if len(record['full_error']) < CHAR_LIMIT
-            else 'Error message was too long to be shown'
-        ),
-        colour=0xFF0000 if record['fixed'] is False else 0x00FF00,
-        url=error_link.url,
-    )
-
-    logger_embed.add_field(
-        value=better_string(
-            (
-                f'- **Command:** `{record["command"]}`',
-                f'- **User:** {bot.get_user(record["user_id"])}',
-                f'- **Guild:** {bot.get_guild(record["guild"]) if record["guild"] else "N/A"}',
-                f'- **URL: ** [Jump to message]({record["message_url"]})',
-                f'- **Occured: ** {discord.utils.format_dt(record["occured_when"], "f")}',
-            ),
-            seperator='\n',
-        )
-    )
-    return logger_embed
-
-
 class ErrorPageSource(menus.ListPageSource):
     def __init__(self, bot: Mafuyu, entries: list[asyncpg.Record]) -> None:
         self.bot = bot
@@ -220,18 +239,21 @@ class ErrorPageSource(menus.ListPageSource):
         super().__init__(entries, per_page=1)
 
     async def format_page(self, _: Paginator, entry: asyncpg.Record) -> Embed:
-        embed = await logger_embed(self.bot, entry)
+        embed = await Embed.logger_embed(self.bot, entry)
         embed.title = embed.title + f'/{self.get_max_pages()}' if embed.title else None
         return embed
 
 
 class ErrorHandler(BaseCog):
-    def _find_closest_command(self, name: str) -> list[str]:
-        return difflib.get_close_matches(
+    def _find_closest_command(self, name: str) -> commands.Command[None, ..., Any] | None:
+        closest_cmd_name = difflib.get_close_matches(
             name,
             [_command.name for _command in self.bot.commands],
             n=1,
         )
+        if not closest_cmd_name:
+            return None
+        return self.bot.get_command(closest_cmd_name[0])
 
     async def _log_error(
         self,
@@ -275,7 +297,7 @@ class ErrorHandler(BaseCog):
         if not record:
             raise ValueError
 
-        embed = await logger_embed(self.bot, record)
+        embed = await Embed.logger_embed(self.bot, record)
 
         await self.bot.logger.send(embed=embed)
 
@@ -323,11 +345,12 @@ class ErrorHandler(BaseCog):
             if possible_commands:
                 embed = Embed.error_embed(
                     title='Command Not Found',
-                    description=f'Could not find a command with that name. Perhaps you meant, `{possible_commands[0]}`?',
+                    description=f'Could not find a command with that name. Perhaps you meant, `{possible_commands}`?',
                     ctx=ctx,
                 )
+                view = CommandInvokeView(ctx=ctx, command=possible_commands)
 
-                await ctx.reply(embed=embed, delete_after=10.0)
+                view.message = await ctx.reply(embed=embed, view=view)
 
             return None
 
@@ -479,7 +502,7 @@ class ErrorHandler(BaseCog):
             if not error_record:
                 await ctx.reply('Error not found.')
                 return
-            embed = await logger_embed(self.bot, error_record)
+            embed = await Embed.logger_embed(self.bot, error_record)
             await ctx.reply(embed=embed)
             return
         errors = await self.bot.pool.fetch(
