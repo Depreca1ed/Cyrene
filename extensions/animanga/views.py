@@ -111,7 +111,6 @@ class WaifuBase(BaseView):
                 seperator='\n',
             ),
             colour=colour,
-            ctx=self.ctx,
         )
 
         embed.set_image(url=data.url)
@@ -303,7 +302,6 @@ class WaifuPageSource(menus.ListPageSource):
                 ],
                 seperator='\n',
             ),
-            ctx=_.ctx,
         )
         embed.set_image(url=post.url)
         embed.set_thumbnail(url=entry.user_id.display_avatar.url)

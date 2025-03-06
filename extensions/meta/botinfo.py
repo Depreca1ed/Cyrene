@@ -50,7 +50,6 @@ class BotInformation(BaseCog):
         embed = Embed(
             title=str(bot.user.name),
             description='\n'.join([self.format_commit(c) for c in self.get_commits()]),
-            ctx=ctx,
         )
 
         embed.set_author(

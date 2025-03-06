@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Self
 
 import discord
 
@@ -12,7 +12,7 @@ from .helper_functions import better_string
 if TYPE_CHECKING:
     import asyncpg
 
-    from . import Context, Mafuyu
+    from . import Mafuyu
 
 __all__ = ('Embed',)
 
@@ -25,32 +25,23 @@ class Embed(discord.Embed):
         url: str | None = None,
         description: str | None = None,
         colour: discord.Colour | int | None = BASE_COLOUR,
-        ctx: Context | None = None,
-        **kwargs: Any,
     ) -> None:
-        if ctx:
-            self.set_footer(
-                text=f'Requested by {ctx.author}',
-            )
         super().__init__(
             title=title,
             url=url,
             description=description,
             colour=(colour if colour and colour != discord.Colour.default() else BASE_COLOUR),
-            timestamp=discord.utils.utcnow(),
-            **kwargs,
         )
 
     def add_field(self, *, name: str | None = '', value: str | None = '', inline: bool = False) -> Self:
         return super().add_field(name=name, value=value, inline=inline)
 
     @classmethod
-    def error_embed(
+    def error(
         cls,
         *,
         title: str | None = None,
         description: str | None = None,
-        ctx: Context | None = None,
     ) -> Self:
         """
         Generate an embed for error handler responses.
@@ -70,11 +61,11 @@ class Embed(discord.Embed):
             The generated embed
 
         """
-        title = f'{BotEmojis.RED_CROSS} | {title}' if ctx else title
-        return cls(title=title, description=description, ctx=ctx, colour=ERROR_COLOUR)
+        title = f'{BotEmojis.RED_CROSS} | {title}'
+        return cls(title=title, description=description, colour=ERROR_COLOUR)
 
     @classmethod
-    async def logger_embed(cls, bot: Mafuyu, record: asyncpg.Record) -> Self:
+    async def logger(cls, bot: Mafuyu, record: asyncpg.Record) -> Self:
         """
         Generate an embed logged to the error logger.
 

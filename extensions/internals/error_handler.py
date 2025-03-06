@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 
     from utils import Context, Mafuyu
 
+log = logging.getLogger(__name__)
+
 
 class CommandInvokeView(BaseView):
     def __init__(self, *, ctx: Context, command: commands.Command[Any, Any, Any]) -> None:
@@ -45,30 +47,32 @@ class CommandInvokeView(BaseView):
     async def run_command(
         self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
     ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
-        can_run = True
+        can_run = False
 
         try:
             self.ctx.command = (
                 self.command
             )  # Since we have the correct command. Running can_run without giving ctx the command loops the error
-            can_run = await self.ctx.bot.invoke(self.ctx)
+            await self.ctx.bot.invoke(self.ctx)
+            can_run = True
+
         except commands.CommandError as err:
             self.ctx.bot.dispatch('command_error', self.ctx, err)
 
         with contextlib.suppress(discord.HTTPException):
-            if hasattr(self, 'message') and self.message:
+            if self.message:
                 await self.message.delete()
 
-        if not can_run:
+        if can_run:
             return None
 
         invoked_with: list[Any] = []
-        if self.ctx.invoked_with:
+        if self.ctx.current_argument:
             for param in self.command.params.values():
                 converted = await commands.run_converters(
                     self.ctx,
                     param.converter,
-                    self.ctx.invoked_with,
+                    self.ctx.current_argument,
                     param,
                 )
                 invoked_with.append(converted)
@@ -110,14 +114,14 @@ class MissingArgumentModal(discord.ui.Modal):
             raise TypeError(msg)
 
         arguments: list[Any] = []
-        for param in cmd.params.values():
-            converted = await commands.run_converters(
-                self.ctx,
-                param.converter,
-                self.argument.value,
-                param,
-            )
-            arguments.append(converted)
+
+        converted = await commands.run_converters(
+            self.ctx,
+            self.error.param.converter,
+            self.argument.value,
+            self.error.param,
+        )
+        arguments.append(converted)
 
         await self.ctx.invoke(cmd, *arguments)
 
@@ -217,21 +221,6 @@ class ErrorView(BaseView):
         await interaction.response.send_message('You will now be notified when this error is fixed', ephemeral=True)
 
 
-defaults = (
-    commands.UserInputError,
-    commands.DisabledCommand,
-    commands.MaxConcurrencyReached,
-    commands.CommandOnCooldown,
-    commands.PrivateMessageOnly,
-    commands.NoPrivateMessage,
-    commands.NotOwner,
-    commands.NSFWChannelRequired,
-    commands.TooManyArguments,
-)
-
-log = logging.getLogger(__name__)
-
-
 class ErrorPageSource(menus.ListPageSource):
     def __init__(self, bot: Mafuyu, entries: list[asyncpg.Record]) -> None:
         self.bot = bot
@@ -239,12 +228,24 @@ class ErrorPageSource(menus.ListPageSource):
         super().__init__(entries, per_page=1)
 
     async def format_page(self, _: Paginator, entry: asyncpg.Record) -> Embed:
-        embed = await Embed.logger_embed(self.bot, entry)
+        embed = await Embed.logger(self.bot, entry)
         embed.title = embed.title + f'/{self.get_max_pages()}' if embed.title else None
         return embed
 
 
 class ErrorHandler(BaseCog):
+    default_errors = (
+        commands.UserInputError,
+        commands.DisabledCommand,
+        commands.MaxConcurrencyReached,
+        commands.CommandOnCooldown,
+        commands.PrivateMessageOnly,
+        commands.NoPrivateMessage,
+        commands.NotOwner,
+        commands.NSFWChannelRequired,
+        commands.TooManyArguments,
+    )
+
     def _find_closest_command(self, name: str) -> commands.Command[None, ..., Any] | None:
         closest_cmd_name = difflib.get_close_matches(
             name,
@@ -276,7 +277,7 @@ class ErrorHandler(BaseCog):
                         guild,
                         error,
                         full_error,
-                        message_url,
+                        message_url,s
                         occured_when,
                         fixed
                     )
@@ -297,7 +298,7 @@ class ErrorHandler(BaseCog):
         if not record:
             raise ValueError
 
-        embed = await Embed.logger_embed(self.bot, record)
+        embed = await Embed.logger(self.bot, record)
 
         await self.bot.logger.send(embed=embed)
 
@@ -343,20 +344,20 @@ class ErrorHandler(BaseCog):
 
             possible_commands = self._find_closest_command(cmd)
             if possible_commands:
-                embed = Embed.error_embed(
-                    title='Command Not Found',
-                    description=f'Could not find a command with that name. Perhaps you meant, `{possible_commands}`?',
-                    ctx=ctx,
-                )
                 view = CommandInvokeView(ctx=ctx, command=possible_commands)
 
-                view.message = await ctx.reply(embed=embed, view=view)
+                cmd_name = await commands.clean_content(escape_markdown=True).convert(ctx, cmd)
+
+                view.message = await ctx.reply(
+                    f"Couldn't find a command named `{cmd_name}`. Perhaps, you meant `{possible_commands.name}`?",
+                    view=view,
+                )
 
             return None
 
         if isinstance(error, commands.MissingRequiredArgument | commands.MissingRequiredAttachment):
             param_name = error.param.displayed_name or error.param.name
-            embed = Embed.error_embed(
+            embed = Embed.error(
                 title=f'Missing {param_name} argument!',
                 description=better_string(
                     (
@@ -365,7 +366,6 @@ class ErrorHandler(BaseCog):
                     ),
                     seperator='\n',
                 ),
-                ctx=ctx,
             )
 
             if isinstance(error, commands.MissingRequiredArgument):
@@ -408,23 +408,17 @@ class ErrorHandler(BaseCog):
                 seperator='\n',
             )
 
-            embed = Embed.error_embed(
-                ctx=ctx,
+            embed = Embed.error(
                 title=f'Missing {error_type_wording.title()}',
                 description=content,
             )
 
             return await ctx.reply(embed=embed)
 
-        if isinstance(error, defaults):
-            embed = Embed.error_embed(
-                title='Cannot run command',
-                description=str(error),
-                ctx=ctx,
-            )
+        if isinstance(error, self.default_errors):
             return await ctx.reply(
+                str(error),
                 delete_after=getattr(error, 'retry_after', None),
-                embed=embed,
             )
 
         log.error(
@@ -433,22 +427,12 @@ class ErrorHandler(BaseCog):
             exc_info=error,
         )
 
-        known_error = await self._is_known_error(
+        record = await self._is_known_error(
             error,
             command_name=ctx.command.qualified_name,
         )
 
-        if known_error:
-            view = ErrorView(known_error, ctx)
-            view.message = await ctx.reply(
-                embed=Embed.error_embed(
-                    title='Known error occured.',
-                    description='This is a known error, and is yet to be fixed.',
-                    ctx=ctx,
-                ),
-                view=view,
-            )
-        else:
+        if not record:
             record = await self._log_error(
                 error,
                 name=ctx.command.qualified_name,
@@ -457,15 +441,14 @@ class ErrorHandler(BaseCog):
                 guild=ctx.guild,
             )
 
-            view = ErrorView(record, ctx)
-            view.message = await ctx.reply(
-                embed=Embed.error_embed(
-                    title='Unknown error occured',
-                    description='The developers have been informed.',
-                    ctx=ctx,
-                ),
-                view=view,
-            )
+        view = ErrorView(record, ctx)
+        view.message = await ctx.reply(
+            embed=Embed.error(
+                title='Error occured',
+                description='The command borked.',
+            ),
+            view=view,
+        )
 
         return None
 
@@ -502,7 +485,7 @@ class ErrorHandler(BaseCog):
             if not error_record:
                 await ctx.reply('Error not found.')
                 return
-            embed = await Embed.logger_embed(self.bot, error_record)
+            embed = await Embed.logger(self.bot, error_record)
             await ctx.reply(embed=embed)
             return
         errors = await self.bot.pool.fetch(

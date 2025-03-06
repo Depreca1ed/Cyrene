@@ -27,7 +27,6 @@ class Userinfo(BaseCog):
         embed = Embed(
             title=str(user),
             colour=user.colour if user.colour != discord.Colour.default() else None,
-            ctx=ctx,
         )
 
         name = f'{user.global_name or user.name} '
@@ -92,7 +91,7 @@ class Userinfo(BaseCog):
     ) -> discord.Message:
         avatar = user.display_avatar if server_avatar is True else user.avatar or user.default_avatar
 
-        embed = Embed(title=f"{user}'s avatar", colour=user.color, ctx=ctx).set_image(url=avatar.url)
+        embed = Embed(title=f"{user}'s avatar", colour=user.color).set_image(url=avatar.url)
 
         filetypes = set(discord.asset.VALID_ASSET_FORMATS if avatar.is_animated() else discord.asset.VALID_STATIC_FORMATS)
         urls_string = better_string(
@@ -116,7 +115,7 @@ class Userinfo(BaseCog):
         if not icon:
             return await ctx.reply(content=f'{commands.clean_content().convert(ctx, str(ctx.guild))} does not have an icon.')
 
-        embed = Embed(title=f"{ctx.guild}'s icon", ctx=ctx).set_image(url=icon.url)
+        embed = Embed(title=f"{ctx.guild}'s icon").set_image(url=icon.url)
 
         filetypes = set(discord.asset.VALID_ASSET_FORMATS if icon.is_animated() else discord.asset.VALID_STATIC_FORMATS)
 

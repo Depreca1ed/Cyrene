@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from discord.ext import commands
 
-from utils import *  # noqa: F403
-from utils import BaseCog, Context, better_string, format_tb
+from utils import BaseCog, BotEmojis, Context, format_tb
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Coroutine
@@ -34,19 +33,13 @@ class Developer(BaseCog):
         return '\n'.join(code_lines)
 
     @commands.command(name='reload', aliases=['re'], hidden=True)
-    async def reload_cogs(self, ctx: Context) -> None:
-        exts = self.bot.initial_extensions
-        messages: list[str] = []
-
-        for ext in exts:
-            try:
-                await self.bot.reload_extension(str(ext))
-            except commands.ExtensionError as error:
-                messages.append(f'Failed to reload {ext}\n```py\n{error}```')
-            else:
-                messages.append(f'Reloaded {ext}')
-
-        await ctx.send(content=better_string(messages, seperator='\n'))
+    async def reload_cogs(self, ctx: Context) -> None | Message:
+        try:
+            await self.bot.reload_extensions(str(self.bot.initial_extensions))
+        except commands.ExtensionError as error:
+            return await ctx.reply(format_tb(error))
+        else:
+            return await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
     @commands.command(
         name='eval',
@@ -91,8 +84,3 @@ class Developer(BaseCog):
             err_str = format_tb(err)
             return await ctx.reply(f'```py\n{err_str}```')
         return None
-
-    @commands.command(name='test')
-    @commands.has_role(1072260390995628072)
-    async def test(self, ctx: Context):
-        await ctx.send('sad')

@@ -23,7 +23,7 @@ class ServerInfo(BaseCog):
             raise commands.GuildNotFound(msg)
         guild = ctx.guild
 
-        embed = Embed(title=guild.name, description=guild.description or None, ctx=ctx)
+        embed = Embed(title=guild.name, description=guild.description or None)
         embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
 
         embed.add_field(
@@ -108,7 +108,6 @@ class ServerInfo(BaseCog):
         embed = Embed(
             title=f'{role.name} {role.unicode_emoji or ""}',
             colour=role.colour,
-            ctx=ctx,
         )
         embed.description = better_string(
             (
