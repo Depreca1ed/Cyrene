@@ -20,6 +20,8 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
+
+# from .help_command import MyHelpCommand  # noqa: ERA001
 from .helper_functions import (
     better_string,
     clean_error,
@@ -50,6 +52,7 @@ __all__ = (
     'FeatureDisabledError',
     'Mafuyu',
     'MafuyuError',
+    #    'MyHelpCommand',
     'NotBlacklistedError',
     'Paginator',
     'PrefixAlreadyPresentError',

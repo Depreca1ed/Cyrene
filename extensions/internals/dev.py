@@ -35,7 +35,7 @@ class Developer(BaseCog):
     @commands.command(name='reload', aliases=['re'], hidden=True)
     async def reload_cogs(self, ctx: Context) -> None | Message:
         try:
-            await self.bot.reload_extensions(str(self.bot.initial_extensions))
+            await self.bot.reload_extensions(self.bot.initial_extensions)
         except commands.ExtensionError as error:
             return await ctx.reply(format_tb(error))
         else:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import datetime
 import difflib
+import inspect
 import logging
 import operator
 from typing import TYPE_CHECKING, Any, Self
@@ -25,7 +26,6 @@ from utils import (
     generate_error_objects,
     get_command_signature,
 )
-from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     import asyncpg
@@ -33,6 +33,22 @@ if TYPE_CHECKING:
     from utils import Context, Mafuyu
 
 log = logging.getLogger(__name__)
+
+
+class Argument:
+    def __init__(self, *, value: str | None, param: commands.Parameter) -> None:
+        self.value: Any = value
+        self.param: commands.Parameter = param
+        super().__init__()
+
+    def to_option(self) -> discord.SelectOption:
+        name = self.param.displayed_name or self.param.name
+        return discord.SelectOption(
+            emoji=BotEmojis.GREEN_TICK if not self.param.required or self.value else BotEmojis.RED_CROSS,
+            label=f'{name}{" [required]" if self.param.required else ""}',
+            value=self.param.name,
+            description=self.param.description,
+        )
 
 
 class CommandInvokeView(BaseView):
@@ -59,12 +75,10 @@ class CommandInvokeView(BaseView):
         except commands.CommandError as err:
             self.ctx.bot.dispatch('command_error', self.ctx, err)
 
-        with contextlib.suppress(discord.HTTPException):
-            if self.message:
-                await self.message.delete()
-
         if can_run:
             return None
+
+        # NOTE: There isn't any case this should run, i believe.
 
         invoked_with: list[Any] = []
         if self.ctx.current_argument:
@@ -82,7 +96,7 @@ class CommandInvokeView(BaseView):
 
 
 class MissingArgumentModal(discord.ui.Modal):
-    argument: discord.ui.TextInput[MissingArgumentHandler] = discord.ui.TextInput(
+    argument_value: discord.ui.TextInput[MissingArgumentHandler] = discord.ui.TextInput(
         label='Enter the Missing Argument,',
         style=discord.TextStyle.long,
         placeholder='...',
@@ -92,46 +106,33 @@ class MissingArgumentModal(discord.ui.Modal):
 
     def __init__(
         self,
-        error: commands.MissingRequiredArgument,
-        ctx: Context,
+        argument: Argument,
+        handler: MissingArgumentHandler,
         *,
         title: str,
         timeout: float | None = None,
         previous_message: discord.Message,
     ) -> None:
-        self.error = error
-        self.ctx = ctx
+        self.argument: Argument = argument
+        self.handler: MissingArgumentHandler = handler
         self.prev_message = previous_message
         super().__init__(title=title, timeout=timeout)
 
     async def on_submit(
         self, interaction: discord.Interaction[Mafuyu]
     ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
-        cmd = self.ctx.command
-        if not cmd:
-            await interaction.response.send_message('Something went wrong', ephemeral=True)
-            msg = 'Command not found. This should not happen.'
-            raise TypeError(msg)
-
-        arguments: list[Any] = []
-
         converted = await commands.run_converters(
-            self.ctx,
-            self.error.param.converter,
-            self.argument.value,
-            self.error.param,
+            self.handler.ctx,
+            self.argument.param.converter,
+            self.argument_value.value,
+            self.argument.param,
         )
-        arguments.append(converted)
-
-        await self.ctx.invoke(cmd, *arguments)
-
-        with contextlib.suppress(discord.HTTPException):
-            await self.prev_message.delete()
-
-        return await interaction.response.defer()
+        self.handler.arguments[self.argument.param.name].value = converted
+        self.handler.handle_components()
+        await interaction.response.edit_message(view=self.handler)
 
 
-class MissingArgumentHandler(BaseView):
+class MissingArgumentHandler(discord.ui.View):
     prev_message: discord.Message
 
     def __init__(
@@ -144,19 +145,72 @@ class MissingArgumentHandler(BaseView):
         self.error = error
         self.ctx = ctx
         super().__init__(timeout=timeout)
-        self.argument_button.emoji = BotEmojis.GREEN_TICK
-        self.argument_button.label = f'Add {(self.error.param.displayed_name or self.error.param.name).title()}'
 
-    @discord.ui.button(style=discord.ButtonStyle.grey)
-    async def argument_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+        self.arguments: dict[str, Argument] = self.collect_parameters_and_arguments()
+        self.handle_components()
+
+    def handle_components(self) -> None:
+        arguments = self.arguments.values()
+        self.argument_selector.options = [argument.to_option() for argument in arguments]
+
+    def get_invoke_args(self) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        if not self.arguments:
+            return (), {}
+
+        args: list[Any] = []
+        kwargs: dict[str, Any] = {}
+        for argument in self.arguments.values():
+            if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+                args.append(argument.value)
+            elif argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+                kwargs[argument.param.name] = argument.value
+
+        return tuple(args), kwargs
+
+    def collect_parameters_and_arguments(self) -> dict[str, Argument]:
+        assert self.ctx.command is not None  # noqa: S101
+        parameters: dict[str, commands.Parameter] = self.ctx.command.clean_params
+        signature: inspect.Signature = inspect.signature(self.ctx.command.callback)
+        bind_arguments: inspect.BoundArguments = signature.bind_partial(*self.ctx.args, **self.ctx.kwargs)
+        bind_arguments.apply_defaults()
+        arguments: dict[str, Argument] = {}
+
+        for param in parameters.values():
+            value = bind_arguments.arguments.get(param.name, None)
+            arguments[param.name] = Argument(
+                value=value,
+                param=param,
+            )
+
+        return arguments
+
+    @discord.ui.select(
+        placeholder='Select an argument to add',
+    )
+    async def argument_selector(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Select[Self]) -> None:
         modal = MissingArgumentModal(
-            self.error,
-            self.ctx,
+            argument=self.arguments[self.argument_selector.values[0]],  # noqa: PD011
+            handler=self,
             title=self.error.param.displayed_name or self.error.param.name,
             previous_message=self.prev_message,
         )
         modal.prev_message = self.prev_message
         await interaction.response.send_modal(modal)
+
+        await modal.wait()
+
+        if all(argument.value for argument in self.arguments.values() if argument.param.required):
+            with contextlib.suppress(discord.HTTPException):
+                if self.prev_message:
+                    await self.prev_message.delete()
+
+            cmd = self.ctx.command
+            if not cmd:
+                await interaction.response.send_message('Something went wrong', ephemeral=True)
+                msg = 'Command not found. This should not happen.'
+                raise TypeError(msg)
+            args, kwargs = self.get_invoke_args()
+            await self.ctx.invoke(cmd, *args, **kwargs)
 
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         return interaction.user == self.ctx.author
