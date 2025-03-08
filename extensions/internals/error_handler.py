@@ -75,6 +75,10 @@ class CommandInvokeView(BaseView):
         except commands.CommandError as err:
             self.ctx.bot.dispatch('command_error', self.ctx, err)
 
+        with contextlib.suppress(discord.HTTPException):
+            if self.message:
+                await self.message.delete()
+
         if can_run:
             return None
 
