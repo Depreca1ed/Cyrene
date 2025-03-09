@@ -46,6 +46,24 @@ class Context(commands.Context['Mafuyu']):
         except discord.HTTPException:
             return await super().send(content=content, **kwargs)
 
+    @discord.utils.copy_doc(commands.Context['Mafuyu'].send)
+    async def send(
+        self,
+        content: None | str = None,
+        **kwargs: Any,
+    ) -> discord.Message:
+        if content and len(content) > 1990:  # 2000 sounds a bit extreme to edge, safe at 1990
+            paste = await self.bot.create_paste(f'Requested by {self.author}', content=content)
+            content = (
+                'The response which was supposed to be here was too big. I have posted it to MystBin instead\n'
+                f'-# Link: {paste.url}'
+            )
+
+        return await super().send(
+            content=content,
+            **kwargs,
+        )
+
 
 async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
     prefixes = commands.when_mentioned(bot, message)
