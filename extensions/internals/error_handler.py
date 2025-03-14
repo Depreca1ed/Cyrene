@@ -313,15 +313,22 @@ class ErrorHandler(BaseCog):
         commands.TooManyArguments,
     )
 
-    def _find_closest_command(self, name: str) -> commands.Command[None, ..., Any] | None:
+    async def _find_closest_command(self, ctx: Context, name: str) -> commands.Command[None, ..., Any] | None:
         closest_cmd_name = difflib.get_close_matches(
             name,
             [_command.name for _command in self.bot.commands],
             n=1,
         )
-        if not closest_cmd_name:
-            return None
-        return self.bot.get_command(closest_cmd_name[0])
+        if closest_cmd_name:
+            cmd = self.bot.get_command(closest_cmd_name[0])
+            if cmd:
+                try:
+                    can_run = await cmd.can_run(ctx)
+                except (commands.CheckAnyFailure, commands.CheckFailure):
+                    can_run = False
+                if can_run:
+                    return cmd
+        return None
 
     async def _log_error(
         self,
@@ -409,7 +416,7 @@ class ErrorHandler(BaseCog):
             if not cmd:
                 return None
 
-            possible_commands = self._find_closest_command(cmd)
+            possible_commands = await self._find_closest_command(ctx, cmd)
             if possible_commands:
                 view = CommandInvokeView(ctx=ctx, command=possible_commands)
 
