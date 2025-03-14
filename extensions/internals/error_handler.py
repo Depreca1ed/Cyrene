@@ -125,12 +125,18 @@ class MissingArgumentModal(discord.ui.Modal):
     async def on_submit(
         self, interaction: discord.Interaction[Mafuyu]
     ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
-        converted = await commands.run_converters(
-            self.handler.ctx,
-            self.argument.param.converter,
-            self.argument_value.value,
-            self.argument.param,
-        )
+        try:
+            converted = await commands.run_converters(
+                self.handler.ctx,
+                self.argument.param.converter,
+                self.argument_value.value,
+                self.argument.param,
+            )
+        except commands.UserInputError as exc:
+            await self.handler.prev_message.delete()
+            self.handler.ctx.bot.dispatch('command_error', self.handler.ctx, exc)
+            await interaction.response.defer()
+            return
         self.handler.arguments[self.argument.param.name].value = converted
         self.handler.handle_components()
         await interaction.response.edit_message(view=self.handler)
@@ -166,7 +172,10 @@ class MissingArgumentHandler(discord.ui.View):
         for argument in self.arguments.values():
             if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
                 args.append(argument.value)
-            elif argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+            elif (
+                argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+                or argument.param.kind is inspect._ParameterKind.KEYWORD_ONLY  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+            ):
                 kwargs[argument.param.name] = argument.value
 
         return tuple(args), kwargs
