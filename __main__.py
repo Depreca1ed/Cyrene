@@ -59,6 +59,7 @@ def run(*, production: bool) -> None:
             pool = await create_bot_pool()
             allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=False)
             intents = discord.Intents.all()
+            intents.presences = False
             session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
             extensions = [
