@@ -92,7 +92,7 @@ class Embed(discord.Embed):
         logger_embed = cls(
             title=f'Error #{record["id"]}',
             description=(
-                f"""```py\n{record['full_error']}```"""
+                f"""```prolog\n{record['full_error']}```"""
                 if len(record['full_error']) < CHAR_LIMIT
                 else 'Error message was too long to be shown'
             ),
