@@ -91,6 +91,7 @@ class Mafuyu(commands.AutoShardedBot):
             strip_after_prefix=True,
             intents=intents,
             allowed_mentions=allowed_mentions,
+            enable_debug_events=True,
             help_command=commands.MinimalHelpCommand(),
         )
 
