@@ -202,7 +202,7 @@ class MissingArgumentHandler(discord.ui.View):
     )
     async def argument_selector(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Select[Self]) -> None:
         modal = MissingArgumentModal(
-            argument=self.arguments[self.argument_selector.values[0]],  # noqa: PD011
+            argument=self.arguments[self.argument_selector.values[0]],
             handler=self,
             title=self.error.param.displayed_name or self.error.param.name,
             previous_message=self.prev_message,
