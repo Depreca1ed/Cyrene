@@ -202,7 +202,7 @@ class MissingArgumentHandler(discord.ui.View):
     )
     async def argument_selector(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Select[Self]) -> None:
         modal = MissingArgumentModal(
-            argument=self.arguments[self.argument_selector.values[0]],
+            argument=self.arguments[self.argument_selector.values[0]],  # noqa: PD011
             handler=self,
             title=self.error.param.displayed_name or self.error.param.name,
             previous_message=self.prev_message,
@@ -230,10 +230,10 @@ class MissingArgumentHandler(discord.ui.View):
 
 
 class ErrorView(BaseView):
-    def __init__(self, error_record: asyncpg.Record, ctx: Context, *, timeout: float | None = 180) -> None:
+    def __init__(self, error_record: asyncpg.Record, ctx: Context) -> None:
         self.error_record = error_record
         self.ctx = ctx
-        super().__init__(timeout=timeout)
+        super().__init__()
 
     @discord.ui.button(label='Wanna know more?', style=discord.ButtonStyle.grey)
     async def inform_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
@@ -351,7 +351,7 @@ class ErrorHandler(BaseCog):
                         guild,
                         error,
                         full_error,
-                        message_url,s
+                        message_url,
                         occured_when,
                         fixed
                     )

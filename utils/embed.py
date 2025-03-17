@@ -4,9 +4,8 @@ from typing import TYPE_CHECKING, Self
 
 import discord
 
-from utils.constants import BotEmojis
-
 from . import BASE_COLOUR, CHAR_LIMIT, ERROR_COLOUR
+from .constants import BotEmojis
 from .helper_functions import better_string
 
 if TYPE_CHECKING:

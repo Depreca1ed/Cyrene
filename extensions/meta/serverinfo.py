@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Embed, better_string, generate_timestamp_string
+from utils import BaseCog, Embed, PermissionView, better_string, generate_timestamp_string
 
 if TYPE_CHECKING:
     from utils import Context
@@ -112,7 +112,7 @@ class ServerInfo(BaseCog):
         embed.description = better_string(
             (
                 f'- **ID:** {role.id}',
-                f'- **Created:** {discord.utils.format_dt(role.created_at, "D")} ({discord.utils.format_dt(role.created_at, "R")})',  # noqa: E501
+                f'- **Created:** {generate_timestamp_string(role.created_at)}',
                 (f'> `{len(role.members)}` users have this role.' if role.members else None),
             ),
             seperator='\n',
@@ -129,4 +129,28 @@ class ServerInfo(BaseCog):
                     seperator='\n',
                 ),
             )
+        view = PermissionView(ctx, target=role, permissions=role.permissions)
+        view.message = await ctx.reply(embed=embed, view=view)
+        return view.message
+
+    @commands.hybrid_command(name='channelinfo', help='Get information about a channel')
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
+    @app_commands.allowed_installs(guilds=True, users=False)
+    @commands.guild_only()
+    async def channelinfo(
+        self, ctx: Context, channel: discord.abc.GuildChannel = commands.CurrentChannel
+    ) -> discord.Message:
+        can_see = [member for member in channel.guild.members if channel.permissions_for(member).view_channel is True]
+        embed = Embed(title=f'# {channel.name}')
+
+        embed.description = better_string(
+            [
+                f' - **ID :** {channel.id}',
+                f'- **Category :** {channel.category.mention}' if channel.category else None,
+                f'- **Created :** {generate_timestamp_string(channel.created_at)}',
+                f'- **Type :** {channel.type.name.title()}',
+                f'- **Member count :** {len(can_see)}' if can_see else None,
+            ],
+            seperator='\n',
+        )
         return await ctx.reply(embed=embed)

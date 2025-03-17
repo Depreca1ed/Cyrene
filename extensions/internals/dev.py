@@ -6,12 +6,108 @@ from typing import TYPE_CHECKING, Any
 
 from discord.ext import commands
 
-from utils import BaseCog, BotEmojis, Context, format_tb
+from utils import BaseCog, BotEmojis, format_tb
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Coroutine
+    from collections.abc import AsyncGenerator, Coroutine, Iterable
 
+    import discord
     from discord import Message
+
+    from utils import Context
+
+PERMISSIONS_STRUCTURE = {
+    'general': [
+        'view_channels',
+        'manage_channels',
+        'manage_roles',
+        'create_expressions',
+        'manage_expressions',
+        'view_audit_log',
+        'view_server_insights',
+        'manage_webhooks',
+        'manage_server',
+    ],
+    'membership': [
+        'create_invite',
+        'change_nickname',
+        'manage_nicknames',
+        'kick_members',
+        'ban_members',
+        'moderate_members',
+    ],
+    'text': [
+        'send_messsages',
+        'send_messages_in_threads',
+        'create_public_threads',
+        'create_private_threads',
+        'embed_links',
+        'attach_files',
+        'add_reactions',
+        'use_external_emojis',
+        'use_external_stickers',
+        'use_external_sounds',
+        'mention_everyone',
+        'manage_messages',
+        'manage_threads',
+        'read_message_history',
+        'send_tts',
+        'send_voice_messages',
+        'create_polls',
+    ],
+    'voice': [
+        'connect',
+        'speak',
+        'video',
+        'use_soundboard',
+        'use_external_sounds',
+        'use_voice_activity',
+        'priority_speaking',
+        'mute_memebrs',
+        'deafen_members',
+        'move_members',
+        'set_voice_channel_status',
+    ],
+    'apps': [
+        'use_application_commands',
+        'use_activities',
+        'use_external_apps',
+    ],
+    'events': [
+        'create_events',
+        'manage_events',
+    ],
+    'misc': [
+        'request_to_speak',
+        'administrator',
+    ],
+}
+
+
+def get_permission_emoji(
+    *, permissions: Iterable[bool] | None = None, permission: bool | None = None
+) -> discord.PartialEmoji:
+    if permissions:
+        if all_true_or_false(permissions) is True:
+            return BotEmojis.GREEN_TICK
+        if all_true_or_false(permissions) is False:
+            return BotEmojis.RED_CROSS
+        return BotEmojis.GREY_TICK
+    return BotEmojis.GREEN_TICK if permission and permission is True else BotEmojis.RED_CROSS
+
+
+def all_true_or_false(targets: Iterable[bool]) -> None | bool:
+    if all(targets):
+        return True
+    if not [_ for _ in targets if _ is True]:
+        return False
+    return None
+
+
+def p_string(
+    p: str,
+) -> str:
+    return f' | `{p.replace("_", " ").title()}`'
 
 
 class Developer(BaseCog):

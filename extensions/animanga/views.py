@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Literal, Self
 
 import discord
 from asyncpg.exceptions import UniqueViolationError
@@ -17,7 +17,6 @@ from utils import (
     better_string,
     generate_timestamp_string,
 )
-from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
@@ -41,7 +40,7 @@ class WaifuBase(BaseView):
         for_user: int,
         query: None | str = None,
     ) -> None:
-        super().__init__(timeout=500.0)
+        super().__init__()
         self.ctx = ctx
         self.session = session
         self.nsfw = nsfw
@@ -354,6 +353,14 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
 
     async def callback(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
         waifu = self.view.current
+
+        def c(a: Literal['added', 'removed']) -> str:
+            return (
+                f'Successfully {a} [#{waifu.image_id}]'
+                f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
+                f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
+            )
+
         try:
             await interaction.client.pool.execute(
                 """INSERT INTO
@@ -368,19 +375,11 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
         except UniqueViolationError:
             await interaction.client.pool.execute("""DELETE FROM WaifuAPIEntries WHERE file_url = $1""", waifu.url)
             return await interaction.response.send_message(
-                (
-                    f'Successfully removed [#{waifu.image_id}]'
-                    f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
-                    f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
-                ),
+                c('removed'),
                 ephemeral=True,
             )
 
         return await interaction.response.send_message(
-            (
-                f'Successfully added [#{waifu.image_id}]'
-                f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
-                f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
-            ),
+            c('added'),
             ephemeral=True,
         )

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 import discord
 
-from utils.view import BaseView
+from .view import BaseView
 
 if TYPE_CHECKING:
     from discord.ext import menus

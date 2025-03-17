@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Embed, better_string, generate_timestamp_string
+from utils import BaseCog, Embed, PermissionView, better_string, generate_timestamp_string
 
 if TYPE_CHECKING:
     from utils import Context
@@ -37,19 +37,19 @@ class Userinfo(BaseCog):
             f'- **Created:** {generate_timestamp_string(user.created_at)}',
         ]
 
+        view = None
+
         if isinstance(user, discord.Member):
             is_guild_ok = bool(user.guild and user.guild.roles)  # When the guild is there, the guild will have @everyone
 
-            if is_guild_ok:
+            if is_guild_ok and user.nick:
                 name += f'({user.nick} in {user.guild.name})'
 
             valid_roles = [role.mention for role in user.roles if role is not user.guild.default_role]
             valid_roles.reverse()
 
-            roles_string = (
-                ', '.join(valid_roles[:USER_DATA_OBJECT_COUNT]) + f' + {len(valid_roles) - USER_DATA_OBJECT_COUNT} roles'
-                if len(valid_roles) > USER_DATA_OBJECT_COUNT
-                else ''
+            roles_string = ', '.join(valid_roles[:USER_DATA_OBJECT_COUNT]) + (
+                f' + {len(valid_roles) - USER_DATA_OBJECT_COUNT} roles' if len(valid_roles) > USER_DATA_OBJECT_COUNT else ''
             )
 
             member_info = [
@@ -59,6 +59,8 @@ class Userinfo(BaseCog):
 
             if member_info:
                 user_info.extend(member_info)
+
+            view = PermissionView(ctx, target=user, permissions=user.guild_permissions)
 
         embed.description = better_string(
             user_info,
@@ -73,7 +75,9 @@ class Userinfo(BaseCog):
         embed.set_thumbnail(url=user.display_avatar.url)
         embed.set_image(url=user.banner.url if user.banner else None)
 
-        await ctx.reply(embed=embed)
+        msg = await ctx.reply(embed=embed, view=view)
+        if view:
+            view.message = msg
 
     @commands.hybrid_command(
         name='avatar',
