@@ -118,13 +118,13 @@ class Blacklist(BaseCog):
 
         """
         if data := self.bot.is_blacklisted(ctx.author):
-            if not await self._pre_check(ctx.author, data):
+            if await self._pre_check(ctx.author, data):
                 return True
             await self.handle_user_blacklist(ctx, ctx.author, data)
             return False
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
-            if not await self._pre_check(ctx.guild, data):
+            if await self._pre_check(ctx.guild, data):
                 return True
             await self.handle_guild_blacklist(ctx, ctx.guild, data)
             return False
