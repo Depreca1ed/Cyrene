@@ -102,7 +102,7 @@ class Guild(BaseCog):
     @commands.command(name='leave')
     async def guild_leave_cmd(self, ctx: Context, guild: discord.Guild = commands.CurrentGuild) -> None:
         if ctx.author.id != self.bot.owner.id:
-            msg = 'This command takes more permissions than the Owner IDS you already have.'
+            msg = 'You need more permissions than being one of the people with eval access'
             raise commands.NotOwner(msg)
         await guild.leave()
         with contextlib.suppress(discord.Forbidden):
