@@ -42,8 +42,10 @@ class Userinfo(BaseCog):
         if isinstance(user, discord.Member):
             is_guild_ok = bool(user.guild and user.guild.roles)  # When the guild is there, the guild will have @everyone
 
-            if is_guild_ok and user.nick:
-                name += f'({user.nick} in {user.guild.name})'
+            if is_guild_ok:
+                if user.nick:
+                    name += f'({user.nick} in {user.guild.name})'
+                view = PermissionView(ctx, target=user, permissions=user.guild_permissions)
 
             valid_roles = [role.mention for role in user.roles if role is not user.guild.default_role]
             valid_roles.reverse()
@@ -59,8 +61,6 @@ class Userinfo(BaseCog):
 
             if member_info:
                 user_info.extend(member_info)
-
-            view = PermissionView(ctx, target=user, permissions=user.guild_permissions)
 
         embed.description = better_string(
             user_info,

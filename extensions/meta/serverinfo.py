@@ -104,7 +104,7 @@ class ServerInfo(BaseCog):
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=True)
     @commands.guild_only()
-    async def roleinfo(self, ctx: Context, role: discord.Role) -> discord.Message:
+    async def roleinfo(self, ctx: Context, role: discord.Role) -> None:
         embed = Embed(
             title=f'{role.name} {role.unicode_emoji or ""}',
             colour=role.colour,
@@ -129,9 +129,15 @@ class ServerInfo(BaseCog):
                     seperator='\n',
                 ),
             )
-        view = PermissionView(ctx, target=role, permissions=role.permissions)
-        view.message = await ctx.reply(embed=embed, view=view)
-        return view.message
+        is_guild_ok = bool(role.guild and role.guild.roles)  # When the guild is there, the guild will have @everyone
+
+        view = None
+        if is_guild_ok:
+            view = PermissionView(ctx, target=role, permissions=role.permissions)
+
+        message = await ctx.reply(embed=embed, view=view)
+        if view:
+            view.message = message
 
     @commands.hybrid_command(name='channelinfo', help='Get information about a channel')
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)

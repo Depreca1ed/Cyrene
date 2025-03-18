@@ -98,6 +98,9 @@ class CommandInvokeView(BaseView):
         await self.ctx.invoke(self.command, *invoked_with)
         return await interaction.response.defer()
 
+    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
+        return interaction.user == self.ctx.author
+
 
 class MissingArgumentModal(discord.ui.Modal):
     argument_value: discord.ui.TextInput[MissingArgumentHandler] = discord.ui.TextInput(
