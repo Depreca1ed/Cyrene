@@ -314,6 +314,7 @@ class ErrorHandler(BaseCog):
         commands.NotOwner,
         commands.NSFWChannelRequired,
         commands.TooManyArguments,
+        commands.CheckFailure,
     )
 
     async def _find_closest_command(self, ctx: Context, name: str) -> commands.Command[None, ..., Any] | None:

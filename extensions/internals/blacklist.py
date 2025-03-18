@@ -224,7 +224,7 @@ class Blacklist(BaseCog):
 
         timestamp_wording = self._timestamp_wording(data.lasts_until)
         content = (
-            f'`{guild}` is blacklisted from using this bot for `{data.reason}` {timestamp_wording}.'
+            f'`{guild}` is blacklisted from using this bot for `{data.reason}` {timestamp_wording}. '
             f'If you wish to appeal this blacklist, please join the [Support Server]( {self.bot.support_invite} ).'
         )
 
