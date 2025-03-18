@@ -7,6 +7,7 @@ import discord
 from discord.ext import commands
 
 from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, BotEmojis, NotBlacklistedError
+from utils.errors import MafuyuError
 
 if TYPE_CHECKING:
     from utils import Context, Mafuyu
@@ -121,13 +122,15 @@ class Blacklist(BaseCog):
             if await self._pre_check(ctx.author, data):
                 return True
             await self.handle_user_blacklist(ctx, ctx.author, data)
-            return False
+            raise MafuyuError  # noqa: DOC501
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
             if await self._pre_check(ctx.guild, data):
                 return True
             await self.handle_guild_blacklist(ctx, ctx.guild, data)
-            return False
+            raise MafuyuError
+
+        # TODO(Depreca1ed): Make custom errors and have them handled as ignored.
 
         return True
 
