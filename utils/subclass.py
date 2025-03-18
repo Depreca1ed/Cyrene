@@ -179,7 +179,7 @@ class Mafuyu(commands.AutoShardedBot):
         """
         return self.prefixes.get(guild.id, [config.DEFAULT_PREFIX]) if guild else [config.DEFAULT_PREFIX]
 
-    def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild) -> BlacklistData | None:
+    def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> BlacklistData | None:
         """
         Check if a user or guild is blacklisted.
 
@@ -196,7 +196,7 @@ class Mafuyu(commands.AutoShardedBot):
             The blacklist data of the snowflake
 
         """
-        return self.blacklists.get(snowflake.id, None)
+        return self.blacklists.get(snowflake if isinstance(snowflake, int) else snowflake.id, None)
 
     async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
         """

@@ -1,9 +1,6 @@
 from .basecog import BaseCog
 from .constants import (
     BASE_COLOUR,
-    BLACKLIST_COLOUR,
-    BOT_FARM_COLOUR,
-    BOT_THRESHOLD,
     CHAR_LIMIT,
     ERROR_COLOUR,
     BotEmojis,
@@ -37,9 +34,6 @@ from .view import BaseView, PermissionView
 
 __all__ = (
     'BASE_COLOUR',
-    'BLACKLIST_COLOUR',
-    'BOT_FARM_COLOUR',
-    'BOT_THRESHOLD',
     'CHAR_LIMIT',
     'ERROR_COLOUR',
     'AlreadyBlacklistedError',

@@ -61,7 +61,7 @@ class AlreadyBlacklistedError(MafuyuError):
 
 
 class NotBlacklistedError(MafuyuError):
-    def __init__(self, snowflake: discord.User | discord.Member | discord.Guild) -> None:
+    def __init__(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
         self.snowflake = snowflake
         super().__init__(f'{snowflake} is not blacklisted.')
 

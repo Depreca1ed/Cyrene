@@ -91,7 +91,7 @@ class Blacklist(BaseCog):
         return
 
     @blacklist_cmd.command(name='remove', help='Remove a user or server from blacklist')
-    async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild) -> None:
+    async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
         try:
             await self.remove(snowflake)
 
@@ -308,7 +308,7 @@ class Blacklist(BaseCog):
         )
         return {snowflake.id: self.bot.blacklists[snowflake.id]}
 
-    async def remove(self, snowflake: discord.User | discord.Member | discord.Guild) -> dict[int, BlacklistData]:
+    async def remove(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> dict[int, BlacklistData]:
         """
         Remove an entry from the blacklist.
 
@@ -333,13 +333,15 @@ class Blacklist(BaseCog):
         if not self.bot.is_blacklisted(snowflake):
             raise NotBlacklistedError(snowflake)
 
+        obj = snowflake if isinstance(snowflake, int) else snowflake.id
+
         await self.bot.pool.execute(
             """DELETE FROM Blacklists WHERE snowflake = $1""",
-            snowflake.id,
+            obj,
         )
 
-        item_removed = self.bot.blacklists.pop(snowflake.id)
-        return {snowflake.id: item_removed}
+        item_removed = self.bot.blacklists.pop(obj)
+        return {obj: item_removed}
 
     def _timestamp_wording(self, dt: datetime.datetime | None) -> str:
         return f'until {discord.utils.format_dt(dt, "f")}' if dt else 'permanently'
