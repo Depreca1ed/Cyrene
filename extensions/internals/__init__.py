@@ -18,9 +18,6 @@ from .guild import Guild
 
 
 class Internals(Blacklist, Developer, ErrorHandler, BoobHideout, Guild, name='Developer'):
-    def __init__(self, bot: Mafuyu) -> None:
-        super().__init__(bot)
-
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
         if await self.bot.is_owner(ctx.author):

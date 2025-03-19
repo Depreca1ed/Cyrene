@@ -75,15 +75,14 @@ class Guild(BaseCog):
 
         await self.bot.logger.send(embed=embed)
 
-        if not (is_blacklisted or is_bot_farm):
+        if not is_bot_farm:
             return
 
         ch = find_base_channel(guild.channels)
         if ch and isinstance(ch, discord.abc.Messageable):
             with contextlib.suppress(discord.HTTPException):
-                if is_bot_farm:
-                    await ch.send(f'{guild.name} is a bot farm. Therefore, I will be the server')
-        await guild.leave()
+                await ch.send(f'{guild.name} is a bot farm. Therefore, I will be the server')
+                await guild.leave()
 
     @commands.Cog.listener('on_guild_remove')
     async def guild_leave(self, guild: discord.Guild) -> None:
