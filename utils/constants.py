@@ -23,3 +23,4 @@ class BotEmojis:
     STATUS_ONLINE = discord.PartialEmoji(name='status_online', id=1328344385783468032)
     PASS = discord.PartialEmoji(name='PASS', id=1339697021942108250)
     SMASH = discord.PartialEmoji(name='SMASH', id=1339697033589559296)
+    SLASH = discord.PartialEmoji(name='Slash_command_white', id=1352388308046581880)
