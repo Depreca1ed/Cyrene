@@ -16,7 +16,7 @@ USER_DATA_OBJECT_COUNT = 5
 
 
 class Userinfo(BaseCog):
-    @commands.hybrid_command(name='whois', help='Get information about a user', aliases=['userinfo', 'who'])
+    @commands.hybrid_command(name='whois', description='Get information about a user', aliases=['userinfo', 'who'])
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def whois(
@@ -81,7 +81,7 @@ class Userinfo(BaseCog):
 
     @commands.hybrid_command(
         name='avatar',
-        help="Get your or user's displayed avatar. By default, returns your server avatar",
+        description="Get your or user's displayed avatar. By default, returns your server avatar",
         aliases=['av'],
     )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -106,7 +106,7 @@ class Userinfo(BaseCog):
 
         return await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name='icon', help="Get the server's icon, if any")
+    @commands.hybrid_command(name='icon', description="Get the server's icon, if any")
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()

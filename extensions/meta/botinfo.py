@@ -30,7 +30,9 @@ class BotInformation(BaseCog):
 
         return f'**[[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})]**: {message}'
 
-    @commands.hybrid_command(name='about', aliases=['info', 'botinfo'], help='Get information about this bot', usage='')
+    @commands.hybrid_command(
+        name='about', aliases=['info', 'botinfo'], description='Get information about this bot', usage=''
+    )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def botinfo(
@@ -103,13 +105,15 @@ class BotInformation(BaseCog):
 
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name='support', help='Get invite link to the support server for the bot')
+    @commands.hybrid_command(name='support', description='Get invite link to the support server for the bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def support(self, ctx: Context) -> None:
         await ctx.reply(str(self.bot.support_invite))
 
-    @commands.hybrid_command(name='invite', help='Get the URL for inviting me to a server or adding it to your account')
+    @commands.hybrid_command(
+        name='invite', description='Get the URL for inviting me to a server or adding it to your account'
+    )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def invite(self, ctx: Context) -> None:

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class Utility(BaseCog, name='Utility'):
     """Some useful utility commands."""
 
-    @commands.command(name='file-to-pages', help='Turns a file into a pages to browse through', aliases=['ftp'])
+    @commands.command(name='file-to-pages', description='Turns a file into a pages to browse through', aliases=['ftp'])
     async def ftp(self, ctx: Context, attachment: discord.Attachment | None) -> discord.Message | PaginatorInterface:
         if not attachment and ctx.message.reference and isinstance(ctx.message.reference.resolved, discord.Message):
             attachment = ctx.message.reference.resolved.attachments[0]

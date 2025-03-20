@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class ServerInfo(BaseCog):
-    @commands.hybrid_command(name='serverinfo', help='Get information about the server')
+    @commands.hybrid_command(name='serverinfo', description='Get information about the server')
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()
@@ -100,7 +100,7 @@ class ServerInfo(BaseCog):
 
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name='roleinfo', help='Get information about a role', aliases=['role'])
+    @commands.hybrid_command(name='roleinfo', description='Get information about a role', aliases=['role'])
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=True)
     @commands.guild_only()
@@ -139,7 +139,7 @@ class ServerInfo(BaseCog):
         if view:
             view.message = message
 
-    @commands.hybrid_command(name='channelinfo', help='Get information about a channel')
+    @commands.hybrid_command(name='channelinfo', description='Get information about a channel')
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()

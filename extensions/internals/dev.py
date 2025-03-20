@@ -140,7 +140,7 @@ class Developer(BaseCog):
     @commands.command(
         name='eval',
         aliases=['e'],
-        help='Attempt at making an eval. Dont fucking use it with yields.',
+        description='Attempt at making an eval. Dont fucking use it with yields.',
     )
     async def eval(self, ctx: Context, *, code: str) -> Message | None:
         variables: dict[str, Any] = {
