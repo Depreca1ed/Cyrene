@@ -27,6 +27,9 @@ if TYPE_CHECKING:
 __all__ = ('WaifuSearchView',)
 
 
+ANICORD_GACHA_SERVER = 1242232552845086782
+
+
 class WaifuBase(BaseView):
     ctx: Context
     current: WaifuResult
@@ -78,8 +81,13 @@ class WaifuBase(BaseView):
         embed = inst.embed(data)
 
         inst.ctx = ctx
+
         if await inst.ctx.bot.is_owner(ctx.author):
             inst.add_item(APIWaifuAddButton(inst.ctx))
+
+        if ctx.guild and ctx.guild.id == ANICORD_GACHA_SERVER:
+            inst.add_item(AnicordGachaBotSuggestionButton(inst.ctx, waifu=data))
+
         inst.message = await ctx.reply(embed=embed, view=inst)
 
         return inst
@@ -113,6 +121,9 @@ class WaifuBase(BaseView):
         )
 
         embed.set_image(url=data.url)
+
+        if self.nsfw:
+            embed.set_footer(text='For SFW results, run this command in a SFW channel.')
 
         return embed
 
@@ -262,6 +273,7 @@ class WaifuSearchView(WaifuBase):
             name=self.query,
             image_id=data['id'],
             url=data['file_url'],
+            source=data['source'],
             characters=data['tag_string_character'],
             copyright=data['tag_string_copyright'],
         )
@@ -383,3 +395,123 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
             c('added'),
             ephemeral=True,
         )
+
+
+class AnicordGachaBotSuggestionButton(discord.ui.Button[WaifuBase]):
+    view: WaifuBase
+
+    def __init__(self, ctx: Context, waifu: WaifuResult) -> None:
+        self.ctx = ctx
+        self.waifu = waifu
+        super().__init__(label='What if this was a card', style=discord.ButtonStyle.grey)
+
+    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
+        m = AnicordGachaSuggestQuery(waifu=self.waifu)
+        return await interaction.response.send_modal(m)
+
+
+CARD_EMOJIS = {
+    1: discord.PartialEmoji(id=1259556949867888660, name='HollowStar'),
+    2: discord.PartialEmoji(id=1259690032554577930, name='GreenStar'),
+    3: discord.PartialEmoji(id=1259557039441711149, name='YellowStar'),
+    4: discord.PartialEmoji(id=1259718164862996573, name='PurpleStar'),
+    5: discord.PartialEmoji(id=1259557105220976772, name='RainbowStar'),
+    6: discord.PartialEmoji(id=1259689874961862688, name='BlackStar'),
+}
+
+BURN_WORTH = {
+    1: 5,
+    2: 10,
+    3: 15,
+    4: 20,
+    5: 25,
+    6: 30,
+}
+
+
+class AnicordGachaSuggestQuery(discord.ui.Modal, title='Enter card details'):
+    def __init__(self, *, waifu: WaifuResult) -> None:
+        self.waifu = waifu
+        name = None
+        if self.waifu.name:
+            x = self.waifu.name.replace('_', ' ')
+            c: list[str] = []
+            for s in x.split(' '):
+                if s.startswith('('):
+                    break
+                c.append(s)
+            name = ' '.join(c)
+        super().__init__()
+
+        self.name: discord.ui.TextInput[Self] = discord.ui.TextInput(
+            label='Name',
+            style=discord.TextStyle.short,
+            placeholder='Name',
+            default=name,
+            required=True,
+        )
+        self.add_item(self.name)
+
+        self.rarity: discord.ui.TextInput[Self] = discord.ui.TextInput(
+            label='Rarity',
+            style=discord.TextStyle.short,
+            placeholder='Rarity',
+            required=True,
+            max_length=2,
+        )
+        self.add_item(self.rarity)
+
+        self.burn_worth: discord.ui.TextInput[Self] = discord.ui.TextInput(
+            label='Burn Worth',
+            style=discord.TextStyle.short,
+            placeholder="Defaults to whatever rarity you've provided's burn worth",
+            required=False,
+            max_length=3,
+        )
+        self.add_item(self.burn_worth)
+
+        self.theme: discord.ui.TextInput[Self] = discord.ui.TextInput(
+            label='Theme',
+            style=discord.TextStyle.short,
+            required=True,
+        )
+        self.add_item(self.theme)
+
+    async def on_submit(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
+        def c(s: str) -> str:
+            return (
+                s
+                + '\nFor re-entering purposes this is what you entered\n'
+                + f'Name: {self.name.value}\n'
+                + f'Rarity: {self.name.value}\n'
+                + f'Burn Worth: {self.burn_worth.value}\n'
+                if self.burn_worth.value
+                else '' + f'Theme: {self.theme.value}'
+            )
+
+        try:
+            rarity = int(self.rarity.value)
+        except ValueError:
+            return await interaction.response.send_message(c('Rarity must be an integer'), ephemeral=True)
+
+        burn_worth = None
+        if self.burn_worth.value:
+            try:
+                burn_worth = int(self.burn_worth.value)
+            except ValueError:
+                return await interaction.response.send_message(c('Burn worth must be an integer'), ephemeral=True)
+
+        embed = discord.Embed(
+            title=self.name.value,
+            description=(
+                f'Rarity: {str(CARD_EMOJIS[rarity]) * rarity}\n'
+                f'Burn Worth: {burn_worth or BURN_WORTH[rarity]}\n'
+                f'Theme: {self.theme.value}'
+            ),
+            url=self.waifu.source,
+        )
+        embed.set_image(url=self.waifu.url)
+
+        embed.set_footer(text='Hypothetically, if this were a card. What would it be like... thingy I guess.')
+
+        return await interaction.response.send_message(embed=embed, ephemeral=False)
