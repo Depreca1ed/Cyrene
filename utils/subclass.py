@@ -10,9 +10,8 @@ import mystbin
 from discord.ext import commands
 
 import config
-from utils.help_command import MafuHelpCommand
 
-from . import BASE_COLOUR
+from . import BASE_COLOUR, MafuHelpCommand
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

@@ -59,12 +59,33 @@ class MafuHelpCommand(commands.HelpCommand):
             if _ is not None
         ]
 
+    def get_command_signature(self, command: commands.Command[Any, ..., Any]) -> str:
+        parent: commands.Group[Any, ..., Any] | None = command.parent  # pyright: ignore[reportAssignmentType]
+        entries: list[str] = []
+        while parent is not None:
+            if not parent.signature or parent.invoke_without_command:
+                entries.append(parent.name)
+            else:
+                entries.append(parent.name + ' ' + parent.signature)
+            parent = parent.parent  # pyright: ignore[reportAssignmentType]
+        parent_sig = ' '.join(reversed(entries))
+
+        if len(command.aliases) > 0:
+            fmt = f'[{command.name}]'
+            if parent_sig:
+                fmt = parent_sig + ' ' + fmt
+            alias = fmt
+        else:
+            alias = command.name if not parent_sig else parent_sig + ' ' + command.name
+
+        return f'{self.context.clean_prefix}{alias} {command.signature}'
+
     async def send_command_help(
         self, command: commands.Command[Any, ..., Any] | commands.HybridCommand[Any, ..., Any]
     ) -> None:
         is_hybrid = isinstance(command, commands.HybridCommand)
 
-        embed = Embed(title=command.name.title(), description=command.description)
+        embed = Embed(title=command.qualified_name.title(), description=command.description)
         if command.help:
             embed.add_field(value=command.help)
 
@@ -85,5 +106,9 @@ class MafuHelpCommand(commands.HelpCommand):
                     seperator='\n',
                 ),
             )
+        if command.aliases:
+            embed.add_field(name='Aliases:', value=','.join([f'`{alias}`' for alias in command.aliases]))
+
+        embed.add_field(name='Usage:', value=f'`{self.get_command_signature(command)}`')
 
         await self.context.reply(embed=embed)

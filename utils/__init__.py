@@ -17,8 +17,7 @@ from .errors import (
     UnderMaintenanceError,
     WaifuNotFoundError,
 )
-
-# from .help_command import MyHelpCommand  # noqa: ERA001
+from .help_command import MafuHelpCommand
 from .helper_functions import (
     better_string,
     clean_error,
@@ -44,9 +43,9 @@ __all__ = (
     'Context',
     'Embed',
     'FeatureDisabledError',
+    'MafuHelpCommand',
     'Mafuyu',
     'MafuyuError',
-    #    'MyHelpCommand',
     'NotBlacklistedError',
     'Paginator',
     'PermissionView',
