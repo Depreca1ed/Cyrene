@@ -1,19 +1,28 @@
 from __future__ import annotations
 
+import datetime
 import traceback
 from typing import TYPE_CHECKING, Any
 
 import discord
+import parsedatetime  # pyright: ignore[reportMissingTypeStubs]
 from discord.ext import commands
 
 if TYPE_CHECKING:
-    import datetime
     from collections.abc import Iterable
 
     from . import Context
 
 
-__all__ = ('better_string',)
+__all__ = (
+    'TimeConverter',
+    'better_string',
+    'clean_error',
+    'format_tb',
+    'generate_error_objects',
+    'generate_timestamp_string',
+    'get_command_signature',
+)
 
 
 def better_string(data: Iterable[str | Any | None], *, seperator: str) -> str:
@@ -116,6 +125,21 @@ def generate_error_objects(
         raise ValueError(msg)
 
     return missings
+
+
+class TimeConverter(commands.Converter[datetime.datetime]):
+    async def convert(self, _: Context, argument: str) -> datetime.datetime:
+        dt_obj: tuple[datetime.datetime, int] = parsedatetime.Calendar().parseDT(argument)  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
+
+        if dt_obj[1] == 0:
+            msg = 'Invalid time provided'
+            raise commands.BadArgument(msg)
+
+        if dt_obj[0] < datetime.datetime.now():
+            msg = "The time you've provided is in the past"
+            raise commands.BadArgument(msg)
+
+        return dt_obj[0]
 
 
 def format_tb(error: Exception) -> str:

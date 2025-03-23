@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, BotEmojis, NotBlacklistedError
-from utils.errors import MafuyuError
+from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, BotEmojis, MafuyuError, NotBlacklistedError, TimeConverter
 
 if TYPE_CHECKING:
     from utils import Context, Mafuyu
 
 WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
+
+dt_param = commands.parameter(converter=TimeConverter, default=None)
 
 
 class Blacklist(BaseCog):
@@ -68,28 +69,22 @@ class Blacklist(BaseCog):
         self,
         ctx: Context,
         snowflake: discord.User | discord.Member | discord.Guild,
-        until: str | None,
+        until: datetime.datetime | None = dt_param,
         *,
         reason: str = 'No reason provided',
     ) -> None:
         if snowflake.id in WHITELISTED_GUILDS:
             msg = 'You cannot blacklist this guilld.'
             raise commands.CheckFailure(msg)
-        bl_until = None
-        if until:
-            bl_until = await self._handle_datetime_argument(ctx, until)
-            if not bl_until:
-                return
 
         try:
-            await self.add(snowflake, lasts_until=bl_until, reason=reason)
+            await self.add(snowflake, lasts_until=until, reason=reason)
 
         except AlreadyBlacklistedError as err:
             content = str(err)
             await ctx.reply(content)
 
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
-        return
 
     @blacklist_cmd.command(name='remove', description='Remove a user or server from blacklist')
     async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
@@ -233,24 +228,6 @@ class Blacklist(BaseCog):
 
         if channel:
             await channel.send(content=content)
-
-    async def _handle_datetime_argument(self, ctx: Context, dt: str) -> None | datetime.datetime:
-        suffixes = {
-            's': 1,
-            'm': 60,
-            'h': 3600,
-            'd': 86400,
-            'mo': 2592000,
-            'y': 2592000 * 12,
-        }
-
-        if dt[-1:] not in suffixes:
-            await ctx.reply(f"{ctx.author.mention}, i can't understand the time you provided.")
-            return None
-        parsed = suffixes[dt[-1:]]
-        c = int(dt[:-1]) if dt[-2:] != 'mo' else int(dt[-2:])
-        final = c * parsed
-        return datetime.datetime.now() + datetime.timedelta(seconds=final)
 
     async def add(
         self,

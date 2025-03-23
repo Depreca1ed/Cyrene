@@ -20,6 +20,7 @@ from .errors import (
 
 # from .help_command import MyHelpCommand  # noqa: ERA001
 from .helper_functions import (
+    TimeConverter,
     better_string,
     clean_error,
     format_tb,
@@ -53,6 +54,7 @@ __all__ = (
     'PrefixAlreadyPresentError',
     'PrefixNotInitialisedError',
     'PrefixNotPresentError',
+    'TimeConverter',
     'UnderMaintenanceError',
     'WaifuFavouriteEntry',
     'WaifuNotFoundError',
