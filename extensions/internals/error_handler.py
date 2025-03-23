@@ -36,6 +36,8 @@ log = logging.getLogger(__name__)
 
 
 class Argument:
+    is_provided: bool = False
+
     def __init__(self, *, value: str | None, param: commands.Parameter) -> None:
         self.value: Any = value
         self.param: commands.Parameter = param
@@ -43,11 +45,25 @@ class Argument:
 
     def to_option(self) -> discord.SelectOption:
         name = self.param.displayed_name or self.param.name
+        emoji = (
+            BotEmojis.GREY_TICK
+            if self.param.required is not True and self.param.default is not inspect._empty and self.is_provided is False  # noqa: SLF001 #pyright: ignore[reportPrivateUsage]
+            else None
+        )
         return discord.SelectOption(
-            emoji=BotEmojis.GREEN_TICK if not self.param.required or self.value else BotEmojis.RED_CROSS,
+            emoji=emoji or BotEmojis.GREEN_TICK if self.value else BotEmojis.RED_CROSS,
             label=f'{name}{" [required]" if self.param.required else ""}',
             value=self.param.name,
-            description=self.param.description,
+            description='\n'.join(
+                _
+                for _ in [
+                    self.param.description,
+                    ('(Default: ' + str(self.param.default if self.param.default is not None else 'Nothing') + ')')
+                    if self.param.default is not inspect._empty and self.param.required is False  # noqa: SLF001 #pyright: ignore[reportPrivateUsage]
+                    else '',
+                ]
+                if _
+            ),
         )
 
 
@@ -141,6 +157,7 @@ class MissingArgumentModal(discord.ui.Modal):
             await interaction.response.defer()
             return
         self.handler.arguments[self.argument.param.name].value = converted
+        self.handler.arguments[self.argument.param.name].is_provided = True
         self.handler.handle_components()
         await interaction.response.edit_message(view=self.handler)
 
