@@ -112,12 +112,18 @@ class Blacklist(BaseCog):
         bool
             If the command should be run
 
+        Raises
+        ------
+        MafuyuError
+            Raised instead of commands.CheckFailure,
+            this is further completely ignored by both the error handlers, as intended
+
         """
         if data := self.bot.is_blacklisted(ctx.author):
             if await self._pre_check(ctx.author, data):
                 return True
             await self.handle_user_blacklist(ctx, ctx.author, data)
-            raise MafuyuError  # noqa: DOC501
+            raise MafuyuError
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
             if await self._pre_check(ctx.guild, data):
