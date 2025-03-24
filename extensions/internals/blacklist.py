@@ -156,10 +156,12 @@ class Blacklist(BaseCog):
             If user is still blacklisted
 
         """
-        if data.lasts_until and datetime.datetime.now() > data.lasts_until:
-            await self.remove(snowflake)
+        if not data.lasts_until:
             return True
-        return False
+        if datetime.datetime.now() > data.lasts_until:
+            await self.remove(snowflake)
+            return False
+        return True
 
     async def handle_user_blacklist(self, ctx: Context, user: discord.User | discord.Member, data: BlacklistData) -> None:
         """
