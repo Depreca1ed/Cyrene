@@ -47,11 +47,11 @@ class Argument:
         name = self.param.displayed_name or self.param.name
         emoji = (
             BotEmojis.GREY_TICK
-            if self.param.required is not True and self.param.default is not inspect._empty and self.is_provided is False  # noqa: SLF001 #pyright: ignore[reportPrivateUsage]
-            else None
+            if self.param.required is False and self.is_provided is False
+            else (BotEmojis.GREEN_TICK if self.is_provided else BotEmojis.RED_CROSS)
         )
         return discord.SelectOption(
-            emoji=emoji or BotEmojis.GREEN_TICK if self.value else BotEmojis.RED_CROSS,
+            emoji=emoji,
             label=f'{name}{" [required]" if self.param.required else ""}',
             value=self.param.name,
             description='\n'.join(
@@ -88,7 +88,7 @@ class CommandInvokeView(BaseView):
             await self.ctx.bot.invoke(self.ctx)
             can_run = True
 
-        except commands.CommandError as err:
+        except Exception as err:
             self.ctx.bot.dispatch('command_error', self.ctx, err)
 
         with contextlib.suppress(discord.HTTPException):
@@ -210,6 +210,10 @@ class MissingArgumentHandler(discord.ui.View):
 
         for param in parameters.values():
             value = bind_arguments.arguments.get(param.name, None)
+
+            if isinstance(value, commands.Parameter):
+                value = value.default
+
             arguments[param.name] = Argument(
                 value=value,
                 param=param,
@@ -243,7 +247,10 @@ class MissingArgumentHandler(discord.ui.View):
                 msg = 'Command not found. This should not happen.'
                 raise TypeError(msg)
             args, kwargs = self.get_invoke_args()
-            await self.ctx.invoke(cmd, *args, **kwargs)
+            try:
+                await self.ctx.invoke(cmd, *args, **kwargs)
+            except Exception as err:
+                self.ctx.bot.dispatch('command_error', self.ctx, err)
 
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         return interaction.user == self.ctx.author
@@ -462,6 +469,7 @@ class ErrorHandler(BaseCog):
                     seperator='\n',
                 ),
             )
+            embed.set_footer(text='The command will be executed as soon as all required arguments have been provided')
 
             if isinstance(error, commands.MissingRequiredArgument):
                 view = MissingArgumentHandler(error, ctx)
