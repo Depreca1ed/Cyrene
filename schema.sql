@@ -66,4 +66,12 @@ CREATE TABLE IF NOT EXISTS Feature (
     allowed BOOLEAN NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ModerationActions (
+    action_type INTEGER NOT NULL,
+    target BIGINT NOT NULL,
+    guild_id BIGINT NOT NULL,
+    until TIMESTAMP NOT NULL,
+    PRIMARY KEY (action_type, target, guild_id)
+);
+
 COMMIT;
