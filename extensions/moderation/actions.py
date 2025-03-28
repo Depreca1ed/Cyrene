@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import enum
 from typing import TYPE_CHECKING
@@ -10,7 +11,7 @@ import discord
 from asyncpg import Record
 from discord.ext import commands
 
-from utils import BaseCog, TimeConverter
+from utils import BaseCog, BotEmojis, TimeConverter
 
 if TYPE_CHECKING:
     from utils import Context, Mafuyu
@@ -67,7 +68,7 @@ class Actions(BaseCog):
                     to_sleep = (expire - now).total_seconds()
                     await asyncio.sleep(to_sleep)
 
-                await self.call_punishment(
+                await self.call_punishment_remove(
                     p['action_type'],
                     p['target'],
                     p['guild_id'],
@@ -78,10 +79,16 @@ class Actions(BaseCog):
             self._task.cancel()
             self._task = self.bot.loop.create_task(self.dispatch_punishment_removal())
 
-    async def call_punishment(self, action_type: ModerationAction, guild_id: int, target: int) -> None:
-        # TODO(Depreca1ed): Add implementation to call event
+    async def call_punishment_remove(self, action_type: ModerationAction, guild_id: int, target: int) -> None:
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            return
 
-        pass
+        if action_type == ModerationAction.UNBAN:
+            await guild.unban(
+                discord.Object(id=target),
+                reason='Ban duration has expired.',
+            )
 
     async def handle_ban_with_duration(
         self,
@@ -95,7 +102,7 @@ class Actions(BaseCog):
 
         if dur.total_seconds() < 30:
             await asyncio.sleep(dur.seconds)
-            await self.call_punishment(ModerationAction.UNBAN, guild.id, member.id)
+            await self.call_punishment_remove(ModerationAction.UNBAN, guild.id, member.id)
             return
 
         await self.bot.pool.execute(
@@ -118,13 +125,15 @@ class Actions(BaseCog):
             self._task = self.bot.loop.create_task(self.dispatch_punishment_removal())
 
     @commands.hybrid_command(name='ban', description='Bans a member from the server')
+    @commands.bot_has_guild_permissions(ban_members=True)
+    @commands.has_guild_permissions(ban_members=True)
     @commands.guild_only()
     async def ban(
         self,
         ctx: Context,
         member: discord.Member | discord.User,
-        duration: datetime.datetime | None = dt_param,
         *,
+        duration: datetime.datetime | None = dt_param,
         delete_messages_days: commands.Range[int, 0, 7] = 0,
         reason: str | None = None,
     ) -> None:
@@ -146,3 +155,20 @@ class Actions(BaseCog):
 
         if duration:
             await self.handle_ban_with_duration(ctx.guild, member, duration=duration)
+
+        with contextlib.suppress(discord.HTTPException):
+            await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
+
+    @commands.hybrid_command(name='unban', description='Unbans a member from the server')
+    @commands.guild_only()
+    async def unban(
+        self,
+        ctx: Context,
+        member: discord.Member | discord.User,
+        *,
+        reason: str | None = None,
+    ) -> None:
+        if not ctx.guild:
+            return
+
+        await ctx.guild.unban(member, reason=reason)
