@@ -116,7 +116,7 @@ class GachaReminderView(BaseView):
 
         author_line = lines[0]
 
-        author_id_parsed = re.findall('<@!?([0-9]+)>', author_line)
+        author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
         if not author_id_parsed:
             return False
         return int(author_id_parsed[0]) == author_id
