@@ -64,3 +64,5 @@ reportMissingSuperCall = true
 reportPropertyTypeMismatch = true
 reportShadowedImports = true
 reportUnnecessaryTypeIgnoreComment = true
+reportUnknownArgumentType = false
+reportUnknownVariableType = false

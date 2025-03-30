@@ -330,10 +330,10 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
         super().__init__(style=style, emoji=BotEmojis.RED_CROSS)
 
     async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
-        item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType]
         await interaction.client.pool.execute(
             """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
-            item.id,  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+            item.id,  # pyright: ignore[reportUnknownMemberType]
             interaction.user.id,
         )
         if hasattr(self.view.source, 'entries'):

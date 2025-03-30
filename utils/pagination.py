@@ -76,7 +76,7 @@ class Paginator(BaseView):
             self.add_item(self.stop_pages)
 
     async def _get_kwargs_from_page(self, page: int) -> dict[str, Any]:
-        value: str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        value: str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: ignore[reportUnknownMemberType]
 
         if isinstance(value, str):
             return {'content': value, 'embed': None}
