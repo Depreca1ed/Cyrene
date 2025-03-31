@@ -13,12 +13,13 @@ from discord.ext import commands
 from utils import BaseCog, BaseView
 from utils.embed import Embed
 from utils.helper_functions import better_string, generate_timestamp_string
-from utils.subclass import Context, Mafuyu
+from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from asyncpg import Record
 
     from utils import Mafuyu
+    from utils.subclass import Context
 
 ANICORD_DISCORD_BOT = 1257717266355851384
 
