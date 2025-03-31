@@ -151,6 +151,7 @@ class AniCordGacha(BaseCog):
 
     async def cog_unload(self) -> None:
         self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
+        self._task.cancel()
 
     async def get_pull_timer(self) -> Record | None:
         query = """
