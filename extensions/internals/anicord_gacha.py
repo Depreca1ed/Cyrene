@@ -12,7 +12,6 @@ from discord import app_commands
 from utils import BaseCog, BaseView
 from utils.embed import Embed
 from utils.helper_functions import better_string, generate_timestamp_string
-from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from asyncpg import Record
@@ -197,7 +196,7 @@ class AniCordGacha(BaseCog):
     async def call_reminder(self, record: Record) -> None:
         user = await self.bot.fetch_user(record['user_id'])
         await user.send('Hey! Pull ')
-        await self.bot.pool.execute("""UPDATE GachaPullReminders SET expires = NULL""")  # Reminded.
+        await self.bot.pool.execute("""UPDATE GachaPullReminders SET expires = NULL WHERE user_id = $1""", record["user_id"])  # Reminded.
 
     async def handle_reminder(
         self,
