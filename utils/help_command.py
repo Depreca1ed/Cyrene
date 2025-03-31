@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from discord.app_commands import AppCommandContext, AppInstallationType
 from discord.ext import commands
 
 from utils.constants import BotEmojis
@@ -10,6 +9,7 @@ from utils.embed import Embed
 from utils.helper_functions import better_string
 
 if TYPE_CHECKING:
+    from discord.app_commands import AppCommandContext, AppInstallationType
     from discord.ext.commands.hybrid import HybridAppCommand  # pyright: ignore[reportMissingTypeStubs]
 
 
@@ -71,7 +71,7 @@ class MafuHelpCommand(commands.HelpCommand):
         parent_sig = ' '.join(reversed(entries))
 
         if len(command.aliases) > 0:
-            fmt = f'[{command.name}]'
+            fmt = f'{command.name}'
             if parent_sig:
                 fmt = parent_sig + ' ' + fmt
             alias = fmt
@@ -80,9 +80,7 @@ class MafuHelpCommand(commands.HelpCommand):
 
         return f'{self.context.clean_prefix}{alias} {command.signature}'
 
-    async def send_command_help(
-        self, command: commands.Command[Any, ..., Any] | commands.HybridCommand[Any, ..., Any]
-    ) -> None:
+    def command_embed(self, command: commands.Command[Any, ..., Any] | commands.HybridCommand[Any, ..., Any]) -> Embed:
         is_hybrid = isinstance(command, commands.HybridCommand)
 
         embed = Embed(title=command.qualified_name.title(), description=command.description)
@@ -111,4 +109,7 @@ class MafuHelpCommand(commands.HelpCommand):
 
         embed.add_field(name='Usage:', value=f'`{self.get_command_signature(command)}`')
 
-        await self.context.reply(embed=embed)
+        return embed
+
+    async def send_command_help(self, command: commands.Command[Any, ..., Any]) -> None:
+        await self.context.reply(embed=self.command_embed(command))
