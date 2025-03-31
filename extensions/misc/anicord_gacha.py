@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING, Self
 import asyncpg
 import discord
 from discord import app_commands
+from discord.ext import commands
 
 from utils import BaseCog, BaseView
 from utils.embed import Embed
 from utils.helper_functions import better_string, generate_timestamp_string
+from utils.subclass import Context, Mafuyu
 
 if TYPE_CHECKING:
     from asyncpg import Record
@@ -26,13 +28,16 @@ class GachaReminderView(BaseView):
         self,
         cog: AniCordGacha,
         user: discord.User | discord.Member,
-        pull_message: discord.Message,
+        pull_message: discord.Message | None,
         record: Record | None,
     ) -> None:
         super().__init__()
         self.cog = cog
         self.user = user
         self.pull_message = pull_message
+        self.clear_items()
+        if self.pull_message:
+            self.add_item(self.remind_me_button)
         self.record = record
 
     @classmethod
@@ -40,47 +45,53 @@ class GachaReminderView(BaseView):
         cls,
         cog: AniCordGacha,
         *,
-        interaction: discord.Interaction[Mafuyu],
+        interaction: discord.Interaction[Mafuyu] | Context,
         user: discord.User | discord.Member,
-        pull_message: discord.Message,
-    ) -> discord.InteractionCallbackResponse[Mafuyu]:
-        if pull_message.author.id != ANICORD_DISCORD_BOT:
-            return await interaction.response.send_message(
-                f'This message is not from the <@{ANICORD_DISCORD_BOT}>.', ephemeral=True
-            )
+        pull_message: discord.Message | None,
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | discord.Message:
+        bot = interaction.client if isinstance(interaction, discord.Interaction) else interaction.bot
+        send = interaction.response.send_message if isinstance(interaction, discord.Interaction) else interaction.send
+        if pull_message:
+            if pull_message.author.id != ANICORD_DISCORD_BOT:
+                return await send(f'This message is not from the <@{ANICORD_DISCORD_BOT}>.', ephemeral=True)
 
-        if not pull_message.embeds:
-            return await interaction.response.send_message('This message.... does not have an embed.', ephemeral=True)
+            if not pull_message.embeds:
+                return await send('This message.... does not have an embed.', ephemeral=True)
 
-        embed = pull_message.embeds[0]
+            embed = pull_message.embeds[0]
 
-        if not embed.title or not embed.description or embed.title.lower() != 'cards pulled':
-            return await interaction.response.send_message('This message is not the pullall message', ephemeral=True)
+            if not embed.title or not embed.description or embed.title.lower() != 'cards pulled':
+                return await send('This message is not the pullall message', ephemeral=True)
 
-        if not cls._check_pullall_author(user.id, embed.description):
-            return await interaction.response.send_message('This is not your pullall message.', ephemeral=True)
+            if not cls._check_pullall_author(user.id, embed.description):
+                return await send('This is not your pullall message.', ephemeral=True)
 
         # The criteria which confirms that this message is the pullall message has
         # been fullfilled is the command executor's has been fullfilled
 
-        record = await cls.fetch_record(interaction.client, user)
+        record = await cls.fetch_record(
+            bot,
+            user,
+        )
 
         v = cls(cog, user, pull_message, record)
 
-        if record and record['repeating'] is True:
+        if v.pull_message and record and record['repeating'] is True:
             await v.cog.handle_reminder(v.user, v.pull_message, v.record)
-            v.record = await v.fetch_record(interaction.client, v.user)
+            v.record = await v.fetch_record(bot, v.user)
 
-        embed = v.embed(pull_message)
-        return await interaction.response.send_message(embed=embed, view=v, ephemeral=True)
+        embed = v.embed(pull_message, v.record)
+        return await send(embed=embed, view=v, ephemeral=True)
 
-    def embed(self, pull_message: discord.Message) -> Embed:
-        next_pull = pull_message.created_at + datetime.timedelta(hours=6)
+    def embed(self, pull_message: discord.Message | None = None, record: Record | None = None) -> Embed:
+        next_pull: datetime.datetime | None = (
+            pull_message.created_at + datetime.timedelta(hours=6) if pull_message else record['expires'] if record else None
+        )
         return Embed(
             title='Anicord Gacha Helper (Work in progress, may fuck up)',
             description=better_string(
                 (
-                    f'- **Next Pull in :** {generate_timestamp_string(next_pull)}',
+                    f'- **Next Pull in :** {generate_timestamp_string(next_pull)}' if next_pull else None,
                     (
                         '> You will be reminded when the pull happens.'
                         '\n-# To not be reminded, click the remind me button again'
@@ -123,6 +134,10 @@ class GachaReminderView(BaseView):
     @discord.ui.button(label='Remind me')
     async def remind_me_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         # Bad implementation incoming
+        if not self.pull_message:
+            # Never will occur
+            await interaction.response.defer()
+            return
         await self.cog.handle_reminder(self.user, self.pull_message, self.record)
         self.record = await self.fetch_record(interaction.client, interaction.user)
         await interaction.response.edit_message(
@@ -154,11 +169,17 @@ class AniCordGacha(BaseCog):
 
     async def get_pull_timer(self) -> Record | None:
         query = """
-            SELECT * FROM GachaPullReminders
-            WHERE expires < (CURRENT_TIMESTAMP + $1::interval)
-            ORDER BY expires
-            LIMIT 1;
-        """
+                SELECT
+                    *
+                FROM
+                    GachaPullReminders
+                WHERE
+                    expires < (CURRENT_TIMESTAMP + $1::interval)
+                ORDER BY
+                    expires
+                LIMIT
+                    1;
+                """
 
         return await self.bot.pool.fetchrow(query, datetime.timedelta(days=40))
 
@@ -196,7 +217,16 @@ class AniCordGacha(BaseCog):
     async def call_reminder(self, record: Record) -> None:
         user = await self.bot.fetch_user(record['user_id'])
         await user.send('Hey! Pull ')
-        await self.bot.pool.execute("""UPDATE GachaPullReminders SET expires = NULL WHERE user_id = $1""", record["user_id"])  # Reminded.
+        await self.bot.pool.execute(
+            """
+            UPDATE GachaPullReminders
+            SET
+                expires = NULL
+            WHERE
+                user_id = $1;
+            """,
+            record['user_id'],
+        )  # Reminded.
 
     async def handle_reminder(
         self,
@@ -207,14 +237,25 @@ class AniCordGacha(BaseCog):
         new_time = pull_messsage.created_at + datetime.timedelta(hours=6)
         if record:
             # We have an existing entry!
-            record = await self.bot.pool.fetchrow(
-                """UPDATE GachaPullReminders SET expires = $1 WHERE user_id = $2 RETURNING *""",
+            await self.bot.pool.execute(
+                """
+                UPDATE GachaPullReminders
+                SET
+                    expires = $1
+                WHERE
+                    user_id = $2;
+                """,
                 new_time,
                 user.id,
             )
         else:
-            record = await self.bot.pool.fetchrow(
-                """INSERT INTO GachaPullReminders VALUES ($1, $2, $3)""",
+            await self.bot.pool.execute(
+                """
+                INSERT INTO
+                    GachaPullReminders
+                VALUES
+                    ($1, $2, $3);
+                """,
                 user.id,
                 False,
                 new_time,
@@ -239,3 +280,7 @@ class AniCordGacha(BaseCog):
             user=interaction.user,
             pull_message=message,
         )
+
+    @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
+    async def gacha_group(self, ctx: Context) -> None:
+        await GachaReminderView.start(self, interaction=ctx.interaction or ctx, user=ctx.author, pull_message=None)

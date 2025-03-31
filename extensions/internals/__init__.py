@@ -10,7 +10,6 @@ import contextlib
 import discord
 from discord.ext import commands
 
-from .anicord_gacha import AniCordGacha
 from .blacklist import Blacklist
 from .boob_hideout import BoobHideout
 from .dev import Developer
@@ -18,7 +17,7 @@ from .error_handler import ErrorHandler
 from .guild import Guild
 
 
-class Internals(Blacklist, Developer, ErrorHandler, BoobHideout, Guild, AniCordGacha, name='Developer'):
+class Internals(Blacklist, Developer, ErrorHandler, BoobHideout, Guild, name='Developer'):
     @discord.utils.copy_doc(commands.Cog.cog_check)
     async def cog_check(self, ctx: Context) -> bool:
         if await self.bot.is_owner(ctx.author):
