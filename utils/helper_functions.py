@@ -30,7 +30,7 @@ def better_string(data: Iterable[str | Any | None], *, seperator: str) -> str:
 
 
 def generate_timestamp_string(dt: datetime.datetime, *, with_time: bool = False) -> str:
-    return f'{discord.utils.format_dt(dt, "D")} ({discord.utils.format_dt(dt, "R" if with_time is False else "f")})'
+    return f'{discord.utils.format_dt(dt, "D" if with_time is False else "f")} ({discord.utils.format_dt(dt, "R")})'
 
 
 def clean_error(objects: list[str] | str, *, seperator: str, prefix: str) -> str:
