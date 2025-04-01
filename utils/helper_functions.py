@@ -29,8 +29,8 @@ def better_string(data: Iterable[str | Any | None], *, seperator: str) -> str:
     return seperator.join(str(subdata) for subdata in data if subdata)
 
 
-def generate_timestamp_string(dt: datetime.datetime) -> str:
-    return f'{discord.utils.format_dt(dt, "D")} ({discord.utils.format_dt(dt, "R")})'
+def generate_timestamp_string(dt: datetime.datetime, *, with_time: bool = False) -> str:
+    return f'{discord.utils.format_dt(dt, "D")} ({discord.utils.format_dt(dt, "R" if with_time is False else "f")})'
 
 
 def clean_error(objects: list[str] | str, *, seperator: str, prefix: str) -> str:

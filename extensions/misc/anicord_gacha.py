@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import datetime
 import re
 from typing import TYPE_CHECKING, Self
@@ -13,7 +14,6 @@ from discord.ext import commands
 from utils import BaseCog, BaseView
 from utils.embed import Embed
 from utils.helper_functions import better_string, generate_timestamp_string
-from utils.subclass import Mafuyu
 
 if TYPE_CHECKING:
     from asyncpg import Record
@@ -22,6 +22,48 @@ if TYPE_CHECKING:
     from utils.subclass import Context
 
 ANICORD_DISCORD_BOT = 1257717266355851384
+
+
+async def fetch_record(bot: Mafuyu, user: discord.User | discord.Member) -> Record | None:
+    return await bot.pool.fetchrow(
+        """
+            SELECT
+                user_id,
+                repeating,
+                expires
+            from
+                GachaPullReminders
+            WHERE
+                user_id = $1;
+            """,
+        user.id,
+    )
+
+
+async def remove_reminder(bot: Mafuyu, record: Record) -> None:
+    await bot.pool.execute(
+        """
+            UPDATE GachaPullReminders
+            SET
+                expires = NULL
+            WHERE
+                user_id = $1;
+            """,
+        record['user_id'],
+    )
+
+
+def check_pullall_author(author_id: int, embed_description: str) -> bool:
+    lines = embed_description.split('\n')
+
+    author_line = lines[0]
+
+    author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
+
+    if not author_id_parsed:
+        return False
+
+    return int(author_id_parsed[0]) == author_id
 
 
 class GachaReminderView(BaseView):
@@ -36,10 +78,12 @@ class GachaReminderView(BaseView):
         self.cog = cog
         self.user = user
         self.pull_message = pull_message
-        self.clear_items()
-        if self.pull_message:
-            self.add_item(self.remind_me_button)
         self.record = record
+        self.clear_items()
+
+        if self.pull_message:
+            self._update_display()
+            self.add_item(self.remind_me_button)
 
     @classmethod
     async def start(
@@ -52,6 +96,7 @@ class GachaReminderView(BaseView):
     ) -> discord.InteractionCallbackResponse[Mafuyu] | discord.Message:
         bot = interaction.client if isinstance(interaction, discord.Interaction) else interaction.bot
         send = interaction.response.send_message if isinstance(interaction, discord.Interaction) else interaction.send
+
         if pull_message:
             if pull_message.author.id != ANICORD_DISCORD_BOT:
                 return await send(f'This message is not from the <@{ANICORD_DISCORD_BOT}>.', ephemeral=True)
@@ -64,13 +109,13 @@ class GachaReminderView(BaseView):
             if not embed.title or not embed.description or embed.title.lower() != 'cards pulled':
                 return await send('This message is not the pullall message', ephemeral=True)
 
-            if not cls._check_pullall_author(user.id, embed.description):
+            if not check_pullall_author(user.id, embed.description):
                 return await send('This is not your pullall message.', ephemeral=True)
 
         # The criteria which confirms that this message is the pullall message has
         # been fullfilled is the command executor's has been fullfilled
 
-        record = await cls.fetch_record(
+        record = await fetch_record(
             bot,
             user,
         )
@@ -78,21 +123,25 @@ class GachaReminderView(BaseView):
         v = cls(cog, user, pull_message, record)
 
         if v.pull_message and record and record['repeating'] is True:
-            await v.cog.handle_reminder(v.user, v.pull_message, v.record)
-            v.record = await v.fetch_record(bot, v.user)
+            # Basically automatically setup reminder if they have repeating as True
+
+            await v.cog.handle_reminder(v.user, v.pull_message)
+            v.record = await fetch_record(bot, v.user)
 
         embed = v.embed(pull_message, v.record)
+
         return await send(embed=embed, view=v, ephemeral=True)
 
     def embed(self, pull_message: discord.Message | None = None, record: Record | None = None) -> Embed:
         next_pull: datetime.datetime | None = (
             pull_message.created_at + datetime.timedelta(hours=6) if pull_message else record['expires'] if record else None
         )
+
         return Embed(
-            title='Anicord Gacha Helper (Work in progress, may fuck up)',
+            title='Anicord Gacha Helper',
             description=better_string(
                 (
-                    f'- **Next Pull in :** {generate_timestamp_string(next_pull)}' if next_pull else None,
+                    f'- **Next Pull in :** {generate_timestamp_string(next_pull, with_time=True)}' if next_pull else None,
                     (
                         '> You will be reminded when the pull happens.'
                         '\n-# To not be reminded, click the remind me button again'
@@ -105,42 +154,35 @@ class GachaReminderView(BaseView):
             ),
         )
 
-    @classmethod
-    async def fetch_record(cls, bot: Mafuyu, user: discord.User | discord.Member) -> Record | None:
-        return await bot.pool.fetchrow(
-            """
-            SELECT
-                user_id,
-                repeating,
-                expires
-            from
-                GachaPullReminders
-            WHERE
-                user_id = $1;
-            """,
-            user.id,
-        )
+    def _update_display(self) -> None:
+        if self.record:
+            self.remind_me_button.style = discord.ButtonStyle.green if self.record['expires'] else discord.ButtonStyle.red
 
-    @classmethod
-    def _check_pullall_author(cls, author_id: int, embed_description: str) -> bool:
-        lines = embed_description.split('\n')
-
-        author_line = lines[0]
-
-        author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
-        if not author_id_parsed:
-            return False
-        return int(author_id_parsed[0]) == author_id
-
-    @discord.ui.button(label='Remind me')
+    @discord.ui.button(label='Remind me', style=discord.ButtonStyle.gray)
     async def remind_me_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
         # Bad implementation incoming
         if not self.pull_message:
             # Never will occur
             await interaction.response.defer()
             return
-        await self.cog.handle_reminder(self.user, self.pull_message, self.record)
-        self.record = await self.fetch_record(interaction.client, interaction.user)
+
+        if self.record and self.record['expires']:
+            await remove_reminder(interaction.client, self.record)
+
+            self.record = await fetch_record(interaction.client, interaction.user)
+            self._update_display()
+            self.cog.restart_task()
+
+            await interaction.response.edit_message(
+                content='I have successfully removed your reminder',
+                embed=self.embed(self.pull_message),
+            )
+
+        await self.cog.handle_reminder(self.user, self.pull_message)
+
+        self.record = await fetch_record(interaction.client, interaction.user)
+        self._update_display()
+
         await interaction.response.edit_message(
             content='I have successfully setup a reminder',
             embed=self.embed(
@@ -162,6 +204,7 @@ class AniCordGacha(BaseCog):
             name='Pullall Message Helper',
             callback=self.pull_message_menu,
         )
+
         self.bot.tree.add_command(self.ctx_menu)
 
     async def cog_unload(self) -> None:
@@ -200,8 +243,10 @@ class AniCordGacha(BaseCog):
         try:
             while not self.bot.is_closed():
                 p = await self.wait_for_active_punishments()
+
                 self._current_timer = p['expires']
                 expire: datetime.datetime = p['expires']
+
                 now = datetime.datetime.now(tz=datetime.UTC)
 
                 if expire >= now:
@@ -209,58 +254,46 @@ class AniCordGacha(BaseCog):
                     await asyncio.sleep(to_sleep)
 
                 await self.call_reminder(p)
+
         except asyncio.CancelledError:
             raise
+
         except (OSError, discord.ConnectionClosed, asyncpg.PostgresConnectionError):
-            self._task.cancel()
-            self._task = self.bot.loop.create_task(self.dispatch_punishment_removal())
+            self.restart_task()
 
     async def call_reminder(self, record: Record) -> None:
-        user = await self.bot.fetch_user(record['user_id'])
-        await user.send('Hey! Pull ')
-        await self.bot.pool.execute(
-            """
-            UPDATE GachaPullReminders
-            SET
-                expires = NULL
-            WHERE
-                user_id = $1;
-            """,
-            record['user_id'],
-        )  # Reminded.
+        with contextlib.suppress(discord.HTTPException):
+            user = await self.bot.fetch_user(record['user_id'])
+            await user.send(
+                (
+                    "Hey! It's been 6 hours since you last pulled. You should pull again.\n"
+                    '-# Remember to run the menu thing again. Otherwise, I would know when to remind you again.'
+                ),
+            )
+        await remove_reminder(self.bot, record)
 
     async def handle_reminder(
         self,
         user: discord.User | discord.Member,
         pull_messsage: discord.Message,
-        record: Record | None,
     ) -> None:
         new_time = pull_messsage.created_at + datetime.timedelta(hours=6)
-        if record:
-            # We have an existing entry!
-            await self.bot.pool.execute(
-                """
-                UPDATE GachaPullReminders
-                SET
-                    expires = $1
-                WHERE
-                    user_id = $2;
-                """,
-                new_time,
-                user.id,
-            )
-        else:
-            await self.bot.pool.execute(
-                """
-                INSERT INTO
-                    GachaPullReminders
-                VALUES
-                    ($1, $2, $3);
-                """,
-                user.id,
-                False,
-                new_time,
-            )
+        await self.bot.pool.execute(
+            """
+
+            INSERT INTO
+                GachaPullReminders
+            VALUES
+                ($1, $2, $3)
+            ON CONFLICT (user_id) DO
+            UPDATE
+            SET
+                expires = $3;
+            """,
+            user.id,
+            False,
+            new_time,
+        )
 
         now = datetime.datetime.now(tz=datetime.UTC)
         dur = new_time - now
@@ -269,8 +302,11 @@ class AniCordGacha(BaseCog):
             self._have_data.set()
 
         if self._current_timer and new_time < self._current_timer:
-            self._task.cancel()
-            self._task = self.bot.loop.create_task(self.dispatch_punishment_removal())
+            self.restart_task()
+
+    def restart_task(self) -> None:
+        self._task.cancel()
+        self._task = self.bot.loop.create_task(self.dispatch_punishment_removal())
 
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
