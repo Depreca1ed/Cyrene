@@ -10,6 +10,7 @@ import mystbin
 from discord.ext import commands
 
 import config
+from utils.timer_manager import TimerManager
 
 from . import BASE_COLOUR
 
@@ -76,6 +77,7 @@ async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
 class Mafuyu(commands.AutoShardedBot):
     pool: asyncpg.Pool[asyncpg.Record]
     user: discord.ClientUser
+    timer_manager: TimerManager
 
     def __init__(
         self,
@@ -105,6 +107,8 @@ class Mafuyu(commands.AutoShardedBot):
         self.initial_extensions = extensions
 
     async def setup_hook(self) -> None:
+        self.timer_manager = TimerManager(self.loop, self)
+
         await self.refresh_bot_variables()
 
         await self.load_extensions(self.initial_extensions)
@@ -294,6 +298,7 @@ class Mafuyu(commands.AutoShardedBot):
             await self.pool.close()
         if hasattr(self, 'session'):
             await self.session.close()
+        self.timer_manager.close()
         await super().close()
 
     @property

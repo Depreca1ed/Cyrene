@@ -28,13 +28,17 @@ ignore = [
     "A005",
     "RUF029",
     "RUF036",
+    "S101",
     "FBT003",
     "DTZ005",
     "BLE001",
     "S105",
     "TD003",
+    'A002',
     "FIX002",
     "PD011",
+    "EM101",
+    "TRY003",
 ]
 
 [tool.ruff.lint.mccabe]

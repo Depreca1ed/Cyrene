@@ -66,10 +66,17 @@ CREATE TABLE IF NOT EXISTS Feature (
     allowed BOOLEAN NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS GachaPullReminders (
-    user_id BIGINT NOT NULL PRIMARY KEY,
-    repeating BOOLEAN,
-    expires TIMESTAMP WITH TIME ZONE
+CREATE TABLE IF NOT EXISTS Timers (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    reserved_type INTEGER,
+    expires TIMESTAMP WITH TIME ZONE NOT NULL,
+    data JSONB
+);
+
+CREATE TABLE IF NOT EXISTS GachaData (
+    user_id BIGINT PRIMARY KEY,
+    repeating_reminder BOOLEAN DEFAULT False
 );
 
 COMMIT;
