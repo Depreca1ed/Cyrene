@@ -201,7 +201,7 @@ class MissingArgumentHandler(discord.ui.View):
         return tuple(args), kwargs
 
     def collect_parameters_and_arguments(self) -> dict[str, Argument]:
-        assert self.ctx.command is not None  # noqa: S101
+        assert self.ctx.command is not None
         parameters: dict[str, commands.Parameter] = self.ctx.command.clean_params
         signature: inspect.Signature = inspect.signature(self.ctx.command.callback)
         bind_arguments: inspect.BoundArguments = signature.bind_partial(*self.ctx.args, **self.ctx.kwargs)
