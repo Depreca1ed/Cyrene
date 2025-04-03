@@ -245,6 +245,6 @@ class AniCordGacha(BaseCog):
         )
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
-    @pullall_check()
+    # @pullall_check()
     async def gacha_group(self, ctx: Context) -> None:
         await GachaReminderView.start(ctx, user=ctx.author, pull_message=None)
