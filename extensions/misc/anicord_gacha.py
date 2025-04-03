@@ -130,6 +130,7 @@ class GachaReminderView(BaseView):
         self.pull_message = pull_message
         self.gacha_user = gacha_user
         self.clear_items()
+        self._update_display()
 
     @classmethod
     async def start(
