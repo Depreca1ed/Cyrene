@@ -331,9 +331,8 @@ class GachaReminderView(BaseView):
         self.__pulls_synced = True
         self._update_display()
 
-        await interaction.response.send_message(
-            f'Your {len(pulls)} cards have been added to tracking database',
-            ephemeral=True,
+        await interaction.response.edit_message(
+            content=f'Your {len(pulls)} cards have been added to tracking database',
             view=self,
         )
 
