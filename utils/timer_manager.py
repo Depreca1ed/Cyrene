@@ -182,13 +182,17 @@ class TimerManager:
         query = 'DELETE FROM Timers WHERE '
 
         params: list[str] = []
+        args: list[Any] = []
 
         if id:
-            params.append('id = $1')
+            params.append(f'id = ${len(params) + 1}')
+            args.append(id)
         if user:
-            params.append('user_id = $2')
+            params.append(f'user_id = ${len(params) + 1}')
+            args.append(user.id)
         if reserved_type:
-            params.append('reserved_type = $3')
+            params.append(f'reserved_type = ${len(params) + 1}')
+            args.append(reserved_type)
 
         query += ' AND '.join(params)
 
