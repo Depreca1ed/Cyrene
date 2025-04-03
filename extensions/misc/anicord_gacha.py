@@ -343,6 +343,9 @@ class GachaReminderView(BaseView):
             view=self,
         )
 
+    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
+        return interaction.user == self.ctx.author
+
 
 class AniCordGacha(BaseCog):
     def __init__(self, bot: Mafuyu) -> None:
