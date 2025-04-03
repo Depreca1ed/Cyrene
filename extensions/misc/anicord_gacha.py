@@ -193,6 +193,8 @@ class GachaReminderView(BaseView):
                 reserved_type=ReservedTimerType.ANICORD_GACHA,
             )
             self.gacha_user.timer = None  # Timer gone.
+            self._update_display()
+
             return await interaction.response.edit_message(content='Successfully removed pull reminder', embed=self.embed())
 
         remind_time = self.pull_message.created_at + PULL_INTERVAL
@@ -202,6 +204,7 @@ class GachaReminderView(BaseView):
             user=interaction.user,
             reserved_type=ReservedTimerType.ANICORD_GACHA,
         )
+        self._update_display()
 
         return await interaction.response.edit_message(content='Successfully created a pull reminder', embed=self.embed())
 
