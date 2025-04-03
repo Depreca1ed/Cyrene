@@ -198,9 +198,7 @@ class TimerManager:
 
         await self.bot.pool.execute(
             query,
-            id,
-            user.id if user else None,
-            reserved_type,
+            *args,
         )
         self.restart_task()
 
