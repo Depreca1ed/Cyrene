@@ -263,23 +263,25 @@ class GachaReminderView(BaseView):
     def _update_display(self) -> None:
         self.clear_items()
 
+        is_timer = self.gacha_user.timer is not None
+
         if self.pull_message:
             self.add_item(self.remind_me_button)
 
             if self.__pulls_synced is False:
                 self.add_item(self.sync_pulls)
 
-        self.remind_me_button.style = discord.ButtonStyle.green if self.gacha_user.timer else discord.ButtonStyle.red
+        elif self.pull_message is None and is_timer:
+            self.add_item(self.remind_me_button)
+
+        self.remind_me_button.style = discord.ButtonStyle.red if is_timer else discord.ButtonStyle.green
+        self.remind_me_button.label = 'Cancel reminder' if is_timer else 'Remind me'
 
     @discord.ui.button(emoji='\U000023f0', label='Remind me', style=discord.ButtonStyle.gray)
     async def remind_me_button(
         self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
     ) -> None | discord.InteractionCallbackResponse[Mafuyu]:
         # Bad implementation incoming
-        if not self.pull_message:
-            # Never will occur
-            await interaction.response.defer()
-            return None
 
         if self.gacha_user.timer:
             await self.ctx.bot.timer_manager.cancel_timer(
@@ -294,6 +296,11 @@ class GachaReminderView(BaseView):
                 embed=self.embed(),
                 view=self,
             )
+
+        if not self.pull_message:
+            # Never will occur
+            await interaction.response.defer()
+            return None
 
         remind_time = self.pull_message.created_at + PULL_INTERVAL
 
