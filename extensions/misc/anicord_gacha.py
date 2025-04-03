@@ -129,7 +129,6 @@ class GachaReminderView(BaseView):
         self.user = user
         self.pull_message = pull_message
         self.gacha_user = gacha_user
-        self.clear_items()
         self._update_display()
 
     @classmethod
@@ -173,6 +172,7 @@ class GachaReminderView(BaseView):
         )
 
     def _update_display(self) -> None:
+        self.clear_items()
         if self.pull_message:
             self.add_item(self.remind_me_button)
         self.remind_me_button.style = discord.ButtonStyle.green if self.gacha_user.timer else discord.ButtonStyle.red
