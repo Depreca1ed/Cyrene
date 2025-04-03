@@ -170,11 +170,11 @@ class PulledCard:
         for _ in parsed:
             d = _.groupdict()
 
-            _id = int(d['id'])
+            c_id = int(d['id'])
             rarity = int(CardRirities[d['rarity']].value)
             name: str = d['name']
 
-            return cls(_id, name, rarity)
+            return cls(c_id, name, rarity)
 
         return None
 
@@ -229,8 +229,8 @@ class GachaReminderView(BaseView):
                 )
             )
 
-            c.__pulls_synced = is_message_syncronised  # noqa: SLF001
-            c._update_display()  # noqa: SLF001
+            c.__pulls_synced = is_message_syncronised
+            c._update_display()
 
         embed = c.embed()
 
