@@ -125,7 +125,7 @@ class TimerManager:
                 LIMIT
                     1;
                 """
-        await self.bot.pool.fetchrow(query, datetime.timedelta(days=40))
+        return await self.bot.pool.fetchrow(query, datetime.timedelta(days=40))
 
     async def call_timer(self, timer: Timer) -> None:
         self.bot.dispatch('timer_expire', timer)
