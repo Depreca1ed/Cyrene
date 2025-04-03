@@ -59,7 +59,7 @@ class Argument:
                 for _ in [
                     self.param.description,
                     ('(Default: ' + str(self.param.default if self.param.default is not None else 'Nothing') + ')')
-                    if self.param.default is not inspect._empty and self.param.required is False  # noqa: SLF001 #pyright: ignore[reportPrivateUsage]
+                    if self.param.default is not inspect._empty and self.param.required is False  # pyright: ignore[reportPrivateUsage]
                     else '',
                 ]
                 if _
@@ -190,11 +190,11 @@ class MissingArgumentHandler(discord.ui.View):
         args: list[Any] = []
         kwargs: dict[str, Any] = {}
         for argument in self.arguments.values():
-            if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+            if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # pyright: ignore[reportPrivateUsage]
                 args.append(argument.value)
             elif (
-                argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
-                or argument.param.kind is inspect._ParameterKind.KEYWORD_ONLY  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+                argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD  # pyright: ignore[reportPrivateUsage]
+                or argument.param.kind is inspect._ParameterKind.KEYWORD_ONLY  # pyright: ignore[reportPrivateUsage]
             ):
                 kwargs[argument.param.name] = argument.value
 
