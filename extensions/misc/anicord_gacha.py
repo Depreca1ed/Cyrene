@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import contextlib
 import datetime
+import enum
 import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -24,6 +26,18 @@ if TYPE_CHECKING:
 ANICORD_DISCORD_BOT = 1257717266355851384
 
 PULL_INTERVAL = datetime.timedelta(hours=6)
+
+
+PULL_LINE_REGEX = r'Name: `(?P<name>.+)` Rarity: <:(?P<rarity>[a-zA-Z0-9]+):.+>.+ ID: `(?P<id>[0-9]+)`'
+
+
+class CardRirities(enum.IntEnum):
+    RedStar = 1
+    GreenStar = 2
+    YellowStar = 3
+    PurpleStar = 4
+    RainbowStar = 5
+    BlackStar = 6
 
 
 def check_pullall_author(author_id: int, embed_description: str) -> bool:
@@ -115,6 +129,55 @@ class GachaUser:
 
         return cls(timer, config_data=record)
 
+    @classmethod
+    async def add_card(
+        cls,
+        pool: asyncpg.Pool[asyncpg.Record],
+        *,
+        user: discord.User | discord.Member,
+        card: PulledCard,
+        pull_message: discord.Message,
+    ) -> None:
+        query = """
+            INSERT INTO
+                GachaPulledCards (user_id, message_id, card_id, card_name, rarity)
+            VALUES
+                ($1, $2, $3, $4, $5);
+            """
+        args = (
+            user.id,
+            pull_message.id,
+            card.id,
+            card.name,
+            card.rarity,
+        )
+        await pool.execute(query, *args)
+
+
+@dataclass
+class PulledCard:
+    id: int
+    name: str | None
+    rarity: int
+
+    @classmethod
+    def parse_from_str(cls, s: str, /) -> None | Self:
+        parsed = re.finditer(PULL_LINE_REGEX, s)
+
+        if not parsed:
+            return None
+
+        for _ in parsed:
+            d = _.groupdict()
+
+            _id = int(d['id'])
+            rarity = int(CardRirities[d['rarity']].value)
+            name: str = d['name']
+
+            return cls(_id, name, rarity)
+
+        return None
+
 
 class GachaReminderView(BaseView):
     def __init__(
@@ -129,6 +192,9 @@ class GachaReminderView(BaseView):
         self.user = user
         self.pull_message = pull_message
         self.gacha_user = gacha_user
+
+        self.__pulls_synced: bool = False
+
         self._update_display()
 
     @classmethod
@@ -142,6 +208,29 @@ class GachaReminderView(BaseView):
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         c = cls(ctx, user, pull_message, gacha_user)
+
+        if c.pull_message:
+            is_message_syncronised: bool = bool(
+                await ctx.bot.pool.fetchval(
+                    """
+                SELECT
+                    EXISTS (
+                        SELECT
+                            *
+                        FROM
+                            GachaPulledCards
+                        WHERE
+                            user_id = $1
+                            AND message_id = $2
+                    );
+                """,
+                    user.id,
+                    c.pull_message.id,
+                )
+            )
+
+            c.__pulls_synced = is_message_syncronised  # noqa: SLF001
+            c._update_display()  # noqa: SLF001
 
         embed = c.embed()
 
@@ -173,8 +262,13 @@ class GachaReminderView(BaseView):
 
     def _update_display(self) -> None:
         self.clear_items()
+
         if self.pull_message:
             self.add_item(self.remind_me_button)
+
+            if self.__pulls_synced is False:
+                self.add_item(self.sync_pulls)
+
         self.remind_me_button.style = discord.ButtonStyle.green if self.gacha_user.timer else discord.ButtonStyle.red
 
     @discord.ui.button(emoji='\U000023f0', label='Remind me', style=discord.ButtonStyle.gray)
@@ -195,7 +289,11 @@ class GachaReminderView(BaseView):
             self.gacha_user.timer = None  # Timer gone.
             self._update_display()
 
-            return await interaction.response.edit_message(content='Successfully removed pull reminder', embed=self.embed(), view=self)
+            return await interaction.response.edit_message(
+                content='Successfully removed pull reminder',
+                embed=self.embed(),
+                view=self,
+            )
 
         remind_time = self.pull_message.created_at + PULL_INTERVAL
 
@@ -206,7 +304,38 @@ class GachaReminderView(BaseView):
         )
         self._update_display()
 
-        return await interaction.response.edit_message(content='Successfully created a pull reminder', embed=self.embed(), view=self)
+        return await interaction.response.edit_message(
+            content='Successfully created a pull reminder',
+            embed=self.embed(),
+            view=self,
+        )
+
+    @discord.ui.button(emoji='\U0001f4e5', label='Syncronize pulls', style=discord.ButtonStyle.grey)
+    async def sync_pulls(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+        assert self.pull_message is not None
+
+        embed = self.pull_message.embeds[0]
+
+        assert embed.description is not None
+
+        pulls = [_ for _ in (PulledCard.parse_from_str(_) for _ in embed.description.split('\n')) if _ is not None]
+
+        for card in pulls:
+            await self.gacha_user.add_card(
+                self.ctx.bot.pool,
+                user=self.user,
+                card=card,
+                pull_message=self.pull_message,
+            )
+
+        self.__pulls_synced = True
+        self._update_display()
+
+        await interaction.response.send_message(
+            f'Your {len(pulls)} cards have been added to tracking database',
+            ephemeral=True,
+            view=self,
+        )
 
 
 class AniCordGacha(BaseCog):
