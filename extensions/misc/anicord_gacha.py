@@ -444,12 +444,9 @@ class AniCordGacha(BaseCog):
         user: discord.User | discord.Member = commands.Author,
         *,
         search: SearchFlags | None = None,
-    ):
+    ) -> None:
         if search and search.id and (search.name or search.rarity):
             raise commands.BadArgument('You provided an ID and name or rarity. You can only provide an ID alone.')
-
-        #       if search:
-        #            await self.handle_search(ctx, user, search)
 
         pull_records = await self.bot.pool.fetch(
             """
