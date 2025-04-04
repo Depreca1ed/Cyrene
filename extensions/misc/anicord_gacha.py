@@ -40,6 +40,27 @@ class CardRirities(enum.IntEnum):
     BlackStar = 6
 
 
+RARITY_EMOJIS = {
+    1: discord.PartialEmoji(id=1259718293410021446, name='RedStar'),
+    2: discord.PartialEmoji(id=1259690032554577930, name='GreenStar'),
+    3: discord.PartialEmoji(id=1259557039441711149, name='YellowStar'),
+    4: discord.PartialEmoji(id=1259718164862996573, name='PurpleStar'),
+    5: discord.PartialEmoji(id=1259557105220976772, name='RainbowStar'),
+    6: discord.PartialEmoji(id=1259689874961862688, name='BlackStar'),
+}
+
+
+HOLLOW_STAR = discord.PartialEmoji(name='HollowStar', id=1259556949867888660)
+
+
+def get_burn_worths(pulls: list[PulledCard]) -> dict[int, int]:
+    burn_worth: dict[int, int] = {}
+    for c in pulls:
+        c_burn_worth = c.rarity * 5
+        burn_worth[c.rarity] = burn_worth.get(c.rarity, 0) + c_burn_worth
+    return burn_worth
+
+
 def check_pullall_author(author_id: int, embed_description: str) -> bool:
     lines = embed_description.split('\n')
 
@@ -179,7 +200,7 @@ class PulledCard:
         return None
 
 
-class GachaReminderView(BaseView):
+class GachaPullView(BaseView):
     def __init__(
         self,
         ctx: Context,
@@ -194,6 +215,7 @@ class GachaReminderView(BaseView):
         self.gacha_user = gacha_user
 
         self.__pulls_synced: bool = False
+        self.__pulls: list[PulledCard] = []
 
         self._update_display()
 
@@ -237,6 +259,8 @@ class GachaReminderView(BaseView):
         return await ctx.reply(embed=embed, view=c, ephemeral=True)
 
     def embed(self) -> Embed:
+        embed = Embed(title='Anicord Gacha Bot Helper')
+
         s: list[str] = []
 
         if self.gacha_user.timer is None:
@@ -254,11 +278,26 @@ class GachaReminderView(BaseView):
 
         if next_pull:
             s.append(f'> **Next Pull in :** {generate_timestamp_string(next_pull, with_time=True)}')
+            if self.gacha_user.timer:
+                s.append('-# You will be reminded in DMs when you can pull again.')
 
-        return Embed(
-            title='Anicord Gacha Bot Helper',
-            description=better_string(s, seperator='\n'),
-        )
+        if self.__pulls:
+            burn_worth = get_burn_worths(self.__pulls)
+
+            p_s: list[str] = []
+            for k, v in burn_worth.items():
+                p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
+
+            p_s.append(f'> Total: `{sum(burn_worth.values())}` blombos')
+
+            embed.add_field(
+                name='Pulled card statistics',
+                value=better_string(p_s, seperator='\n'),
+            )
+
+        embed.description = better_string(s, seperator='\n')
+
+        return embed
 
     def _update_display(self) -> None:
         self.clear_items()
@@ -334,14 +373,23 @@ class GachaReminderView(BaseView):
                 card=card,
                 pull_message=self.pull_message,
             )
+            self.__pulls.append(card)
 
         self.__pulls_synced = True
         self._update_display()
 
         await interaction.response.edit_message(
             content=f'Your {len(pulls)} cards have been added to tracking database',
+            embed=self.embed(),
             view=self,
         )
+
+
+class SearchFlags(commands.FlagConverter):
+    id: int | None = None
+    name: str | None = None
+    rarity: int | None = None
+
 
 class AniCordGacha(BaseCog):
     def __init__(self, bot: Mafuyu) -> None:
@@ -372,13 +420,92 @@ class AniCordGacha(BaseCog):
         check = await pullall_check().predicate(await Context.from_interaction(interaction))
         if check is False:
             return
-        await GachaReminderView.start(
+        await GachaPullView.start(
             await Context.from_interaction(interaction),
             user=interaction.user,
             pull_message=message,
         )
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
-    # @pullall_check()
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
     async def gacha_group(self, ctx: Context) -> None:
-        await GachaReminderView.start(ctx, user=ctx.author, pull_message=None)
+        await GachaPullView.start(ctx, user=ctx.author, pull_message=None)
+
+    @gacha_group.command(
+        name='statistics',
+        description='Given you have syncronized pulls at least ones, this command provides statistics for it.',
+    )
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def gacha_statistics(
+        self,
+        ctx: Context,
+        user: discord.User | discord.Member = commands.Author,
+        *,
+        search: SearchFlags | None = None,
+    ):
+        if search and search.id and (search.name or search.rarity):
+            raise commands.BadArgument('You provided an ID and name or rarity. You can only provide an ID alone.')
+
+        #       if search:
+        #            await self.handle_search(ctx, user, search)
+
+        pull_records = await self.bot.pool.fetch(
+            """
+            SELECT
+                message_id,
+                card_id,
+                card_name,
+                rarity
+            FROM
+                GachaPulledCards
+            WHERE
+                user_id = $1;
+            """,
+            user.id,
+        )
+        if not pull_records:
+            raise commands.BadArgument(
+                'You never syncronised your pulls. You bitch. Why would you run random commands. Smh.'
+            )
+
+        pulls = [
+            PulledCard(
+                p['card_id'],
+                p['card_name'],
+                p['rarity'],
+            )
+            for p in pull_records
+        ]
+        burn_worths = get_burn_worths(pulls)
+        embed = Embed(title='Pulled cards statistics')
+
+        embed.add_field(
+            name='How to understand this?',
+            value=(
+                'The text below looks like\n'
+                f'`1` {HOLLOW_STAR} `[1-\U0000221e]`: `1-\U0000221e` blombos.\n'
+                'The digit at the first represents what rarity is being talked about in the line.\n'
+                "The digits inside [] represent how many cards you've pulled of that rarity.\n"
+                'The digits after the : show how many blombos worth of cards you have pulled.\n'
+                '\n'
+                'These are statistics which use certain constants and applies it all cards. '
+                'If there are some unique cases where the burn worth is different, it has not been taken into account'
+            ),
+            inline=False,
+        )
+        # I really need to explain to the user what the fuck they are looking at.
+
+        p_s: list[str] = []
+        for k, v in burn_worths.items():
+            p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
+
+        p_s.append(f'> Total `[{len(pulls)}]`: `{sum(burn_worths.values())}` blombos')
+
+        embed.add_field(
+            name='Pulled cards statistics',
+            value=better_string(p_s, seperator='\n'),
+        )
+
+        await ctx.reply(embed=embed)
