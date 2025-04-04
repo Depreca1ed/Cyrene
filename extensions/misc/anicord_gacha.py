@@ -478,22 +478,6 @@ class AniCordGacha(BaseCog):
         burn_worths = get_burn_worths(pulls)
         embed = Embed(title='Pulled cards statistics')
 
-        embed.add_field(
-            name='How to understand this?',
-            value=(
-                'The text below looks like\n'
-                f'`1` {HOLLOW_STAR} `[1-\U0000221e]`: `1-\U0000221e` blombos.\n'
-                'The digit at the first represents what rarity is being talked about in the line.\n'
-                "The digits inside [] represent how many cards you've pulled of that rarity.\n"
-                'The digits after the : show how many blombos worth of cards you have pulled.\n'
-                '\n'
-                'These are statistics which use certain constants and applies it all cards. '
-                'If there are some unique cases where the burn worth is different, it has not been taken into account'
-            ),
-            inline=False,
-        )
-        # I really need to explain to the user what the fuck they are looking at.
-
         p_s: list[str] = []
         for k, v in burn_worths.items():
             p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
