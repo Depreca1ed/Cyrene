@@ -444,7 +444,8 @@ class AniCordGacha(BaseCog):
             for p in pull_records
         ]
         burn_worths = get_burn_worths(pulls)
-        embed = Embed(title='Pulled cards statistics')
+        embed = Embed(title=f'Pulled cards statistics for {user}')
+        embed.set_thumbnail(url=user.display_avatar.url)
 
         p_s: list[str] = []
         for k, v in burn_worths.items():
