@@ -46,9 +46,11 @@ class Timer:
         if id:
             params.append(f'id = ${len(params) + 1}')
             args.append(id)
+
         if user:
             params.append(f'user_id = ${len(params) + 1}')
             args.append(user.id)
+
         if reserved_type:
             params.append(f'reserved_type = ${len(params) + 1}')
             args.append(reserved_type)
@@ -187,9 +189,11 @@ class TimerManager:
         if id:
             params.append(f'id = ${len(params) + 1}')
             args.append(id)
+
         if user:
             params.append(f'user_id = ${len(params) + 1}')
             args.append(user.id)
+
         if reserved_type:
             params.append(f'reserved_type = ${len(params) + 1}')
             args.append(reserved_type)

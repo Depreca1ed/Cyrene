@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import datetime
-import enum
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
@@ -19,7 +18,6 @@ from utils.timer_manager import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
     import asyncpg
-    from discord.ext.commands._types import Check  # pyright: ignore[reportMissingTypeStubs]
 
     from utils import Mafuyu
 
@@ -29,15 +27,6 @@ PULL_INTERVAL = datetime.timedelta(hours=6)
 
 
 PULL_LINE_REGEX = r'Name: `(?P<name>.+)` Rarity: <:(?P<rarity>[a-zA-Z0-9]+):.+>.+ ID: `(?P<id>[0-9]+)`'
-
-
-class CardRirities(enum.IntEnum):
-    RedStar = 1
-    GreenStar = 2
-    YellowStar = 3
-    PurpleStar = 4
-    RainbowStar = 5
-    BlackStar = 6
 
 
 RARITY_EMOJIS = {
@@ -58,62 +47,12 @@ def get_burn_worths(pulls: list[PulledCard]) -> dict[int, int]:
     for c in pulls:
         c_burn_worth = c.rarity * 5
         burn_worth[c.rarity] = burn_worth.get(c.rarity, 0) + c_burn_worth
-    return burn_worth
-
-
-def check_pullall_author(author_id: int, embed_description: str) -> bool:
-    lines = embed_description.split('\n')
-
-    author_line = lines[0]
-
-    author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
-
-    if not author_id_parsed:
-        return False
-
-    return int(author_id_parsed[0]) == author_id
-
-
-def pullall_check() -> Check[Context]:
-    async def predicate(ctx: Context) -> bool:
-        msg = ctx.message
-
-        m = None
-
-        if msg.author.id != ANICORD_DISCORD_BOT:
-            m = f'This message is not from the <@{ANICORD_DISCORD_BOT}>.'
-
-        elif not msg.embeds:
-            m = 'This message.... does not have an embed.'
-
-        elif (embed := msg.embeds[0]) and (
-            not embed.title or not embed.description or embed.title.lower() != 'cards pulled'
-        ):
-            if embed.description and not check_pullall_author(msg.author.id, embed.description):
-                m = 'This is not your pullall message.'
-            else:
-                m = 'This message is not the pullall message'
-
-        # These are a lot of checks to avoid yk using the wrong data.
-        # The messages are reduces to an amount which isnt much
-        # but is enough to convey most of the information required
-
-        fail = m is None
-
-        kwargs = {}
-
-        if ctx.interaction:
-            kwargs['ephemeral'] = True
-
-        if m:
-            await ctx.reply(m, **kwargs)
-        return fail
-
-    return commands.check(predicate)
+    return {k: burn_worth[k] for k in sorted(burn_worth)}
 
 
 class GachaUser:
-    def __init__(self, timer: Timer | None, *, config_data: asyncpg.Record) -> None:
+    def __init__(self, user: discord.User | discord.Member, *, timer: Timer | None, config_data: asyncpg.Record) -> None:
+        self.user = user
         self.timer = timer
         self.config_data = config_data
         super().__init__()
@@ -148,14 +87,12 @@ class GachaUser:
         )
         assert record is not None
 
-        return cls(timer, config_data=record)
+        return cls(user, timer=timer, config_data=record)
 
-    @classmethod
     async def add_card(
-        cls,
+        self,
         pool: asyncpg.Pool[asyncpg.Record],
         *,
-        user: discord.User | discord.Member,
         card: PulledCard,
         pull_message: discord.Message,
     ) -> None:
@@ -166,7 +103,7 @@ class GachaUser:
                 ($1, $2, $3, $4, $5);
             """
         args = (
-            user.id,
+            self.user.id,
             pull_message.id,
             card.id,
             card.name,
@@ -180,6 +117,7 @@ class PulledCard:
     id: int
     name: str | None
     rarity: int
+    message_id: int | None = None
 
     @classmethod
     def parse_from_str(cls, s: str, /) -> None | Self:
@@ -192,7 +130,7 @@ class PulledCard:
             d = _.groupdict()
 
             c_id = int(d['id'])
-            rarity = int(CardRirities[d['rarity']].value)
+            rarity = next(k for k, _ in RARITY_EMOJIS.items() if _.name == d['rarity'])
             name: str = d['name']
 
             return cls(c_id, name, rarity)
@@ -291,7 +229,7 @@ class GachaPullView(BaseView):
             p_s.append(f'> Total: `{sum(burn_worth.values())}` blombos')
 
             embed.add_field(
-                name='Pulled card statistics',
+                name='Estimated burn worth:',
                 value=better_string(p_s, seperator='\n'),
             )
 
@@ -369,7 +307,6 @@ class GachaPullView(BaseView):
         for card in pulls:
             await self.gacha_user.add_card(
                 self.ctx.bot.pool,
-                user=self.user,
                 card=card,
                 pull_message=self.pull_message,
             )
@@ -383,12 +320,6 @@ class GachaPullView(BaseView):
             embed=self.embed(),
             view=self,
         )
-
-
-class SearchFlags(commands.FlagConverter):
-    id: int | None = None
-    name: str | None = None
-    rarity: int | None = None
 
 
 class AniCordGacha(BaseCog):
@@ -413,18 +344,59 @@ class AniCordGacha(BaseCog):
             user = await self.bot.fetch_user(timer.user_id)
             await user.send("Hey! It's been 6 hours since you last pulled. You should pull again")
 
+    def _check_pullall_author(self, author_id: int, embed_description: str) -> bool:
+        lines = embed_description.split('\n')
+
+        author_line = lines[0]
+
+        author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
+
+        if not author_id_parsed:
+            return False
+
+        return int(author_id_parsed[0]) == author_id
+
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def pull_message_menu(self, interaction: discord.Interaction[Mafuyu], message: discord.Message) -> None:
-        interaction.message = message
-        check = await pullall_check().predicate(await Context.from_interaction(interaction))
-        if check is False:
-            return
+    async def pull_message_menu(
+        self,
+        interaction: discord.Interaction[Mafuyu],
+        message: discord.Message,
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
+        # Few checks
+
+        m = None
+
+        if message.author.id != ANICORD_DISCORD_BOT:
+            m = f'This message is not from the <@{ANICORD_DISCORD_BOT}>.'
+
+        elif not message.embeds:
+            m = 'This message.... does not have an embed.'
+
+        elif (embed := message.embeds[0]) and (
+            not embed.title or not embed.description or embed.title.lower() != 'cards pulled'
+        ):
+            if embed.description and not self._check_pullall_author(
+                message.author.id,
+                embed.description,
+            ):
+                m = 'This is not your pullall message.'
+            else:
+                m = 'This message is not the pullall message'
+
+        if m:
+            return await interaction.response.send_message(m, ephemeral=True)
+
+        # These are a lot of checks to avoid yk using the wrong data.
+        # The messages are reduces to an amount which isnt much
+        # but is enough to convey most of the information required
+
         await GachaPullView.start(
             await Context.from_interaction(interaction),
             user=interaction.user,
             pull_message=message,
         )
+        return None
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -442,12 +414,7 @@ class AniCordGacha(BaseCog):
         self,
         ctx: Context,
         user: discord.User | discord.Member = commands.Author,
-        *,
-        search: SearchFlags | None = None,
     ) -> None:
-        if search and search.id and (search.name or search.rarity):
-            raise commands.BadArgument('You provided an ID and name or rarity. You can only provide an ID alone.')
-
         pull_records = await self.bot.pool.fetch(
             """
             SELECT
@@ -459,8 +426,6 @@ class AniCordGacha(BaseCog):
                 GachaPulledCards
             WHERE
                 user_id = $1
-           ORDER BY
-                rarity;
             """,
             user.id,
         )
@@ -474,6 +439,7 @@ class AniCordGacha(BaseCog):
                 p['card_id'],
                 p['card_name'],
                 p['rarity'],
+                p['message_id'],
             )
             for p in pull_records
         ]
@@ -487,8 +453,42 @@ class AniCordGacha(BaseCog):
         p_s.append(f'> Total `[{len(pulls)}]`: `{sum(burn_worths.values())}` blombos')
 
         embed.add_field(
-            name='Pulled cards statistics',
             value=better_string(p_s, seperator='\n'),
         )
+
+        first_sync_time = next(
+            (
+                _.message_id
+                for _ in sorted(
+                    (_ for _ in pulls),
+                    key=lambda p: discord.utils.snowflake_time(p.message_id).timestamp() if p.message_id else 0,
+                )
+                if _.message_id
+            ),
+            None,
+        )
+
+        if first_sync_time:
+            _messages_amount: dict[int, int] = {}
+            for p in pulls:
+                if p.message_id:
+                    _messages_amount[p.message_id] = _messages_amount.get(p.message_id, 0) + 1
+            times_pulled = sum(_messages_amount.values())
+            days = (datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time)).days
+            rate = times_pulled / days
+
+            embed.add_field(
+                value=better_string(
+                    (
+                        '- **Syncing Since:** '
+                        + generate_timestamp_string(
+                            discord.utils.snowflake_time(first_sync_time),
+                            with_time=True,
+                        ),
+                        f'  - **Rate :** {rate:.2f} pulls per day',
+                    ),
+                    seperator='\n',
+                ),
+            )
 
         await ctx.reply(embed=embed)
