@@ -157,7 +157,7 @@ class Blacklist(BaseCog):
 
         """
         if not data.lasts_until:
-            return True
+            return False
         if datetime.datetime.now() > data.lasts_until:
             await self.remove(snowflake)
             return False
