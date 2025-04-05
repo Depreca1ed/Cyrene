@@ -469,12 +469,17 @@ class AniCordGacha(BaseCog):
         )
 
         if first_sync_time:
-            _messages: list[int] = []
+            messages: list[int] = []
             for p in pulls:
-                if p.message_id and p.message_id not in _messages:
-                    _messages.append(p.message_id)
-            times_pulled = len(_messages)
-            days = (datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time)).days
+                if p.message_id and p.message_id not in messages:
+                    messages.append(p.message_id)
+
+            times_pulled = len(messages)
+
+            days = (
+                datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time)
+            ).total_seconds() / 86400
+
             rate = times_pulled / days
 
             embed.add_field(
@@ -486,6 +491,7 @@ class AniCordGacha(BaseCog):
                             with_time=True,
                         ),
                         f'  - **Rate :** {rate:.2f} pullall(s) per day',
+                        f'  - **Total :** {times_pulled} pullall(s)',
                     ),
                     seperator='\n',
                 ),
