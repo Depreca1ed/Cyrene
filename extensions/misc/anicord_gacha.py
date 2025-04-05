@@ -469,11 +469,11 @@ class AniCordGacha(BaseCog):
         )
 
         if first_sync_time:
-            _messages_amount: dict[int, int] = {}
+            _messages: list[int] = []
             for p in pulls:
-                if p.message_id:
-                    _messages_amount[p.message_id] = _messages_amount.get(p.message_id, 0) + 1
-            times_pulled = sum(_messages_amount.values())
+                if p.message_id and p.message_id not in _messages:
+                    _messages.append(p.message_id)
+            times_pulled = len(_messages)
             days = (datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time)).days
             rate = times_pulled / days
 
@@ -485,7 +485,7 @@ class AniCordGacha(BaseCog):
                             discord.utils.snowflake_time(first_sync_time),
                             with_time=True,
                         ),
-                        f'  - **Rate :** {rate:.2f} pulls per day',
+                        f'  - **Rate :** {rate:.2f} pullall(s) per day',
                     ),
                     seperator='\n',
                 ),
