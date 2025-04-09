@@ -2,93 +2,52 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Self
 
 import discord
 import jishaku
 import mystbin
 from discord.ext import commands
 
-import config
-from utils.timer_manager import TimerManager
-
-from . import BASE_COLOUR
-
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import aiohttp
-    import asyncpg
+    from aiohttp import ClientSession
+    from asyncpg import Pool, Record
 
-    from . import BlacklistData
+    from utilities.types import BlacklistData
 
-
-__all__ = (
-    'Context',
-    'Mafuyu',
-)
+from config import DEFAULT_PREFIX, OWNER_IDS, WEBHOOK
+from utilities.bases.context import MafuContext
+from utilities.constants import BASE_COLOUR
+from utilities.timers import TimerManager
 
 log = logging.getLogger('Mafuyu')
 
+__all__ = ('Mafuyu',)
 
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
 jishaku.Flags.NO_DM_TRACEBACK = True
 jishaku.Flags.NO_UNDERSCORE = True
 
-C = TypeVar('C', bound='Context')
-
-
-class Context(commands.Context['Mafuyu']):
-    @discord.utils.copy_doc(commands.Context['Mafuyu'].reply)
-    async def reply(self, content: str | None = None, **kwargs: Any) -> discord.Message:
-        try:
-            return await super().reply(content=content, **kwargs)
-        except discord.HTTPException:
-            return await super().send(content=content, **kwargs)
-
-    @discord.utils.copy_doc(commands.Context['Mafuyu'].send)
-    async def send(
-        self,
-        content: None | str = None,
-        **kwargs: Any,
-    ) -> discord.Message:
-        if content and (c := str(content)) and len(c) > 1990:  # 2000 sounds a bit extreme to edge, safe at 1990
-            paste = await self.bot.create_paste(f'Requested by {self.author}', content=content)
-            content = (
-                'The response which was supposed to be here was too big. I have posted it to MystBin instead\n'
-                f'-# Link: {paste.url}'
-            )
-
-        return await super().send(
-            content=content,
-            **kwargs,
-        )
-
-
-async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
-    prefixes = commands.when_mentioned(bot, message)
-
-    prefixes.extend(bot.get_prefixes(message.guild))
-
-    return prefixes
-
 
 class Mafuyu(commands.AutoShardedBot):
-    pool: asyncpg.Pool[asyncpg.Record]
+    pool: Pool[Record]
     user: discord.ClientUser
     timer_manager: TimerManager
 
     def __init__(
         self,
         *,
+        command_prefix: commands.bot.PrefixType[Self],
         extensions: list[str],
         intents: discord.Intents,
         allowed_mentions: discord.AllowedMentions,
-        session: aiohttp.ClientSession,
+        session: ClientSession,
     ) -> None:
         super().__init__(
-            command_prefix=_callable_prefix,
+            command_prefix=command_prefix,
             case_insensitive=True,
             strip_after_prefix=True,
             intents=intents,
@@ -109,16 +68,18 @@ class Mafuyu(commands.AutoShardedBot):
     async def setup_hook(self) -> None:
         self.timer_manager = TimerManager(self.loop, self)
 
-        await self.refresh_bot_variables()
+        await self.refresh_vars()
 
         await self.load_extensions(self.initial_extensions)
         await self.load_extension('jishaku')
 
-    async def get_context(self, origin: discord.Message | discord.Interaction, *, cls: type[Context] = Context) -> Context:
+    async def get_context(
+        self, origin: discord.Message | discord.Interaction, *, cls: type[MafuContext] = MafuContext
+    ) -> MafuContext:
         return await super().get_context(origin, cls=cls)
 
     async def is_owner(self, user: discord.abc.User) -> bool:
-        return bool(user.id in config.OWNERS_ID)
+        return bool(user.id in OWNER_IDS)
 
     async def load_extensions(self, extensions: Iterable[str]) -> None:
         """
@@ -181,7 +142,7 @@ class Mafuyu(commands.AutoShardedBot):
             A list of prefixes for a guild if provided. Defaults to base prefix
 
         """
-        return self.prefixes.get(guild.id, [config.DEFAULT_PREFIX]) if guild else [config.DEFAULT_PREFIX]
+        return self.prefixes.get(guild.id, [DEFAULT_PREFIX]) if guild else [DEFAULT_PREFIX]
 
     def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> BlacklistData | None:
         """
@@ -222,7 +183,7 @@ class Mafuyu(commands.AutoShardedBot):
         file = mystbin.File(filename=filename, content=content)
         return await self.mystbin.create_paste(files=[file])
 
-    async def refresh_bot_variables(self) -> None:
+    async def refresh_vars(self) -> None:
         """Set values to some bot constants."""
         self._support_invite = await self.fetch_invite('https://discord.gg/mtWF6sWMex')
 
@@ -252,7 +213,7 @@ class Mafuyu(commands.AutoShardedBot):
             The webhook used.
 
         """
-        return discord.Webhook.from_url(config.WEBHOOK, session=self.session)
+        return discord.Webhook.from_url(WEBHOOK, session=self.session)
 
     @property
     def support_invite(self) -> discord.Invite:
@@ -268,7 +229,7 @@ class Mafuyu(commands.AutoShardedBot):
         return self._support_invite
 
     @discord.utils.cached_property
-    def invite_url(self) -> str:
+    def invite_url(self, *, with_scopes: bool = False) -> str:
         """
         Return invite link to invite the bot.
 
@@ -278,20 +239,9 @@ class Mafuyu(commands.AutoShardedBot):
             The generated link
 
         """
-        return discord.utils.oauth_url(self.user.id, scopes=None)
-
-    @property
-    def humanized_start_time(self) -> str:
-        """
-        Return a humanized form of the bot's uptime.
-
-        Returns
-        -------
-        str
-            The humanized uptime
-
-        """
-        return discord.utils.format_dt(self.start_time, 'R')
+        return discord.utils.oauth_url(
+            self.user.id, scopes=discord.utils.MISSING if with_scopes is True else None
+        )  # MISSING is handled by the library
 
     async def close(self) -> None:
         if hasattr(self, 'pool'):
@@ -300,7 +250,3 @@ class Mafuyu(commands.AutoShardedBot):
             await self.session.close()
         self.timer_manager.close()
         await super().close()
-
-    @property
-    def config(self):  # noqa: ANN201
-        return __import__('config')

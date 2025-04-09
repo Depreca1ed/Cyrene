@@ -9,7 +9,7 @@ from .view import BaseView
 if TYPE_CHECKING:
     from discord.ext import menus
 
-    from . import Context
+    from utilities.bases.context import MafuContext
 
 __all__ = ('Paginator',)
 
@@ -43,7 +43,7 @@ class Paginator(BaseView):
         self,
         source: menus.PageSource,
         *,
-        ctx: Context,
+        ctx: MafuContext,
         check_embeds: bool = True,
         compact: bool = False,
     ) -> None:
@@ -51,7 +51,7 @@ class Paginator(BaseView):
         self.current_modal: SkipToModal | None = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
-        self.ctx: Context = ctx
+        self.ctx: MafuContext = ctx
         self.message: discord.Message | None = None
         self.current_page: int = 0
         self.compact: bool = compact

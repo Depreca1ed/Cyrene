@@ -10,16 +10,17 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, BaseView
-from utils.embed import Embed
-from utils.helper_functions import better_string, generate_timestamp_string
-from utils.subclass import Context, Mafuyu
-from utils.timer_manager import ReservedTimerType, Timer
+from utilities.bases.cog import MafuCog
+from utilities.bases.context import MafuContext
+from utilities.embed import Embed
+from utilities.functions import fmt_str, timestamp_str
+from utilities.timers import ReservedTimerType, Timer
+from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    import asyncpg
+    from asyncpg import Pool, Record
 
-    from utils import Mafuyu
+    from utilities.bases.bot import Mafuyu
 
 ANICORD_DISCORD_BOT = 1257717266355851384
 
@@ -51,7 +52,7 @@ def get_burn_worths(pulls: list[PulledCard]) -> dict[int, int]:
 
 
 class GachaUser:
-    def __init__(self, user: discord.User | discord.Member, *, timer: Timer | None, config_data: asyncpg.Record) -> None:
+    def __init__(self, user: discord.User | discord.Member, *, timer: Timer | None, config_data: Record) -> None:
         self.user = user
         self.timer = timer
         self.config_data = config_data
@@ -60,7 +61,7 @@ class GachaUser:
     @classmethod
     async def from_fetched_record(
         cls,
-        pool: asyncpg.Pool[asyncpg.Record],
+        pool: Pool[Record],
         *,
         user: discord.User | discord.Member,
     ) -> Self:
@@ -91,7 +92,7 @@ class GachaUser:
 
     async def add_card(
         self,
-        pool: asyncpg.Pool[asyncpg.Record],
+        pool: Pool[Record],
         *,
         card: PulledCard,
         pull_message: discord.Message,
@@ -141,7 +142,7 @@ class PulledCard:
 class GachaPullView(BaseView):
     def __init__(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         user: discord.User | discord.Member,
         pull_message: discord.Message | None,
         gacha_user: GachaUser,
@@ -160,7 +161,7 @@ class GachaPullView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: Context,
+        ctx: MafuContext,
         *,
         user: discord.User | discord.Member,
         pull_message: discord.Message | None,
@@ -215,7 +216,7 @@ class GachaPullView(BaseView):
         )
 
         if next_pull:
-            s.append(f'> **Next Pull in :** {generate_timestamp_string(next_pull, with_time=True)}')
+            s.append(f'> **Next Pull in :** {timestamp_str(next_pull, with_time=True)}')
             if self.gacha_user.timer:
                 s.append('-# You will be reminded in DMs when you can pull again.')
 
@@ -230,10 +231,10 @@ class GachaPullView(BaseView):
 
             embed.add_field(
                 name='Estimated burn worth:',
-                value=better_string(p_s, seperator='\n'),
+                value=fmt_str(p_s, seperator='\n'),
             )
 
-        embed.description = better_string(s, seperator='\n')
+        embed.description = fmt_str(s, seperator='\n')
 
         return embed
 
@@ -322,7 +323,7 @@ class GachaPullView(BaseView):
         )
 
 
-class AniCordGacha(BaseCog):
+class AniCordGacha(MafuCog):
     def __init__(self, bot: Mafuyu) -> None:
         super().__init__(bot)
 
@@ -392,7 +393,7 @@ class AniCordGacha(BaseCog):
         # but is enough to convey most of the information required
 
         await GachaPullView.start(
-            await Context.from_interaction(interaction),
+            await MafuContext.from_interaction(interaction),
             user=interaction.user,
             pull_message=message,
         )
@@ -401,7 +402,7 @@ class AniCordGacha(BaseCog):
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def gacha_group(self, ctx: Context) -> None:
+    async def gacha_group(self, ctx: MafuContext) -> None:
         await GachaPullView.start(ctx, user=ctx.author, pull_message=None)
 
     @gacha_group.command(
@@ -412,7 +413,7 @@ class AniCordGacha(BaseCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def gacha_statistics(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         user: discord.User | discord.Member = commands.Author,
     ) -> None:
         pull_records = await self.bot.pool.fetch(
@@ -454,7 +455,7 @@ class AniCordGacha(BaseCog):
         p_s.append(f'> Total `[{len(pulls)}]`: `{sum(burn_worths.values())}` blombos')
 
         embed.add_field(
-            value=better_string(p_s, seperator='\n'),
+            value=fmt_str(p_s, seperator='\n'),
         )
 
         first_sync_time = next(
@@ -484,10 +485,10 @@ class AniCordGacha(BaseCog):
             rate = times_pulled / days
 
             embed.add_field(
-                value=better_string(
+                value=fmt_str(
                     (
                         '- **Syncing Since:** '
-                        + generate_timestamp_string(
+                        + timestamp_str(
                             discord.utils.snowflake_time(first_sync_time),
                             with_time=True,
                         ),

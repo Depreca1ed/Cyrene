@@ -3,23 +3,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from utils import Context, Mafuyu
-
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 import contextlib
 
 import discord
 from discord.ext import commands
 
 from .blacklist import Blacklist
-from .boob_hideout import BoobHideout
 from .dev import Developer
 from .error_handler import ErrorHandler
 from .guild import Guild
 
 
-class Internals(Blacklist, Developer, ErrorHandler, BoobHideout, Guild, name='Developer'):
+class Internals(Blacklist, Developer, ErrorHandler, Guild, name='Developer'):
     @discord.utils.copy_doc(commands.Cog.cog_check)
-    async def cog_check(self, ctx: Context) -> bool:
+    async def cog_check(self, ctx: MafuContext) -> bool:
         if await self.bot.is_owner(ctx.author):
             return True
         msg = 'You do not own this bot.'

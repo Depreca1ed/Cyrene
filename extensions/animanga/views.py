@@ -7,36 +7,30 @@ import discord
 from asyncpg.exceptions import UniqueViolationError
 from discord.ext import menus
 
-from utils import (
-    BaseView,
-    BotEmojis,
-    Embed,
-    Paginator,
-    WaifuNotFoundError,
-    WaifuResult,
-    better_string,
-    generate_timestamp_string,
-)
+from utilities.constants import BotEmojis
+from utilities.embed import Embed
+from utilities.errors import WaifuNotFoundError
+from utilities.functions import fmt_str, timestamp_str
+from utilities.pagination import Paginator
+from utilities.types import WaifuFavouriteEntry, WaifuResult
+from utilities.view import BaseView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from utils import Context, Mafuyu, WaifuFavouriteEntry
-
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 __all__ = ('WaifuSearchView',)
 
 
-ANICORD_GACHA_SERVER = 1242232552845086782
-
-
 class WaifuBase(BaseView):
-    ctx: Context
+    ctx: MafuContext
     current: WaifuResult
 
     def __init__(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         session: ClientSession,
         *,
         nsfw: bool,
@@ -57,7 +51,7 @@ class WaifuBase(BaseView):
         self.pass_emoji = self.passbutton.emoji = BotEmojis.PASS
 
     @classmethod
-    async def start(cls, ctx: Context, *, query: None | str = None) -> Self | None:
+    async def start(cls, ctx: MafuContext, *, query: None | str = None) -> Self | None:
         inst = cls(
             ctx,
             ctx.bot.session,
@@ -85,9 +79,6 @@ class WaifuBase(BaseView):
         if await inst.ctx.bot.is_owner(ctx.author):
             inst.add_item(APIWaifuAddButton(inst.ctx))
 
-        if ctx.guild and ctx.guild.id == ANICORD_GACHA_SERVER:
-            inst.add_item(AnicordGachaBotSuggestionButton(inst.ctx, waifu=data))
-
         inst.message = await ctx.reply(embed=embed, view=inst)
 
         return inst
@@ -96,8 +87,8 @@ class WaifuBase(BaseView):
         raise NotImplementedError
 
     def embed(self, data: WaifuResult) -> discord.Embed:
-        smasher = better_string([user.mention for user in self.smashers], seperator=', ') or discord.utils.MISSING
-        passer = better_string([user.mention for user in self.passers], seperator=', ') or discord.utils.MISSING
+        smasher = fmt_str([user.mention for user in self.smashers], seperator=', ') or discord.utils.MISSING
+        passer = fmt_str([user.mention for user in self.passers], seperator=', ') or discord.utils.MISSING
 
         total = len(self.passers) + len(self.smashers)
 
@@ -108,7 +99,7 @@ class WaifuBase(BaseView):
         embed = Embed(
             title=f'#{data.image_id}',
             url=f'https://danbooru.donmai.us/posts/{self.current.image_id}',
-            description=better_string(
+            description=fmt_str(
                 [
                     f'- {self.smash_emoji} **Smashers:** {smasher}',
                     f'- {self.pass_emoji} **Passers:** {passer}',
@@ -249,11 +240,11 @@ class WaifuBase(BaseView):
 
 class WaifuSearchView(WaifuBase):
     async def request(self) -> WaifuResult:
-        rating = better_string(['explicit', 'questionable', 'sensitive'], seperator=',') if self.nsfw is True else 'general'
+        rating = fmt_str(['explicit', 'questionable', 'sensitive'], seperator=',') if self.nsfw is True else 'general'
         waifu = await self.session.get(
             'https://danbooru.donmai.us/posts/random.json',
             params={
-                'tags': better_string(
+                'tags': fmt_str(
                     [
                         'solo',
                         self.query or '1girl',
@@ -304,10 +295,10 @@ class WaifuPageSource(menus.ListPageSource):
         embed = Embed(
             title=f'#{post.image_id} {"[NSFW]" if entry.nsfw is True else ""}',
             url=post_url,
-            description=better_string(
+            description=fmt_str(
                 [
                     f'- **Favourited by:** {entry.user_id.mention}',
-                    f'- **Favourited on:** {generate_timestamp_string(entry.tm)}',
+                    f'- **Favourited on:** {timestamp_str(entry.tm, with_time=True)}',
                     f'-# **Characters:** {", ".join(post.parse_string_lists(post.characters))}' if post.characters else None,
                     f'-# **Copyright:** {", ".join(post.parse_string_lists(post.copyright))}' if post.copyright else None,
                 ],
@@ -327,7 +318,11 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
         *,
         style: discord.ButtonStyle = discord.ButtonStyle.red,
     ) -> None:
-        super().__init__(style=style, emoji=BotEmojis.RED_CROSS)
+        super().__init__(
+            style=style,
+            emoji=BotEmojis.RED_CROSS,
+            label='Remove entry',
+        )
 
     async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
         item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType]
@@ -355,7 +350,7 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
 
     def __init__(
         self,
-        ctx: Context,
+        ctx: MafuContext,
     ) -> None:
         self.ctx = ctx
         super().__init__(label='Add image to API', style=discord.ButtonStyle.blurple)
@@ -395,123 +390,3 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
             c('added'),
             ephemeral=True,
         )
-
-
-class AnicordGachaBotSuggestionButton(discord.ui.Button[WaifuBase]):
-    view: WaifuBase
-
-    def __init__(self, ctx: Context, waifu: WaifuResult) -> None:
-        self.ctx = ctx
-        self.waifu = waifu
-        super().__init__(label='What if this was a card', style=discord.ButtonStyle.grey)
-
-    async def callback(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
-        m = AnicordGachaSuggestQuery(waifu=self.waifu)
-        return await interaction.response.send_modal(m)
-
-
-CARD_EMOJIS = {
-    1: discord.PartialEmoji(id=1259556949867888660, name='HollowStar'),
-    2: discord.PartialEmoji(id=1259690032554577930, name='GreenStar'),
-    3: discord.PartialEmoji(id=1259557039441711149, name='YellowStar'),
-    4: discord.PartialEmoji(id=1259718164862996573, name='PurpleStar'),
-    5: discord.PartialEmoji(id=1259557105220976772, name='RainbowStar'),
-    6: discord.PartialEmoji(id=1259689874961862688, name='BlackStar'),
-}
-
-BURN_WORTH = {
-    1: 5,
-    2: 10,
-    3: 15,
-    4: 20,
-    5: 25,
-    6: 30,
-}
-
-
-class AnicordGachaSuggestQuery(discord.ui.Modal, title='Enter card details'):
-    def __init__(self, *, waifu: WaifuResult) -> None:
-        self.waifu = waifu
-        name = None
-        if self.waifu.name:
-            x = self.waifu.name.replace('_', ' ')
-            c: list[str] = []
-            for s in x.split(' '):
-                if s.startswith('('):
-                    break
-                c.append(s)
-            name = ' '.join(c)
-        super().__init__()
-
-        self.name: discord.ui.TextInput[Self] = discord.ui.TextInput(
-            label='Name',
-            style=discord.TextStyle.short,
-            placeholder='Name',
-            default=name,
-            required=True,
-        )
-        self.add_item(self.name)
-
-        self.rarity: discord.ui.TextInput[Self] = discord.ui.TextInput(
-            label='Rarity',
-            style=discord.TextStyle.short,
-            placeholder='Rarity',
-            required=True,
-            max_length=2,
-        )
-        self.add_item(self.rarity)
-
-        self.burn_worth: discord.ui.TextInput[Self] = discord.ui.TextInput(
-            label='Burn Worth',
-            style=discord.TextStyle.short,
-            placeholder="Defaults to whatever rarity you've provided's burn worth",
-            required=False,
-            max_length=3,
-        )
-        self.add_item(self.burn_worth)
-
-        self.theme: discord.ui.TextInput[Self] = discord.ui.TextInput(
-            label='Theme',
-            style=discord.TextStyle.short,
-            required=True,
-        )
-        self.add_item(self.theme)
-
-    async def on_submit(self, interaction: discord.Interaction[Mafuyu]) -> discord.InteractionCallbackResponse[Mafuyu]:
-        def c(s: str) -> str:
-            return (
-                s
-                + '\nFor re-entering purposes this is what you entered\n'
-                + f'Name: {self.name.value}\n'
-                + f'Rarity: {self.name.value}\n'
-                + f'Burn Worth: {self.burn_worth.value}\n'
-                if self.burn_worth.value
-                else '' + f'Theme: {self.theme.value}'
-            )
-
-        try:
-            rarity = int(self.rarity.value)
-        except ValueError:
-            return await interaction.response.send_message(c('Rarity must be an integer'), ephemeral=True)
-
-        burn_worth = None
-        if self.burn_worth.value:
-            try:
-                burn_worth = int(self.burn_worth.value)
-            except ValueError:
-                return await interaction.response.send_message(c('Burn worth must be an integer'), ephemeral=True)
-
-        embed = discord.Embed(
-            title=self.name.value,
-            description=(
-                f'Rarity: {str(CARD_EMOJIS[rarity]) * rarity}\n'
-                f'Burn Worth: {burn_worth or BURN_WORTH[rarity]}\n'
-                f'Theme: {self.theme.value}'
-            ),
-            url=self.waifu.source,
-        )
-        embed.set_image(url=self.waifu.url)
-
-        embed.set_footer(text='Hypothetically, if this were a card. What would it be like... thingy I guess.')
-
-        return await interaction.response.send_message(embed=embed, ephemeral=False)

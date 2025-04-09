@@ -9,14 +9,16 @@ from discord.ext import commands
 from jishaku.functools import executor_function
 from PIL import Image
 
-from utils import Embed, better_string
+from utilities.embed import Embed
+from utilities.functions import fmt_str
+
+if TYPE_CHECKING:
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 from .botinfo import BotInformation
 from .serverinfo import ServerInfo
 from .userinfo import Userinfo
-
-if TYPE_CHECKING:
-    from utils import Context, Mafuyu
 
 THUMBNAIL_SIZE = (128, 128)
 
@@ -34,7 +36,7 @@ class Meta(BotInformation, Userinfo, ServerInfo, name='Meta'):
     """For everything related to Discord or Mafuyu."""
 
     @commands.command(name='colour', aliases=['color'], description='Get information about a certain colour')
-    async def colour(self, ctx: Context, *, colour: discord.Colour | None = None) -> None:
+    async def colour(self, ctx: MafuContext, *, colour: discord.Colour | None = None) -> None:
         colour = colour or discord.Colour.random()
 
         rgb = colour.to_rgb()
@@ -44,7 +46,7 @@ class Meta(BotInformation, Userinfo, ServerInfo, name='Meta'):
 
         embed = Embed(
             title=str(colour).upper(),
-            description=better_string(
+            description=fmt_str(
                 (
                     f'- **RGB :** `{rounder(rgb)}`',
                     f'- **INT :** `{(int(colour))}`',

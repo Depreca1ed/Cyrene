@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from .anicord_gacha import AniCordGacha
 
 if TYPE_CHECKING:
-    from utils.subclass import Mafuyu
+    from utilities.bases.bot import Mafuyu
 
 
 async def setup(bot: Mafuyu) -> None:

@@ -11,27 +11,19 @@ from typing import TYPE_CHECKING, Any, Self
 import discord
 from discord.ext import commands, menus
 
-from utils import (
-    ERROR_COLOUR,
-    BaseCog,
-    BaseView,
-    BotEmojis,
-    Embed,
-    MafuyuError,
-    Paginator,
-    WaifuNotFoundError,
-    better_string,
-    clean_error,
-    format_tb,
-    generate_error_objects,
-    get_command_signature,
-)
+from utilities.bases.cog import MafuCog
+from utilities.constants import ERROR_COLOUR, BotEmojis
+from utilities.embed import Embed
+from utilities.errors import MafuyuError, WaifuNotFoundError
+from utilities.functions import fmt_str, format_tb, get_command_signature
+from utilities.pagination import Paginator
+from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    import asyncpg
+    from asyncpg import Record
 
-    from utils import Context, Mafuyu
-
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 log = logging.getLogger(__name__)
 
 
@@ -68,7 +60,7 @@ class Argument:
 
 
 class CommandInvokeView(BaseView):
-    def __init__(self, *, ctx: Context, command: commands.Command[Any, Any, Any]) -> None:
+    def __init__(self, *, ctx: MafuContext, command: commands.Command[Any, Any, Any]) -> None:
         super().__init__(timeout=180.0)
         self.ctx = ctx
         self.command = command
@@ -168,7 +160,7 @@ class MissingArgumentHandler(discord.ui.View):
     def __init__(
         self,
         error: commands.MissingRequiredArgument,
-        ctx: Context,
+        ctx: MafuContext,
         *,
         timeout: float | None = 180,
     ) -> None:
@@ -257,7 +249,7 @@ class MissingArgumentHandler(discord.ui.View):
 
 
 class ErrorView(BaseView):
-    def __init__(self, error_record: asyncpg.Record, ctx: Context) -> None:
+    def __init__(self, error_record: Record, ctx: MafuContext) -> None:
         self.error_record = error_record
         self.ctx = ctx
         super().__init__()
@@ -316,18 +308,18 @@ class ErrorView(BaseView):
 
 
 class ErrorPageSource(menus.ListPageSource):
-    def __init__(self, bot: Mafuyu, entries: list[asyncpg.Record]) -> None:
+    def __init__(self, bot: Mafuyu, entries: list[Record]) -> None:
         self.bot = bot
         entries = sorted(entries, key=operator.itemgetter('id'))
         super().__init__(entries, per_page=1)
 
-    async def format_page(self, _: Paginator, entry: asyncpg.Record) -> Embed:
+    async def format_page(self, _: Paginator, entry: Record) -> Embed:
         embed = await Embed.logger(self.bot, entry)
         embed.title = embed.title + f'/{self.get_max_pages()}' if embed.title else None
         return embed
 
 
-class ErrorHandler(BaseCog):
+class ErrorHandler(MafuCog):
     default_errors = (
         commands.UserInputError,
         commands.DisabledCommand,
@@ -341,7 +333,41 @@ class ErrorHandler(BaseCog):
         commands.CheckFailure,
     )
 
-    async def _find_closest_command(self, ctx: Context, name: str) -> commands.Command[None, ..., Any] | None:
+    def _cleanse_error_attrs(self, attrs: list[str] | str, *, seperator: str, prefix: str) -> str:
+        return (
+            fmt_str(
+                (prefix + f'{(perm.replace("_", " ")).capitalize()}' for perm in attrs),
+                seperator=seperator,
+            )
+            if type(attrs) is not str
+            else prefix + attrs
+        )
+
+    def _fix_error_iter(
+        self,
+        error: (
+            commands.MissingPermissions
+            | commands.BotMissingPermissions
+            | commands.MissingAnyRole
+            | commands.MissingRole
+            | commands.BotMissingAnyRole
+            | commands.BotMissingRole
+        ),
+    ) -> list[str]:
+        m: list[str] = []
+
+        if isinstance(error, commands.MissingRole | commands.BotMissingRole):
+            m.append(str(f'<@&{error.missing_role}>' if type(error.missing_role) is int else error.missing_role))
+
+        elif isinstance(error, commands.MissingAnyRole | commands.BotMissingAnyRole):
+            m.extend([str(f'<@&{role_id}>' if role_id is int else role_id) for role_id in error.missing_roles])
+
+        else:
+            m.extend(error.missing_permissions)
+
+        return m
+
+    async def _find_closest_command(self, ctx: MafuContext, name: str) -> commands.Command[None, ..., Any] | None:
         closest_cmd_name = difflib.get_close_matches(
             name,
             [_command.name for _command in self.bot.commands],
@@ -366,7 +392,7 @@ class ErrorHandler(BaseCog):
         author: discord.User | discord.Member,
         message: discord.Message,
         guild: discord.Guild | None = None,
-    ) -> asyncpg.Record:
+    ) -> Record:
         formatted_error = format_tb(error)
         time_occured = datetime.datetime.now()
 
@@ -411,7 +437,7 @@ class ErrorHandler(BaseCog):
         error: commands.CommandError,
         *,
         command_name: str,
-    ) -> asyncpg.Record | None:
+    ) -> Record | None:
         return await self.bot.pool.fetchrow(
             """
                 SELECT
@@ -429,7 +455,7 @@ class ErrorHandler(BaseCog):
         )
 
     @commands.Cog.listener('on_command_error')
-    async def error_handler(self, ctx: Context, error: commands.CommandError) -> None | discord.Message:
+    async def error_handler(self, ctx: MafuContext, error: commands.CommandError) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
@@ -461,7 +487,7 @@ class ErrorHandler(BaseCog):
             param_name = error.param.displayed_name or error.param.name
             embed = Embed.error(
                 title=f'Missing {param_name} argument!',
-                description=better_string(
+                description=fmt_str(
                     (
                         f'You did not provide a **__{param_name}__** argument.',
                         f'> -# `{get_command_signature(ctx, ctx.command)}`',
@@ -501,12 +527,12 @@ class ErrorHandler(BaseCog):
                 'permissions' if isinstance(error, commands.MissingPermissions | commands.BotMissingPermissions) else 'roles'
             )
 
-            final_iter = generate_error_objects(error)
+            final_iter = self._fix_error_iter(error)
 
-            content = better_string(
+            content = fmt_str(
                 (
                     f'{subject} missing the following {error_type_wording} to run this command:',
-                    clean_error(final_iter, seperator='\n', prefix='- '),
+                    self._cleanse_error_attrs(final_iter, seperator='\n', prefix='- '),
                 ),
                 seperator='\n',
             )
@@ -556,7 +582,7 @@ class ErrorHandler(BaseCog):
         return None
 
     @commands.Cog.listener('on_command_error')
-    async def custom_errors_handler(self, ctx: Context, error: MafuyuError | Exception) -> None | discord.Message:
+    async def custom_errors_handler(self, ctx: MafuContext, error: MafuyuError | Exception) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
@@ -578,11 +604,11 @@ class ErrorHandler(BaseCog):
         description='Handles all things related to error handler logging.',
         invoke_without_command=True,
     )
-    async def errorcmd_base(self, ctx: Context) -> None:
+    async def errorcmd_base(self, ctx: MafuContext) -> None:
         await ctx.send_help(ctx.command)
 
     @errorcmd_base.command(name='show', description='Shows the embed for a certain error')
-    async def error_show(self, ctx: Context, error_id: int | None = None) -> None:
+    async def error_show(self, ctx: MafuContext, error_id: int | None = None) -> None:
         if error_id:
             error_record = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
             if not error_record:
@@ -598,7 +624,7 @@ class ErrorHandler(BaseCog):
         await paginate.start()
 
     @errorcmd_base.command(name='fix', description='Mark an error as fixed')
-    async def error_fix(self, ctx: Context, error_id: int) -> None:
+    async def error_fix(self, ctx: MafuContext, error_id: int) -> None:
         data = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
         if not data:
             await ctx.reply(f'Cannot find an error with the ID: `{error_id}`')

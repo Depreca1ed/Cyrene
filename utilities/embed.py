@@ -4,14 +4,13 @@ from typing import TYPE_CHECKING, Self
 
 import discord
 
-from . import BASE_COLOUR, CHAR_LIMIT, ERROR_COLOUR
-from .constants import BotEmojis
-from .helper_functions import better_string
+from utilities.constants import BASE_COLOUR, ERROR_COLOUR, BotEmojis
+from utilities.functions import fmt_str
 
 if TYPE_CHECKING:
     import asyncpg
 
-    from . import Mafuyu
+    from utilities.bases.bot import Mafuyu
 
 __all__ = ('Embed',)
 
@@ -92,7 +91,7 @@ class Embed(discord.Embed):
             title=f'Error #{record["id"]}',
             description=(
                 f"""```prolog\n{record['full_error']}```"""
-                if len(record['full_error']) < CHAR_LIMIT
+                if len(record['full_error']) < 1900
                 else 'Error message was too long to be shown'
             ),
             colour=0xFF0000 if record['fixed'] is False else 0x00FF00,
@@ -100,7 +99,7 @@ class Embed(discord.Embed):
         )
 
         logger_embed.add_field(
-            value=better_string(
+            value=fmt_str(
                 (
                     f'- **Command:** `{record["command"]}`',
                     f'- **User:** {bot.get_user(record["user_id"])}',

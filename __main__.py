@@ -19,9 +19,10 @@ import aiohttp
 import asyncpg
 import click
 import discord
+from discord.ext import commands
 
 from config import DATABASE_CRED, TEST_TOKEN, TOKEN
-from utils import Mafuyu
+from utilities.bases.bot import Mafuyu
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -49,6 +50,14 @@ async def create_bot_pool() -> asyncpg.Pool[asyncpg.Record]:
     return pool
 
 
+async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
+    prefixes = commands.when_mentioned(bot, message)
+
+    prefixes.extend(bot.get_prefixes(message.guild))
+
+    return prefixes
+
+
 @click.command()
 @click.option('--production', is_flag=True)
 def run(*, production: bool) -> None:
@@ -59,7 +68,6 @@ def run(*, production: bool) -> None:
             pool = await create_bot_pool()
             allowed_mentions = discord.AllowedMentions(everyone=False, users=True, roles=False, replied_user=False)
             intents = discord.Intents.all()
-            intents.presences = False
             session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60))
 
             extensions = [
@@ -71,6 +79,7 @@ def run(*, production: bool) -> None:
             ]
 
             async with Mafuyu(
+                command_prefix=_callable_prefix,
                 extensions=extensions,
                 allowed_mentions=allowed_mentions,
                 intents=intents,

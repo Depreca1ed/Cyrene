@@ -10,7 +10,14 @@ import asyncpg
 import discord
 
 if TYPE_CHECKING:
-    from utils.subclass import Mafuyu
+    from utilities.bases.bot import Mafuyu
+
+
+__all__ = (
+    'ReservedTimerType',
+    'Timer',
+    'TimerManager',
+)
 
 
 class ReservedTimerType(enum.IntEnum):

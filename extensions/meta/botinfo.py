@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import pathlib
 import platform
+from typing import TYPE_CHECKING
 
 import discord
 import git
@@ -11,10 +12,15 @@ from discord import app_commands
 from discord.ext import commands
 from jishaku.math import natural_size
 
-from utils import BaseCog, Context, Embed, better_string
+from utilities.bases.cog import MafuCog
+from utilities.embed import Embed
+from utilities.functions import fmt_str, timestamp_str
+
+if TYPE_CHECKING:
+    from utilities.bases.context import MafuContext
 
 
-class BotInformation(BaseCog):
+class BotInformation(MafuCog):
     def get_commits(self, count: int = 5) -> list[git.Commit]:
         repo = git.Repo(pathlib.Path.cwd())
         return list(repo.iter_commits(repo.active_branch, max_count=count))
@@ -37,7 +43,7 @@ class BotInformation(BaseCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def botinfo(
         self,
-        ctx: Context,
+        ctx: MafuContext,
     ) -> None:
         bot = self.bot
 
@@ -66,7 +72,7 @@ class BotInformation(BaseCog):
 
         embed.add_field(
             name='Internal Statistics',
-            value=better_string(
+            value=fmt_str(
                 [
                     f'- **Servers :** `{len(bot.guilds)}`',
                     f'- **Users :** `{len(bot.users)}` (`{len([_ for _ in bot.users if _.bot is True])} bots`)',
@@ -75,7 +81,7 @@ class BotInformation(BaseCog):
                         if self.bot.appinfo.approximate_user_install_count
                         else None
                     ),
-                    f'- **Uptime :** {bot.humanized_start_time}',
+                    f'- **Uptime since:** {timestamp_str(bot.start_time, with_time=True)}',
                     f'- **Memory :** `{memory_usage}` (`{round(proc.memory_percent(), 2)}%`)',
                 ],
                 seperator='\n',
@@ -83,7 +89,7 @@ class BotInformation(BaseCog):
         )
 
         embed.add_field(
-            value=better_string(
+            value=fmt_str(
                 [
                     (
                         (
@@ -108,7 +114,7 @@ class BotInformation(BaseCog):
     @commands.hybrid_command(name='support', description='Get invite link to the support server for the bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def support(self, ctx: Context) -> None:
+    async def support(self, ctx: MafuContext) -> None:
         await ctx.reply(str(self.bot.support_invite))
 
     @commands.hybrid_command(
@@ -116,5 +122,5 @@ class BotInformation(BaseCog):
     )
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def invite(self, ctx: Context) -> None:
+    async def invite(self, ctx: MafuContext) -> None:
         await ctx.reply(str(self.bot.invite_url))
