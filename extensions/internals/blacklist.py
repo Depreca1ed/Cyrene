@@ -283,7 +283,7 @@ class Blacklist(MafuCog):
 
         if entry:
             check = await self._pre_check(snowflake, entry)
-            if check:
+            if check is False:
                 raise AlreadyBlacklistedError(snowflake, reason=entry.reason, until=entry.lasts_until)
         blacklist_type = 'user' if isinstance(snowflake, discord.User | discord.Member) else 'guild'
 
