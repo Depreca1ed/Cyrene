@@ -484,7 +484,7 @@ class AniCordGacha(MafuCog):
 
             rate = times_pulled / days
             if days <= 1:
-                rate = 1
+                rate = times_pulled
 
             embed.add_field(
                 value=fmt_str(
