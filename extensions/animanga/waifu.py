@@ -79,11 +79,13 @@ class Waifu(MafuCog):
         )
 
         query = """SELECT * FROM WaifuFavourites WHERE user_id = $1""" + (' AND nsfw = $2' if show_nsfw is False else '')  # noqa: S608
+        args = [user.id,]
 
+        if show_nsfw is False:
+            args.append(show_nsfw)
         fav_entries = await self.bot.pool.fetch(
             query,
-            user.id,
-            show_nsfw,
+            *args,
         )
 
         if not fav_entries:
