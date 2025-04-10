@@ -483,6 +483,8 @@ class AniCordGacha(MafuCog):
             ).total_seconds() / 86400
 
             rate = times_pulled / days
+            if rate <= 1:
+                rate = 1
 
             embed.add_field(
                 value=fmt_str(
