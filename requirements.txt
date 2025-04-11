@@ -19,3 +19,4 @@ configparser
 gitpython
 python-dotenv
 click
+ruff
