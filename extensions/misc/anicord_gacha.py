@@ -195,7 +195,7 @@ class GachaPullView(BaseView):
 
         embed = c.embed()
 
-        return await ctx.reply(embed=embed, view=c, ephemeral=True)
+        return await ctx.reply(embed=embed, view=c, ephemeral=False)
 
     def embed(self) -> Embed:
         embed = Embed(title='Anicord Gacha Bot Helper')
@@ -321,7 +321,11 @@ class GachaPullView(BaseView):
             embed=self.embed(),
             view=self,
         )
-
+    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]):
+        if interaction.user and interaction.user.id == self.user.id:
+            return True
+        await interaction.response.send_message('This is not for you', ephemeral=True)
+        return False
 
 class AniCordGacha(MafuCog):
     def __init__(self, bot: Mafuyu) -> None:
