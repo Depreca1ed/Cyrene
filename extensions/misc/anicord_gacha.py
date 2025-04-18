@@ -195,7 +195,7 @@ class GachaPullView(BaseView):
 
         embed = c.embed()
 
-        return await ctx.reply(embed=embed, view=c, ephemeral=False)
+        return await ctx.reply(embed=embed, view=c, ephemeral=True)
 
     def embed(self) -> Embed:
         embed = Embed(title='Anicord Gacha Bot Helper')
