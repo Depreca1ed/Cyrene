@@ -378,16 +378,14 @@ class AniCordGacha(MafuCog):
         elif not message.embeds:
             m = 'This message.... does not have an embed.'
 
-        elif (embed := message.embeds[0]) and (
-            not embed.title or not embed.description or embed.title.lower() != 'cards pulled'
-        ):
-            if embed.description and not self._check_pullall_author(
-                message.author.id,
+        elif (embed := message.embeds[0]):
+            if (not embed.title or not embed.description or embed.title.lower() != 'cards pulled'):
+                m = 'This message is not the pullall message'
+            elif not self._check_pullall_author(
+                interaction.user.id,
                 embed.description,
             ):
                 m = 'This is not your pullall message.'
-            else:
-                m = 'This message is not the pullall message'
 
         if m:
             return await interaction.response.send_message(m, ephemeral=True)
