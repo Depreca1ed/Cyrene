@@ -79,7 +79,9 @@ class Waifu(MafuCog):
         )
 
         query = """SELECT * FROM WaifuFavourites WHERE user_id = $1""" + (' AND nsfw = $2' if show_nsfw is False else '')  # noqa: S608
-        args = [user.id,]
+        args = [
+            user.id,
+        ]
 
         if show_nsfw is False:
             args.append(show_nsfw)

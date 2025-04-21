@@ -225,6 +225,7 @@ class GachaStatisticsView(BaseView):
     @classmethod
     async def start(cls, ctx: MafuContext, *, pulls: list[PulledCard], user: discord.User | discord.Member) -> None:
         c = cls(pulls, user)
+        c.current = pulls
 
         embed = c.embed()
 
