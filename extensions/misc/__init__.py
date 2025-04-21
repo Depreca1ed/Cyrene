@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .anicord_gacha import AniCordGacha
+from .AnicordGacha import AniCordGacha
 
 if TYPE_CHECKING:
     from utilities.bases.bot import Mafuyu
