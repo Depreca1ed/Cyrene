@@ -12,7 +12,7 @@ __ALL__ = (
     'WebhookThreads',
 )
 
-BASE_COLOUR = discord.Colour.from_str('#4B506F')
+BASE_COLOUR = discord.Colour.from_str('#A27869')
 ERROR_COLOUR = discord.Colour.from_str('#bb6688')
 
 CHAR_LIMIT = 2000
