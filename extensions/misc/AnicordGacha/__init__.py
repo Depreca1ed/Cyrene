@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import contextlib
+import re
 from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from extensions.misc.AnicordGacha.bases import PulledCard
+from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
 from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT
 from extensions.misc.AnicordGacha.utils import check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
 from utilities.bases.context import MafuContext
+from utilities.constants import BotEmojis
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -80,6 +82,67 @@ class AniCordGacha(MafuCog):
             pull_message=message,
         )
         return None
+
+    @commands.Cog.listener('on_message')
+    async def gacha_message_listener(self, message: discord.Message) -> None:
+        if message.author.id != ANICORD_DISCORD_BOT:
+            return
+
+        if not message.embeds:
+            return
+
+        if (embed := message.embeds[0]) and not (
+            embed.title and embed.description and embed.title.lower() == 'cards pulled'
+        ):
+            return
+        assert embed.description is not None
+
+        pulls = [_ for _ in (PulledCard.parse_from_str(_) for _ in embed.description.split('\n')) if _ is not None]
+
+        lines = embed.description.split('\n')
+
+        author_line = lines[0]
+
+        author_id_parsed = re.findall(r'<@!?([0-9]+)>', author_line)
+
+        if not author_id_parsed:
+            return
+        user = await self.bot.fetch_user(author_id_parsed[0])
+
+        is_message_syncronised: bool = bool(
+            await self.bot.pool.fetchval(
+                """
+                SELECT
+                    EXISTS (
+                        SELECT
+                            *
+                        FROM
+                            GachaPulledCards
+                        WHERE
+                            user_id = $1
+                            AND message_id = $2
+                    );
+                """,
+                user.id,
+                message.id,
+            )
+        )
+        if is_message_syncronised is True:
+            return
+
+        gacha_user = await GachaUser.from_fetched_record(self.bot.pool, user=user)
+
+        __pulls: list[PulledCard] = []
+
+        for card in pulls:
+            await gacha_user.add_card(
+                self.bot.pool,
+                card=card,
+                pull_message=message,
+            )
+            __pulls.append(card)
+
+        await message.add_reaction(BotEmojis.GREEN_TICK)
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)

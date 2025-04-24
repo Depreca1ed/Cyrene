@@ -4,12 +4,15 @@ import datetime
 from typing import TYPE_CHECKING, Self
 
 import discord
+from discord.ext import menus
 
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
 from extensions.misc.AnicordGacha.constants import PULL_INTERVAL, RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import get_burn_worths
+from utilities.bases.bot import Mafuyu
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
+from utilities.pagination import Paginator
 from utilities.timers import ReservedTimerType
 from utilities.view import BaseView
 
@@ -208,9 +211,21 @@ class GachaPullView(BaseView):
         return False
 
 
+class GachaPersonalCardsSorter(menus.ListPageSource):
+    def __init__(self, bot: Mafuyu, entries: list[PulledCard], *, sort_type: int) -> None:
+        self.bot = bot
+        self.sort_type = sort_type
+
+        super().__init__(entries, per_page=10)
+
+    async def format_page(self, _: Paginator, entry: list[PulledCard]) -> Embed:  # noqa: ARG002
+        return Embed(title='YO')
+
+
 class GachaStatisticsView(BaseView):
     current: list[PulledCard]
     query: datetime.timedelta | tuple[datetime.datetime | None, datetime.datetime | None] | None
+    ctx: MafuContext
 
     def __init__(
         self,
@@ -221,10 +236,13 @@ class GachaStatisticsView(BaseView):
         self.user = user
         self.query = None
         super().__init__()
+        self.clear_items()
+        self.add_item(self.view_select)
 
     @classmethod
     async def start(cls, ctx: MafuContext, *, pulls: list[PulledCard], user: discord.User | discord.Member) -> None:
         c = cls(pulls, user)
+        c.ctx = ctx
         c.current = pulls
 
         embed = c.embed()
@@ -292,3 +310,47 @@ class GachaStatisticsView(BaseView):
             ),
             None,
         )
+
+    @discord.ui.select(
+        placeholder='Select a view',
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(
+                label='View total pulls with rarity and pull rate',
+                value='1',
+                description="See how much you've pulled and how much you've gained along with the rate of pulls per day",
+                emoji=RARITY_EMOJIS[1],
+            ),
+            discord.SelectOption(
+                label='View most owned',
+                value='2',
+                description="See what cards you've pulled multiple times",
+                emoji=RARITY_EMOJIS[2],
+            ),
+        ],
+    )
+    async def view_select(
+        self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]
+    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
+        if s.values:
+            match int(s.values[0]):
+                case 1:
+                    return await interaction.response.edit_message(embed=self.embed(), view=self)
+                case 2:
+                    return await interaction.response.edit_message(content='Coming soon', embed=None, view=self)
+                    await interaction.response.defer()
+                    await Paginator(
+                        GachaPersonalCardsSorter(
+                            interaction.client,
+                            self.current,
+                            sort_type=1,
+                        ),
+                        ctx=self.ctx,
+                        borrowed_select=s,
+                    ).start(message=self.message)
+                    # We add some buttons for only this specific case
+
+                case _:
+                    pass
+        return None
