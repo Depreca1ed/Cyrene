@@ -142,7 +142,6 @@ class AniCordGacha(MafuCog):
             )
             __pulls.append(card)
 
-        await message.add_reaction(BotEmojis.GREEN_TICK)
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
