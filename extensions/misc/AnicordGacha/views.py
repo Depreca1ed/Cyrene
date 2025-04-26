@@ -81,12 +81,12 @@ class GachaPullView(BaseView):
         return await ctx.reply(embed=embed, view=c, ephemeral=True)
 
     def embed(self) -> Embed:
-        embed = Embed(title='Anicord Gacha Bot Helper', colour=self.user.color)
+        embed = Embed(title="Anicord Gacha Bot Helper", colour=self.user.color)
 
         s: list[str] = []
 
         if self.gacha_user.timer is None:
-            s.append('- You do not have a pull reminder setup yet.')
+            s.append("- You do not have a pull reminder setup yet.")
 
         now = datetime.datetime.now(tz=datetime.UTC)
 
@@ -99,25 +99,27 @@ class GachaPullView(BaseView):
         )
 
         if next_pull:
-            s.append(f'> **Next Pull in :** {timestamp_str(next_pull, with_time=True)}')
+            s.append(f"> **Next Pull in :** {timestamp_str(next_pull, with_time=True)}")
             if self.gacha_user.timer:
-                s.append('-# You will be reminded in DMs when you can pull again.')
+                s.append("-# You will be reminded in DMs when you can pull again.")
 
         if self.__pulls:
             burn_worth = get_burn_worths(self.__pulls)
 
             p_s: list[str] = []
             for k, v in burn_worth.items():
-                p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
+                p_s.append(
+                    f"`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos"
+                )
 
-            p_s.append(f'> Total: `{sum(burn_worth.values())}` blombos')
+            p_s.append(f"> Total: `{sum(burn_worth.values())}` blombos")
 
             embed.add_field(
-                name='Estimated burn worth:',
-                value=fmt_str(p_s, seperator='\n'),
+                name="Estimated burn worth:",
+                value=fmt_str(p_s, seperator="\n"),
             )
 
-        embed.description = fmt_str(s, seperator='\n')
+        embed.description = fmt_str(s, seperator="\n")
 
         return embed
 
@@ -135,10 +137,14 @@ class GachaPullView(BaseView):
         elif self.pull_message is None and is_timer:
             self.add_item(self.remind_me_button)
 
-        self.remind_me_button.style = discord.ButtonStyle.red if is_timer else discord.ButtonStyle.green
-        self.remind_me_button.label = 'Cancel reminder' if is_timer else 'Remind me'
+        self.remind_me_button.style = (
+            discord.ButtonStyle.red if is_timer else discord.ButtonStyle.green
+        )
+        self.remind_me_button.label = "Cancel reminder" if is_timer else "Remind me"
 
-    @discord.ui.button(emoji='\U000023f0', label='Remind me', style=discord.ButtonStyle.gray)
+    @discord.ui.button(
+        emoji="\U000023f0", label="Remind me", style=discord.ButtonStyle.gray
+    )
     async def remind_me_button(
         self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
     ) -> None | discord.InteractionCallbackResponse[Mafuyu]:
@@ -153,7 +159,7 @@ class GachaPullView(BaseView):
             self._update_display()
 
             return await interaction.response.edit_message(
-                content='Successfully removed pull reminder',
+                content="Successfully removed pull reminder",
                 embed=self.embed(),
                 view=self,
             )
@@ -173,20 +179,30 @@ class GachaPullView(BaseView):
         self._update_display()
 
         return await interaction.response.edit_message(
-            content='Successfully created a pull reminder',
+            content="Successfully created a pull reminder",
             embed=self.embed(),
             view=self,
         )
 
-    @discord.ui.button(emoji='\U0001f4e5', label='Syncronize pulls', style=discord.ButtonStyle.grey)
-    async def sync_pulls(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    @discord.ui.button(
+        emoji="\U0001f4e5", label="Syncronize pulls", style=discord.ButtonStyle.grey
+    )
+    async def sync_pulls(
+        self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
+    ) -> None:
         assert self.pull_message is not None
 
         embed = self.pull_message.embeds[0]
 
         assert embed.description is not None
 
-        pulls = [_ for _ in (PulledCard.parse_from_str(_) for _ in embed.description.split('\n')) if _ is not None]
+        pulls = [
+            _
+            for _ in (
+                PulledCard.parse_from_str(_) for _ in embed.description.split("\n")
+            )
+            if _ is not None
+        ]
 
         for card in pulls:
             await self.gacha_user.add_card(
@@ -200,7 +216,7 @@ class GachaPullView(BaseView):
         self._update_display()
 
         await interaction.response.edit_message(
-            content=f'Your {len(pulls)} cards have been added to tracking database',
+            content=f"Your {len(pulls)} cards have been added to tracking database",
             embed=self.embed(),
             view=self,
         )
@@ -208,12 +224,14 @@ class GachaPullView(BaseView):
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         if interaction.user and interaction.user.id == self.user.id:
             return True
-        await interaction.response.send_message('This is not for you', ephemeral=True)
+        await interaction.response.send_message("This is not for you", ephemeral=True)
         return False
 
 
 class GachaPersonalCardsSorter(menus.ListPageSource):
-    def __init__(self, bot: Mafuyu, entries: list[PulledCard], *, sort_type: int) -> None:
+    def __init__(
+        self, bot: Mafuyu, entries: list[PulledCard], *, sort_type: int
+    ) -> None:
         self.bot = bot
         self.sort_type = sort_type
 
@@ -221,33 +239,44 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
 
         super().__init__(entries_sorted, per_page=10)
 
-    async def format_page(self, _: Paginator, entry: list[tuple[str, int]] | list[tuple[tuple[int, str], int]]) -> Embed:
+    async def format_page(
+        self,
+        _: Paginator,
+        entry: list[tuple[str, int]] | list[tuple[tuple[int, str], int]],
+    ) -> Embed:
         embed = Embed(
-            title='Most pulled cards', description='These are your most pulled cards sorted according to what is selected'
+            title="Most pulled cards",
+            description="These are your most pulled cards sorted according to what is selected",
         )
         match self.sort_type:
             case 2:
                 embed.add_field(
-                    name='Sorted by character',
-                    value='\n'.join([f'{_}. **{i[0]}** \n- Pulled `{i[1]}` times' for _, i in enumerate(entry)]),
+                    name="Sorted by character",
+                    value="\n".join([
+                        f"{_}. **{i[0]}** \n  - Pulled `{i[1]}` times"
+                        for _, i in enumerate(entry)
+                    ]),
                 )
             case _:
                 embed.add_field(
-                    name='Sorted on per card basis',
-                    value='\n'.join([
-                        f'{_}. **{i[0][0]} ({i[0][1]})** \n- Pulled `{i[1]}` times' for _, i in enumerate(entry)
+                    name="Sorted on per card basis",
+                    value="\n".join([
+                        f"{_}. **{i[0][0]} ({i[0][1]})** \n  - Pulled `{i[1]}` times"
+                        for _, i in enumerate(entry)
                     ]),
                 )
 
         return embed
 
-    def sort_cards(self, entries: list[PulledCard]) -> list[tuple[str, int]] | list[tuple[tuple[int, str], int]]:
+    def sort_cards(
+        self, entries: list[PulledCard]
+    ) -> list[tuple[str, int]] | list[tuple[tuple[int, str], int]]:
         match self.sort_type:
             case 2:
                 c2: dict[str, int] = {}
 
                 for card in entries:
-                    c2[card.name or 'Misc'] = c2.get(card.name or 'Misc', 0) + 1
+                    c2[card.name or "Misc"] = c2.get(card.name or "Misc", 0) + 1
 
                 return sorted(c2.items(), key=operator.itemgetter(1), reverse=True)
             case _:  # Also handles 1
@@ -261,7 +290,11 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
 
 class GachaStatisticsView(BaseView):
     current: list[PulledCard]
-    query: datetime.timedelta | tuple[datetime.datetime | None, datetime.datetime | None] | None
+    query: (
+        datetime.timedelta
+        | tuple[datetime.datetime | None, datetime.datetime | None]
+        | None
+    )
 
     sort_type: int | None
 
@@ -281,7 +314,13 @@ class GachaStatisticsView(BaseView):
         self.add_item(self.view_select)
 
     @classmethod
-    async def start(cls, ctx: MafuContext, *, pulls: list[PulledCard], user: discord.User | discord.Member) -> None:
+    async def start(
+        cls,
+        ctx: MafuContext,
+        *,
+        pulls: list[PulledCard],
+        user: discord.User | discord.Member,
+    ) -> None:
         c = cls(pulls, user)
         c.ctx = ctx
         c.current = pulls
@@ -293,20 +332,30 @@ class GachaStatisticsView(BaseView):
     def embed(self) -> Embed:
         burn_worths = get_burn_worths(self.current)
 
-        embed = Embed(title=f'Pulled cards statistics for {self.user}', colour=self.user.color)
+        embed = Embed(
+            title=f"Pulled cards statistics for {self.user}", colour=self.user.color
+        )
         embed.set_thumbnail(url=self.user.display_avatar.url)
 
         p_s: list[str] = []
         for k, v in burn_worths.items():
-            p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
+            p_s.append(
+                f"`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos"
+            )
 
-        p_s.append(f'> Total `[{len(self.current)}]`: `{sum(burn_worths.values())}` blombos')
-
-        embed.add_field(
-            value=fmt_str(p_s, seperator='\n'),
+        p_s.append(
+            f"> Total `[{len(self.current)}]`: `{sum(burn_worths.values())}` blombos"
         )
 
-        if (first_sync_time := self._get_first_pull(self.pulls)) and first_sync_time and first_sync_time.message_id:
+        embed.add_field(
+            value=fmt_str(p_s, seperator="\n"),
+        )
+
+        if (
+            (first_sync_time := self._get_first_pull(self.pulls))
+            and first_sync_time
+            and first_sync_time.message_id
+        ):
             messages: list[int] = []
             for p in self.pulls:
                 if p.message_id and p.message_id not in messages:
@@ -315,7 +364,8 @@ class GachaStatisticsView(BaseView):
             times_pulled = len(messages)
 
             days = (
-                datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time.message_id)
+                datetime.datetime.now(tz=datetime.UTC)
+                - discord.utils.snowflake_time(first_sync_time.message_id)
             ).total_seconds() / 86400
 
             rate = times_pulled / days
@@ -325,15 +375,15 @@ class GachaStatisticsView(BaseView):
             embed.add_field(
                 value=fmt_str(
                     (
-                        '- **Syncing Since:** '
+                        "- **Syncing Since:** "
                         + timestamp_str(
                             discord.utils.snowflake_time(first_sync_time.message_id),
                             with_time=True,
                         ),
-                        f'  - **Rate :** {rate:.2f} pullall(s) per day',
-                        f'  - **Total :** {times_pulled} pullall(s)',
+                        f"  - **Rate :** {rate:.2f} pullall(s) per day",
+                        f"  - **Total :** {times_pulled} pullall(s)",
                     ),
-                    seperator='\n',
+                    seperator="\n",
                 ),
             )
 
@@ -345,7 +395,9 @@ class GachaStatisticsView(BaseView):
                 _
                 for _ in sorted(
                     (_ for _ in pulls),
-                    key=lambda p: discord.utils.snowflake_time(p.message_id).timestamp() if p.message_id else 0,
+                    key=lambda p: discord.utils.snowflake_time(p.message_id).timestamp()
+                    if p.message_id
+                    else 0,
                 )
                 if _.message_id
             ),
@@ -353,19 +405,19 @@ class GachaStatisticsView(BaseView):
         )
 
     @discord.ui.select(
-        placeholder='Select a view',
+        placeholder="Select a view",
         min_values=1,
         max_values=1,
         options=[
             discord.SelectOption(
-                label='View total pulls with rarity and pull rate',
-                value='1',
+                label="View total pulls with rarity and pull rate",
+                value="1",
                 description="See how much you've pulled and how much you've gained along with the rate of pulls per day",
                 emoji=RARITY_EMOJIS[1],
             ),
             discord.SelectOption(
-                label='View most owned',
-                value='2',
+                label="View most owned",
+                value="2",
                 description="See what cards you've pulled multiple times",
                 emoji=RARITY_EMOJIS[2],
             ),
@@ -377,7 +429,9 @@ class GachaStatisticsView(BaseView):
         if s.values:
             match int(s.values[0]):
                 case 1:
-                    return await interaction.response.edit_message(embed=self.embed(), view=self)
+                    return await interaction.response.edit_message(
+                        embed=self.embed(), view=self
+                    )
                 case 2:
                     await interaction.response.defer()
 
@@ -403,23 +457,25 @@ class GachaStatisticsView(BaseView):
         return None
 
     @discord.ui.select(
-        placeholder='Sort by',
+        placeholder="Sort by",
         min_values=1,
         max_values=1,
         options=[
             discord.SelectOption(
-                label='Card',
-                value='1',
+                label="Card",
+                value="1",
                 emoji=RARITY_EMOJIS[1],
             ),
             discord.SelectOption(
-                label='Character',
-                value='2',
+                label="Character",
+                value="2",
                 emoji=RARITY_EMOJIS[2],
             ),
         ],
     )
-    async def sort_select(self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]) -> None:
+    async def sort_select(
+        self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]
+    ) -> None:
         self.sort_type = int(s.values[0])
         await interaction.response.defer()
 
