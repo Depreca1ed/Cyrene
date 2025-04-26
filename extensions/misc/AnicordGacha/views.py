@@ -222,12 +222,22 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         super().__init__(entries_sorted, per_page=10)
 
     async def format_page(self, _: Paginator, entry: list[tuple[str, int]] | list[tuple[tuple[int, str], int]]) -> Embed:
-        embed = Embed(title='This is some new shit i added. Expect it to break like a doll')
+        embed = Embed(
+            title='Most pulled cards', description='These are your most pulled cards sorted according to what is selected'
+        )
         match self.sort_type:
             case 2:
-                embed.add_field(value='\n'.join([f'{_}. **{i[0]}** [`{i[1]}`]' for _, i in enumerate(entry)]))
+                embed.add_field(
+                    name='Sorted by character',
+                    value='\n'.join([f'{_}. **{i[0]}** \n- Pulled `{i[1]}` times' for _, i in enumerate(entry)]),
+                )
             case _:
-                embed.add_field(value='\n'.join([f'{_}. **{i[0][0]} ({i[0][1]})** [`{i[1]}`]' for _, i in enumerate(entry)]))
+                embed.add_field(
+                    name='Sorted on per card basis',
+                    value='\n'.join([
+                        f'{_}. **{i[0][0]} ({i[0][1]})** \n- Pulled `{i[1]}` times' for _, i in enumerate(entry)
+                    ]),
+                )
 
         return embed
 
