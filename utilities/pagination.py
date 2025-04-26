@@ -46,10 +46,8 @@ class Paginator(BaseView):
         ctx: MafuContext,
         check_embeds: bool = True,
         compact: bool = False,
-        borrowed_select: discord.ui.Select[discord.ui.View] | None = None,
     ) -> None:
         super().__init__()
-        self.borrowed_select = borrowed_select
         self.current_modal: SkipToModal | None = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
@@ -72,9 +70,6 @@ class Paginator(BaseView):
             self.add_item(self.go_to_next_page)
             if use_last_and_first:
                 self.add_item(self.go_to_last_page)
-
-        if self.borrowed_select:
-            self.add_item(self.borrowed_select)
 
     async def _get_kwargs_from_page(self, page: int) -> dict[str, Any]:
         value: str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: ignore[reportUnknownMemberType]

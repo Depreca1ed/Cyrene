@@ -14,7 +14,6 @@ from extensions.misc.AnicordGacha.utils import check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
 from utilities.bases.context import MafuContext
-from utilities.constants import BotEmojis
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -141,7 +140,6 @@ class AniCordGacha(MafuCog):
                 pull_message=message,
             )
             __pulls.append(card)
-
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)

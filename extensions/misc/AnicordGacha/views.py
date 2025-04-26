@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from typing import TYPE_CHECKING, Self
 
 import discord
@@ -80,7 +81,7 @@ class GachaPullView(BaseView):
         return await ctx.reply(embed=embed, view=c, ephemeral=True)
 
     def embed(self) -> Embed:
-        embed = Embed(title='Anicord Gacha Bot Helper')
+        embed = Embed(title='Anicord Gacha Bot Helper', colour=self.user.color)
 
         s: list[str] = []
 
@@ -216,15 +217,44 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         self.bot = bot
         self.sort_type = sort_type
 
-        super().__init__(entries, per_page=10)
+        entries_sorted = self.sort_cards(entries)
 
-    async def format_page(self, _: Paginator, entry: list[PulledCard]) -> Embed:  # noqa: ARG002
-        return Embed(title='YO')
+        super().__init__(entries_sorted, per_page=10)
+
+    async def format_page(self, _: Paginator, entry: list[tuple[str, int]] | list[tuple[tuple[int, str], int]]) -> Embed:
+        embed = Embed(title='This is some new shit i added. Expect it to break like a doll')
+        match self.sort_type:
+            case 2:
+                embed.add_field(value='\n'.join([f'{_}. **{i[0]}** [`{i[1]}`]' for _, i in enumerate(entry)]))
+            case _:
+                embed.add_field(value='\n'.join([f'{_}. **{i[0][0]} ({i[0][1]})** [`{i[1]}`]' for _, i in enumerate(entry)]))
+
+        return embed
+
+    def sort_cards(self, entries: list[PulledCard]) -> list[tuple[str, int]] | list[tuple[tuple[int, str], int]]:
+        match self.sort_type:
+            case 2:
+                c2: dict[str, int] = {}
+
+                for card in entries:
+                    c2[card.name or 'Misc'] = c2.get(card.name or 'Misc', 0) + 1
+
+                return sorted(c2.items(), key=operator.itemgetter(1), reverse=True)
+            case _:  # Also handles 1
+                c1: dict[tuple[int, str], int] = {}
+
+                for card in entries:
+                    c1[card.id, card.name] = c1.get((card.id, card.name), 0) + 1
+
+                return sorted(c1.items(), key=operator.itemgetter(1), reverse=True)
 
 
 class GachaStatisticsView(BaseView):
     current: list[PulledCard]
     query: datetime.timedelta | tuple[datetime.datetime | None, datetime.datetime | None] | None
+
+    sort_type: int | None
+
     ctx: MafuContext
 
     def __init__(
@@ -235,6 +265,7 @@ class GachaStatisticsView(BaseView):
         self.pulls = pulls
         self.user = user
         self.query = None
+        self.sort_type = None
         super().__init__()
         self.clear_items()
         self.add_item(self.view_select)
@@ -252,7 +283,7 @@ class GachaStatisticsView(BaseView):
     def embed(self) -> Embed:
         burn_worths = get_burn_worths(self.current)
 
-        embed = Embed(title=f'Pulled cards statistics for {self.user}')
+        embed = Embed(title=f'Pulled cards statistics for {self.user}', colour=self.user.color)
         embed.set_thumbnail(url=self.user.display_avatar.url)
 
         p_s: list[str] = []
@@ -338,19 +369,61 @@ class GachaStatisticsView(BaseView):
                 case 1:
                     return await interaction.response.edit_message(embed=self.embed(), view=self)
                 case 2:
-                    return await interaction.response.edit_message(content='Coming soon', embed=None, view=self)
                     await interaction.response.defer()
-                    await Paginator(
+
+                    self.sort_type = 1
+
+                    v = Paginator(
                         GachaPersonalCardsSorter(
                             interaction.client,
                             self.current,
-                            sort_type=1,
+                            sort_type=self.sort_type,
                         ),
                         ctx=self.ctx,
-                        borrowed_select=s,
-                    ).start(message=self.message)
-                    # We add some buttons for only this specific case
+                    )
+
+                    v.add_item(self.sort_select)
+
+                    v.add_item(s)
+
+                    await v.start(message=self.message)
 
                 case _:
                     pass
         return None
+
+    @discord.ui.select(
+        placeholder='Sort by',
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(
+                label='Card',
+                value='1',
+                emoji=RARITY_EMOJIS[1],
+            ),
+            discord.SelectOption(
+                label='Character',
+                value='2',
+                emoji=RARITY_EMOJIS[2],
+            ),
+        ],
+    )
+    async def sort_select(self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]) -> None:
+        self.sort_type = int(s.values[0])
+        await interaction.response.defer()
+
+        v = Paginator(
+            GachaPersonalCardsSorter(
+                interaction.client,
+                self.current,
+                sort_type=self.sort_type,
+            ),
+            ctx=self.ctx,
+        )
+
+        v.add_item(s)
+
+        v.add_item(self.view_select)
+
+        await v.start(message=self.message)

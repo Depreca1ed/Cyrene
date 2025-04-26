@@ -77,7 +77,7 @@ class GachaUser:
 @dataclass
 class PulledCard:
     id: int
-    name: str | None
+    name: str
     rarity: int
     message_id: int | None = None
 
