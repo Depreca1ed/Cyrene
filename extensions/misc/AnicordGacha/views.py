@@ -230,10 +230,16 @@ class GachaPullView(BaseView):
 
 class GachaPersonalCardsSorter(menus.ListPageSource):
     def __init__(
-        self, bot: Mafuyu, entries: list[PulledCard], *, sort_type: int
+        self,
+        bot: Mafuyu,
+        entries: list[PulledCard],
+        *,
+        sort_type: int,
+        user: discord.User | discord.Member,
     ) -> None:
         self.bot = bot
         self.sort_type = sort_type
+        self.user = user
 
         entries_sorted = list(enumerate(self.sort_cards(entries)))
         super().__init__(entries_sorted, per_page=10)
@@ -248,7 +254,11 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         embed = Embed(
             title="Most pulled cards",
             description="These are your most pulled cards sorted according to what is selected",
+            colour=self.user.color,
         )
+
+        embed.set_thumbnail(url=self.user.display_avatar.url)
+
         match self.sort_type:
             case 2:
                 embed.add_field(
@@ -443,6 +453,7 @@ class GachaStatisticsView(BaseView):
                             interaction.client,
                             self.current,
                             sort_type=self.sort_type,
+                            user=self.user,
                         ),
                         ctx=self.ctx,
                     )
