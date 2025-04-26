@@ -248,7 +248,7 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         self,
         _: Paginator,
         entry: list[
-            tuple[int, list[tuple[str, int]] | list[tuple[tuple[int, str], int]]]
+            tuple[int, list[tuple[str, int]] | list[tuple[tuple[int, str, int], int]]]
         ],
     ) -> Embed:
         embed = Embed(
@@ -272,7 +272,7 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
                 embed.add_field(
                     name="Sorted on per card basis",
                     value="\n".join([
-                        f"{i[0] + 1}. **{i[1][0][0]} ({i[1][0][1]})** \n  - Pulled `{i[1][1]}` times"
+                        f"{i[0] + 1}. {RARITY_EMOJIS[int(i[1][0][2])]} **{i[1][0][0]} ({i[1][0][1]})** \n  - Pulled `{i[1][1]}` times"  # type: ignore
                         for i in entry
                     ]),
                 )
@@ -281,7 +281,7 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
 
     def sort_cards(
         self, entries: list[PulledCard]
-    ) -> list[tuple[str, int]] | list[tuple[tuple[int, str], int]]:
+    ) -> list[tuple[str, int]] | list[tuple[tuple[int, str, int], int]]:
         match self.sort_type:
             case 2:
                 c2: dict[str, int] = {}
@@ -291,10 +291,12 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
 
                 return sorted(c2.items(), key=operator.itemgetter(1), reverse=True)
             case _:  # Also handles 1
-                c1: dict[tuple[int, str], int] = {}
+                c1: dict[tuple[int, str, int], int] = {}
 
                 for card in entries:
-                    c1[card.id, card.name] = c1.get((card.id, card.name), 0) + 1
+                    c1[card.id, card.name, card.rarity] = (
+                        c1.get((card.id, card.name, card.rarity), 0) + 1
+                    )
 
                 return sorted(c1.items(), key=operator.itemgetter(1), reverse=True)
 
