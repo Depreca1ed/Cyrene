@@ -235,14 +235,15 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         self.bot = bot
         self.sort_type = sort_type
 
-        entries_sorted = self.sort_cards(entries)
-
+        entries_sorted = list(enumerate(self.sort_cards(entries)))
         super().__init__(entries_sorted, per_page=10)
 
     async def format_page(
         self,
         _: Paginator,
-        entry: list[tuple[str, int]] | list[tuple[tuple[int, str], int]],
+        entry: list[
+            tuple[int, list[tuple[str, int]] | list[tuple[tuple[int, str], int]]]
+        ],
     ) -> Embed:
         embed = Embed(
             title="Most pulled cards",
@@ -253,16 +254,16 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
                 embed.add_field(
                     name="Sorted by character",
                     value="\n".join([
-                        f"{_}. **{i[0]}** \n  - Pulled `{i[1]}` times"
-                        for _, i in enumerate(entry)
+                        f"{i[0] + 1}. **{i[1][0]}** \n  - Pulled `{i[1][1]}` times"
+                        for i in entry
                     ]),
                 )
             case _:
                 embed.add_field(
                     name="Sorted on per card basis",
                     value="\n".join([
-                        f"{_}. **{i[0][0]} ({i[0][1]})** \n  - Pulled `{i[1]}` times"
-                        for _, i in enumerate(entry)
+                        f"{i[0] + 1}. **{i[1][0][0]} ({i[1][0][1]})** \n  - Pulled `{i[1][1]}` times"
+                        for i in entry
                     ]),
                 )
 
