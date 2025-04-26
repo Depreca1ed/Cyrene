@@ -496,6 +496,7 @@ class GachaStatisticsView(BaseView):
                 interaction.client,
                 self.current,
                 sort_type=self.sort_type,
+                user=self.user,
             ),
             ctx=self.ctx,
         )
