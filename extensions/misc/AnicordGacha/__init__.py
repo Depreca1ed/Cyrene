@@ -106,7 +106,7 @@ class AniCordGacha(MafuCog):
 
         if not author_id_parsed:
             return
-        user = self.bot.get_user(author_id_parsed[0])
+        user = self.bot.get_user(int(author_id_parsed[0]))
 
         is_message_syncronised: bool = bool(
             await self.bot.pool.fetchval(
