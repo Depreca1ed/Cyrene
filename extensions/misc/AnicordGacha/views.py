@@ -235,7 +235,7 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         entries: list[PulledCard],
         *,
         sort_type: int,
-        user: discord.User | discord.Member | None,
+        user: discord.User | discord.Member,
     ) -> None:
         self.bot = bot
         self.sort_type = sort_type
@@ -254,10 +254,10 @@ class GachaPersonalCardsSorter(menus.ListPageSource):
         embed = Embed(
             title="Most pulled cards",
             description="These are your most pulled cards sorted according to what is selected",
-            colour=self.user.color if self.user else None,
+            colour=self.user.color,
         )
 
-        embed.set_thumbnail(url=self.user.display_avatar.url if self.user else None)
+        embed.set_thumbnail(url=self.user.display_avatar.url)
 
         match self.sort_type:
             case 2:
@@ -316,7 +316,7 @@ class GachaStatisticsView(BaseView):
     def __init__(
         self,
         pulls: list[PulledCard],
-        user: discord.User | discord.Member | None,
+        user: discord.User | discord.Member,
     ) -> None:
         self.pulls = pulls
         self.user = user
@@ -332,7 +332,7 @@ class GachaStatisticsView(BaseView):
         ctx: MafuContext,
         *,
         pulls: list[PulledCard],
-        user: discord.User | discord.Member | None,
+        user: discord.User | discord.Member,
     ) -> None:
         c = cls(pulls, user)
         c.ctx = ctx
@@ -346,10 +346,9 @@ class GachaStatisticsView(BaseView):
         burn_worths = get_burn_worths(self.current)
 
         embed = Embed(
-            title=f"Pulled cards statistics for {self.user or 'everyone'}",
-            colour=self.user.color if self.user else None,
+            title=f"Pulled cards statistics for {self.user}", colour=self.user.color
         )
-        embed.set_thumbnail(url=self.user.display_avatar.url if self.user else None)
+        embed.set_thumbnail(url=self.user.display_avatar.url)
 
         p_s: list[str] = []
         for k, v in burn_worths.items():
