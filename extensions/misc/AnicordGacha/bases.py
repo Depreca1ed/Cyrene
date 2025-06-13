@@ -13,7 +13,9 @@ if TYPE_CHECKING:
 
 
 class GachaUser:
-    def __init__(self, user: User | Member, *, timer: Timer | None, config_data: Record) -> None:
+    def __init__(
+        self, user: User | Member, *, timer: Timer | None, config_data: Record
+    ) -> None:
         self.user = user
         self.timer = timer
         self.config_data = config_data
@@ -80,6 +82,7 @@ class PulledCard:
     name: str
     rarity: int
     message_id: int | None = None
+    user: User | None = None
 
     @classmethod
     def parse_from_str(cls, s: str, /) -> None | Self:
@@ -91,9 +94,9 @@ class PulledCard:
         for _ in parsed:
             d = _.groupdict()
 
-            c_id = int(d['id'])
-            rarity = next(k for k, _ in RARITY_EMOJIS.items() if _.name == d['rarity'])
-            name: str = d['name']
+            c_id = int(d["id"])
+            rarity = next(k for k, _ in RARITY_EMOJIS.items() if _.name == d["rarity"])
+            name: str = d["name"]
 
             return cls(c_id, name, rarity)
 
