@@ -9,12 +9,12 @@ from discord import app_commands
 from discord.ext import commands
 
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
-from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, RARITY_EMOJIS
+from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, RARITY_EMOJIS as RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
 from utilities.bases.context import MafuContext
-from utilities.embed import Embed
+from utilities.embed import Embed as Embed
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -201,41 +201,3 @@ class AniCordGacha(MafuCog):
         ]
 
         await GachaStatisticsView.start(ctx, pulls=pulls, user=user)
-
-    @gacha_group.group(name="search")
-    async def gacha_search(self, ctx: MafuContext):
-        await ctx.send_help(ctx.command)
-
-    @gacha_search.command(name="card")
-    async def gacha_search_card(self, ctx: MafuContext, card: int):
-        entries = await self.bot.pool.fetch(
-            """SELECT * FROM GachaPulledCards WHERE card_id = $1""", card
-        )
-        if not entries:
-            return await ctx.reply(
-                "Either this card doesn't exist or nobody has pulled it."
-            )
-
-        cards = [
-            PulledCard(
-                c["card_id"],
-                c["card_name"],
-                c["rarity"],
-                c["message_id"],
-                self.bot.get_user(c["user_id"]),
-            )
-            for c in entries
-        ]
-
-        id = next(_ for _ in cards).id
-        name = next(_ for _ in cards).name
-        rarity = next(_ for _ in cards).rarity
-
-        embed = Embed(title=f"[{id}] {name}")
-        embed.set_thumbnail(url=RARITY_EMOJIS[rarity].url)
-
-        embed.description = "- **Pulled by :** " + ", ".join(
-            str(c.user.mention if c.user else "@unknown-user") for c in cards
-        )
-
-        return await ctx.reply(embed=embed)
