@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS Timers (
 
 CREATE TABLE IF NOT EXISTS GachaData (
     user_id BIGINT PRIMARY KEY,
-    repeating_reminder BOOLEAN DEFAULT False
+    autoremind BOOLEAN DEFAULT False
 );
 
 CREATE TABLE IF NOT EXISTS GachaPulledCards (
