@@ -145,7 +145,7 @@ class AniCordGacha(MafuCog):
         if gacha_user.config_data['autoremind'] is True:
             new_remind_time = message.created_at + PULL_INTERVAL
 
-            if new_remind_time < datetime.datetime.now():
+            if new_remind_time < discord.utils.utcnow():
                 return
 
             await self.bot.timer_manager.create_timer(
