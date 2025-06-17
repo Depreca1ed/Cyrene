@@ -155,7 +155,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction("\U000023f0")
+                await message.add_reaction("<:ClockGuy:1384518877358198814>")
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
