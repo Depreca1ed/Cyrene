@@ -122,21 +122,20 @@ class Blacklist(MafuCog):
         Raises
         ------
         MafuyuError
-            Raised instead of commands.CheckFailure,
-            this is further completely ignored by both the error handlers, as intended
+            Error raised to ignore
 
         """
         if data := self.bot.is_blacklisted(ctx.author):
-            if await self._pre_check(ctx.author, data):
-                return True
-            await self.handle_user_blacklist(ctx, ctx.author, data)
-            raise MafuyuError
+            if await self._pre_check(ctx.author, data) is False:
+                await self.handle_user_blacklist(ctx, ctx.author, data)
+                raise MafuyuError
+            return True
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
-            if await self._pre_check(ctx.guild, data):
-                return True
-            await self.handle_guild_blacklist(ctx, ctx.guild, data)
-            raise MafuyuError
+            if await self._pre_check(ctx.guild, data) is False:
+                await self.handle_guild_blacklist(ctx, ctx.guild, data)
+                raise MafuyuError
+            return True
 
         # TODO(Depreca1ed): Make custom errors and have them handled as ignored.
 
@@ -164,11 +163,11 @@ class Blacklist(MafuCog):
 
         """
         if not data.lasts_until:
-            return False
-        if datetime.datetime.now() > data.lasts_until:
+            return False  # It's permanent
+        if datetime.datetime.now().astimezone(datetime.UTC) > data.lasts_until.astimezone(datetime.UTC):
             await self.remove(snowflake)
-            return False
-        return True
+            return True
+        return False
 
     async def handle_user_blacklist(
         self, ctx: MafuContext, user: discord.User | discord.Member, data: BlacklistData
