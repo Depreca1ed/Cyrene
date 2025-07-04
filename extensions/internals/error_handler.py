@@ -11,31 +11,25 @@ from typing import TYPE_CHECKING, Any, Self
 import discord
 from discord.ext import commands, menus
 
-from utils import (
-    ERROR_COLOUR,
-    BaseCog,
-    BaseView,
-    BotEmojis,
-    Embed,
-    MafuyuError,
-    Paginator,
-    WaifuNotFoundError,
-    better_string,
-    clean_error,
-    format_tb,
-    generate_error_objects,
-    get_command_signature,
-)
+from utilities.bases.cog import MafuCog
+from utilities.constants import ERROR_COLOUR, BotEmojis
+from utilities.embed import Embed
+from utilities.errors import MafuyuError, WaifuNotFoundError
+from utilities.functions import fmt_str, format_tb, get_command_signature
+from utilities.pagination import Paginator
+from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    import asyncpg
+    from asyncpg import Record
 
-    from utils import Context, Mafuyu
-
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 log = logging.getLogger(__name__)
 
 
 class Argument:
+    is_provided: bool = False
+
     def __init__(self, *, value: str | None, param: commands.Parameter) -> None:
         self.value: Any = value
         self.param: commands.Parameter = param
@@ -43,16 +37,30 @@ class Argument:
 
     def to_option(self) -> discord.SelectOption:
         name = self.param.displayed_name or self.param.name
+        emoji = (
+            BotEmojis.GREY_TICK
+            if self.param.required is False and self.is_provided is False
+            else (BotEmojis.GREEN_TICK if self.is_provided else BotEmojis.RED_CROSS)
+        )
         return discord.SelectOption(
-            emoji=BotEmojis.GREEN_TICK if not self.param.required or self.value else BotEmojis.RED_CROSS,
+            emoji=emoji,
             label=f'{name}{" [required]" if self.param.required else ""}',
             value=self.param.name,
-            description=self.param.description,
+            description='\n'.join(
+                _
+                for _ in [
+                    self.param.description,
+                    ('(Default: ' + str(self.param.default if self.param.default is not None else 'Nothing') + ')')
+                    if self.param.default is not inspect._empty and self.param.required is False  # pyright: ignore[reportPrivateUsage]
+                    else '',
+                ]
+                if _
+            ),
         )
 
 
 class CommandInvokeView(BaseView):
-    def __init__(self, *, ctx: Context, command: commands.Command[Any, Any, Any]) -> None:
+    def __init__(self, *, ctx: MafuContext, command: commands.Command[Any, Any, Any]) -> None:
         super().__init__(timeout=180.0)
         self.ctx = ctx
         self.command = command
@@ -72,7 +80,7 @@ class CommandInvokeView(BaseView):
             await self.ctx.bot.invoke(self.ctx)
             can_run = True
 
-        except commands.CommandError as err:
+        except Exception as err:
             self.ctx.bot.dispatch('command_error', self.ctx, err)
 
         with contextlib.suppress(discord.HTTPException):
@@ -141,6 +149,7 @@ class MissingArgumentModal(discord.ui.Modal):
             await interaction.response.defer()
             return
         self.handler.arguments[self.argument.param.name].value = converted
+        self.handler.arguments[self.argument.param.name].is_provided = True
         self.handler.handle_components()
         await interaction.response.edit_message(view=self.handler)
 
@@ -151,7 +160,7 @@ class MissingArgumentHandler(discord.ui.View):
     def __init__(
         self,
         error: commands.MissingRequiredArgument,
-        ctx: Context,
+        ctx: MafuContext,
         *,
         timeout: float | None = 180,
     ) -> None:
@@ -173,18 +182,18 @@ class MissingArgumentHandler(discord.ui.View):
         args: list[Any] = []
         kwargs: dict[str, Any] = {}
         for argument in self.arguments.values():
-            if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+            if argument.param.kind is inspect._ParameterKind.POSITIONAL_ONLY:  # pyright: ignore[reportPrivateUsage]
                 args.append(argument.value)
             elif (
-                argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
-                or argument.param.kind is inspect._ParameterKind.KEYWORD_ONLY  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
+                argument.param.kind is inspect._ParameterKind.POSITIONAL_OR_KEYWORD  # pyright: ignore[reportPrivateUsage]
+                or argument.param.kind is inspect._ParameterKind.KEYWORD_ONLY  # pyright: ignore[reportPrivateUsage]
             ):
                 kwargs[argument.param.name] = argument.value
 
         return tuple(args), kwargs
 
     def collect_parameters_and_arguments(self) -> dict[str, Argument]:
-        assert self.ctx.command is not None  # noqa: S101
+        assert self.ctx.command is not None
         parameters: dict[str, commands.Parameter] = self.ctx.command.clean_params
         signature: inspect.Signature = inspect.signature(self.ctx.command.callback)
         bind_arguments: inspect.BoundArguments = signature.bind_partial(*self.ctx.args, **self.ctx.kwargs)
@@ -193,6 +202,10 @@ class MissingArgumentHandler(discord.ui.View):
 
         for param in parameters.values():
             value = bind_arguments.arguments.get(param.name, None)
+
+            if isinstance(value, commands.Parameter):
+                value = value.default
+
             arguments[param.name] = Argument(
                 value=value,
                 param=param,
@@ -226,14 +239,17 @@ class MissingArgumentHandler(discord.ui.View):
                 msg = 'Command not found. This should not happen.'
                 raise TypeError(msg)
             args, kwargs = self.get_invoke_args()
-            await self.ctx.invoke(cmd, *args, **kwargs)
+            try:
+                await self.ctx.invoke(cmd, *args, **kwargs)
+            except Exception as err:
+                self.ctx.bot.dispatch('command_error', self.ctx, err)
 
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         return interaction.user == self.ctx.author
 
 
 class ErrorView(BaseView):
-    def __init__(self, error_record: asyncpg.Record, ctx: Context) -> None:
+    def __init__(self, error_record: Record, ctx: MafuContext) -> None:
         self.error_record = error_record
         self.ctx = ctx
         super().__init__()
@@ -292,18 +308,18 @@ class ErrorView(BaseView):
 
 
 class ErrorPageSource(menus.ListPageSource):
-    def __init__(self, bot: Mafuyu, entries: list[asyncpg.Record]) -> None:
+    def __init__(self, bot: Mafuyu, entries: list[Record]) -> None:
         self.bot = bot
         entries = sorted(entries, key=operator.itemgetter('id'))
         super().__init__(entries, per_page=1)
 
-    async def format_page(self, _: Paginator, entry: asyncpg.Record) -> Embed:
+    async def format_page(self, _: Paginator, entry: Record) -> Embed:
         embed = await Embed.logger(self.bot, entry)
         embed.title = embed.title + f'/{self.get_max_pages()}' if embed.title else None
         return embed
 
 
-class ErrorHandler(BaseCog):
+class ErrorHandler(MafuCog):
     default_errors = (
         commands.UserInputError,
         commands.DisabledCommand,
@@ -317,7 +333,41 @@ class ErrorHandler(BaseCog):
         commands.CheckFailure,
     )
 
-    async def _find_closest_command(self, ctx: Context, name: str) -> commands.Command[None, ..., Any] | None:
+    def _cleanse_error_attrs(self, attrs: list[str] | str, *, seperator: str, prefix: str) -> str:
+        return (
+            fmt_str(
+                (prefix + f'{(perm.replace("_", " ")).capitalize()}' for perm in attrs),
+                seperator=seperator,
+            )
+            if type(attrs) is not str
+            else prefix + attrs
+        )
+
+    def _fix_error_iter(
+        self,
+        error: (
+            commands.MissingPermissions
+            | commands.BotMissingPermissions
+            | commands.MissingAnyRole
+            | commands.MissingRole
+            | commands.BotMissingAnyRole
+            | commands.BotMissingRole
+        ),
+    ) -> list[str]:
+        m: list[str] = []
+
+        if isinstance(error, commands.MissingRole | commands.BotMissingRole):
+            m.append(str(f'<@&{error.missing_role}>' if type(error.missing_role) is int else error.missing_role))
+
+        elif isinstance(error, commands.MissingAnyRole | commands.BotMissingAnyRole):
+            m.extend([str(f'<@&{role_id}>' if role_id is int else role_id) for role_id in error.missing_roles])
+
+        else:
+            m.extend(error.missing_permissions)
+
+        return m
+
+    async def _find_closest_command(self, ctx: MafuContext, name: str) -> commands.Command[None, ..., Any] | None:
         closest_cmd_name = difflib.get_close_matches(
             name,
             [_command.name for _command in self.bot.commands],
@@ -342,7 +392,7 @@ class ErrorHandler(BaseCog):
         author: discord.User | discord.Member,
         message: discord.Message,
         guild: discord.Guild | None = None,
-    ) -> asyncpg.Record:
+    ) -> Record:
         formatted_error = format_tb(error)
         time_occured = datetime.datetime.now()
 
@@ -387,7 +437,7 @@ class ErrorHandler(BaseCog):
         error: commands.CommandError,
         *,
         command_name: str,
-    ) -> asyncpg.Record | None:
+    ) -> Record | None:
         return await self.bot.pool.fetchrow(
             """
                 SELECT
@@ -405,7 +455,7 @@ class ErrorHandler(BaseCog):
         )
 
     @commands.Cog.listener('on_command_error')
-    async def error_handler(self, ctx: Context, error: commands.CommandError) -> None | discord.Message:
+    async def error_handler(self, ctx: MafuContext, error: commands.CommandError) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
@@ -437,7 +487,7 @@ class ErrorHandler(BaseCog):
             param_name = error.param.displayed_name or error.param.name
             embed = Embed.error(
                 title=f'Missing {param_name} argument!',
-                description=better_string(
+                description=fmt_str(
                     (
                         f'You did not provide a **__{param_name}__** argument.',
                         f'> -# `{get_command_signature(ctx, ctx.command)}`',
@@ -445,6 +495,7 @@ class ErrorHandler(BaseCog):
                     seperator='\n',
                 ),
             )
+            embed.set_footer(text='The command will be executed as soon as all required arguments have been provided')
 
             if isinstance(error, commands.MissingRequiredArgument):
                 view = MissingArgumentHandler(error, ctx)
@@ -476,12 +527,12 @@ class ErrorHandler(BaseCog):
                 'permissions' if isinstance(error, commands.MissingPermissions | commands.BotMissingPermissions) else 'roles'
             )
 
-            final_iter = generate_error_objects(error)
+            final_iter = self._fix_error_iter(error)
 
-            content = better_string(
+            content = fmt_str(
                 (
                     f'{subject} missing the following {error_type_wording} to run this command:',
-                    clean_error(final_iter, seperator='\n', prefix='- '),
+                    self._cleanse_error_attrs(final_iter, seperator='\n', prefix='- '),
                 ),
                 seperator='\n',
             )
@@ -531,7 +582,7 @@ class ErrorHandler(BaseCog):
         return None
 
     @commands.Cog.listener('on_command_error')
-    async def custom_errors_handler(self, ctx: Context, error: MafuyuError | Exception) -> None | discord.Message:
+    async def custom_errors_handler(self, ctx: MafuContext, error: MafuyuError | Exception) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
@@ -553,11 +604,11 @@ class ErrorHandler(BaseCog):
         description='Handles all things related to error handler logging.',
         invoke_without_command=True,
     )
-    async def errorcmd_base(self, ctx: Context) -> None:
+    async def errorcmd_base(self, ctx: MafuContext) -> None:
         await ctx.send_help(ctx.command)
 
     @errorcmd_base.command(name='show', description='Shows the embed for a certain error')
-    async def error_show(self, ctx: Context, error_id: int | None = None) -> None:
+    async def error_show(self, ctx: MafuContext, error_id: int | None = None) -> None:
         if error_id:
             error_record = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
             if not error_record:
@@ -573,7 +624,7 @@ class ErrorHandler(BaseCog):
         await paginate.start()
 
     @errorcmd_base.command(name='fix', description='Mark an error as fixed')
-    async def error_fix(self, ctx: Context, error_id: int) -> None:
+    async def error_fix(self, ctx: MafuContext, error_id: int) -> None:
         data = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
         if not data:
             await ctx.reply(f'Cannot find an error with the ID: `{error_id}`')

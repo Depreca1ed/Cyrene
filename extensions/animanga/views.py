@@ -7,33 +7,30 @@ import discord
 from asyncpg.exceptions import UniqueViolationError
 from discord.ext import menus
 
-from utils import (
-    BaseView,
-    BotEmojis,
-    Embed,
-    Paginator,
-    WaifuNotFoundError,
-    WaifuResult,
-    better_string,
-    generate_timestamp_string,
-)
+from utilities.constants import BotEmojis
+from utilities.embed import Embed
+from utilities.errors import WaifuNotFoundError
+from utilities.functions import fmt_str, timestamp_str
+from utilities.pagination import Paginator
+from utilities.types import WaifuFavouriteEntry, WaifuResult
+from utilities.view import BaseView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from utils import Context, Mafuyu, WaifuFavouriteEntry
-
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 __all__ = ('WaifuSearchView',)
 
 
 class WaifuBase(BaseView):
-    ctx: Context
+    ctx: MafuContext
     current: WaifuResult
 
     def __init__(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         session: ClientSession,
         *,
         nsfw: bool,
@@ -54,7 +51,7 @@ class WaifuBase(BaseView):
         self.pass_emoji = self.passbutton.emoji = BotEmojis.PASS
 
     @classmethod
-    async def start(cls, ctx: Context, *, query: None | str = None) -> Self | None:
+    async def start(cls, ctx: MafuContext, *, query: None | str = None) -> Self | None:
         inst = cls(
             ctx,
             ctx.bot.session,
@@ -78,8 +75,10 @@ class WaifuBase(BaseView):
         embed = inst.embed(data)
 
         inst.ctx = ctx
+
         if await inst.ctx.bot.is_owner(ctx.author):
             inst.add_item(APIWaifuAddButton(inst.ctx))
+
         inst.message = await ctx.reply(embed=embed, view=inst)
 
         return inst
@@ -88,8 +87,8 @@ class WaifuBase(BaseView):
         raise NotImplementedError
 
     def embed(self, data: WaifuResult) -> discord.Embed:
-        smasher = better_string([user.mention for user in self.smashers], seperator=', ') or discord.utils.MISSING
-        passer = better_string([user.mention for user in self.passers], seperator=', ') or discord.utils.MISSING
+        smasher = fmt_str([user.mention for user in self.smashers], seperator=', ') or discord.utils.MISSING
+        passer = fmt_str([user.mention for user in self.passers], seperator=', ') or discord.utils.MISSING
 
         total = len(self.passers) + len(self.smashers)
 
@@ -100,7 +99,7 @@ class WaifuBase(BaseView):
         embed = Embed(
             title=f'#{data.image_id}',
             url=f'https://danbooru.donmai.us/posts/{self.current.image_id}',
-            description=better_string(
+            description=fmt_str(
                 [
                     f'- {self.smash_emoji} **Smashers:** {smasher}',
                     f'- {self.pass_emoji} **Passers:** {passer}',
@@ -113,6 +112,9 @@ class WaifuBase(BaseView):
         )
 
         embed.set_image(url=data.url)
+
+        if self.nsfw:
+            embed.set_footer(text='For SFW results, run this command in a SFW channel.')
 
         return embed
 
@@ -238,11 +240,11 @@ class WaifuBase(BaseView):
 
 class WaifuSearchView(WaifuBase):
     async def request(self) -> WaifuResult:
-        rating = better_string(['explicit', 'questionable', 'sensitive'], seperator=',') if self.nsfw is True else 'general'
+        rating = fmt_str(['explicit', 'questionable', 'sensitive'], seperator=',') if self.nsfw is True else 'general'
         waifu = await self.session.get(
             'https://danbooru.donmai.us/posts/random.json',
             params={
-                'tags': better_string(
+                'tags': fmt_str(
                     [
                         'solo',
                         self.query or '1girl',
@@ -262,6 +264,7 @@ class WaifuSearchView(WaifuBase):
             name=self.query,
             image_id=data['id'],
             url=data['file_url'],
+            source=data['source'],
             characters=data['tag_string_character'],
             copyright=data['tag_string_copyright'],
         )
@@ -292,10 +295,10 @@ class WaifuPageSource(menus.ListPageSource):
         embed = Embed(
             title=f'#{post.image_id} {"[NSFW]" if entry.nsfw is True else ""}',
             url=post_url,
-            description=better_string(
+            description=fmt_str(
                 [
                     f'- **Favourited by:** {entry.user_id.mention}',
-                    f'- **Favourited on:** {generate_timestamp_string(entry.tm)}',
+                    f'- **Favourited on:** {timestamp_str(entry.tm, with_time=True)}',
                     f'-# **Characters:** {", ".join(post.parse_string_lists(post.characters))}' if post.characters else None,
                     f'-# **Copyright:** {", ".join(post.parse_string_lists(post.copyright))}' if post.copyright else None,
                 ],
@@ -315,13 +318,17 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
         *,
         style: discord.ButtonStyle = discord.ButtonStyle.red,
     ) -> None:
-        super().__init__(style=style, emoji=BotEmojis.RED_CROSS)
+        super().__init__(
+            style=style,
+            emoji=BotEmojis.RED_CROSS,
+            label='Remove entry',
+        )
 
     async def callback(self, interaction: discord.Interaction[Mafuyu]) -> None:
-        item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType]
         await interaction.client.pool.execute(
             """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
-            item.id,  # pyright: ignore[reportUnknownMemberType,reportUnknownArgumentType]
+            item.id,  # pyright: ignore[reportUnknownMemberType]
             interaction.user.id,
         )
         if hasattr(self.view.source, 'entries'):
@@ -343,7 +350,7 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
 
     def __init__(
         self,
-        ctx: Context,
+        ctx: MafuContext,
     ) -> None:
         self.ctx = ctx
         super().__init__(label='Add image to API', style=discord.ButtonStyle.blurple)

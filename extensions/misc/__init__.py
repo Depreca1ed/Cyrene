@@ -2,15 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .waifu import Waifu
+from .AnicordGacha import AniCordGacha
 
 if TYPE_CHECKING:
     from utilities.bases.bot import Mafuyu
 
 
-class AniManga(Waifu, name='Anime & Manga'):
-    """For everything related to Anime or Manga."""
-
-
 async def setup(bot: Mafuyu) -> None:
-    await bot.add_cog(AniManga(bot))
+    await bot.add_cog(AniCordGacha(bot))

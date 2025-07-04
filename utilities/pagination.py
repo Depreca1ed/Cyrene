@@ -9,7 +9,7 @@ from .view import BaseView
 if TYPE_CHECKING:
     from discord.ext import menus
 
-    from . import Context
+    from utilities.bases.context import MafuContext
 
 __all__ = ('Paginator',)
 
@@ -43,7 +43,7 @@ class Paginator(BaseView):
         self,
         source: menus.PageSource,
         *,
-        ctx: Context,
+        ctx: MafuContext,
         check_embeds: bool = True,
         compact: bool = False,
     ) -> None:
@@ -51,7 +51,7 @@ class Paginator(BaseView):
         self.current_modal: SkipToModal | None = None
         self.source: menus.PageSource = source
         self.check_embeds: bool = check_embeds
-        self.ctx: Context = ctx
+        self.ctx: MafuContext = ctx
         self.message: discord.Message | None = None
         self.current_page: int = 0
         self.compact: bool = compact
@@ -59,9 +59,6 @@ class Paginator(BaseView):
         self.fill_items()
 
     def fill_items(self) -> None:
-        if not self.compact:
-            self.stop_pages.row = 1
-
         if self.source.is_paginating():
             max_pages = self.source.get_max_pages()
             use_last_and_first = max_pages is not None and max_pages >= 2
@@ -73,10 +70,9 @@ class Paginator(BaseView):
             self.add_item(self.go_to_next_page)
             if use_last_and_first:
                 self.add_item(self.go_to_last_page)
-            self.add_item(self.stop_pages)
 
     async def _get_kwargs_from_page(self, page: int) -> dict[str, Any]:
-        value: str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportUnknownArgumentType]
+        value: str | discord.Embed | Any = await discord.utils.maybe_coroutine(self.source.format_page, self, page)  # pyright: ignore[reportUnknownMemberType]
 
         if isinstance(value, str):
             return {'content': value, 'embed': None}
@@ -141,13 +137,18 @@ class Paginator(BaseView):
         await interaction.response.send_message('This pagination menu cannot be controlled by you, sorry!', ephemeral=True)
         return False
 
-    async def start(self, *, ephemeral: bool = False) -> None:
+    async def start(self, *, ephemeral: bool = False, message: discord.Message | None = None) -> None:
         await self.source.prepare()
         page: Any = await self.source.get_page(0)  # pyright: ignore[reportUnknownMemberType]
         kwargs = await self._get_kwargs_from_page(page)
 
         self._update_labels(0)
-        self.message = await self.ctx.send(**kwargs, view=self, ephemeral=ephemeral)
+
+        if message is None:
+            self.message = await self.ctx.send(**kwargs, view=self, ephemeral=ephemeral)
+            return
+
+        self.message = await message.edit(**kwargs, view=self)
 
     @discord.ui.button(label='≪', style=discord.ButtonStyle.grey)
     async def go_to_first_page(self, interaction: discord.Interaction, _: discord.ui.Button[Self]) -> None:
@@ -192,10 +193,3 @@ class Paginator(BaseView):
         """Go to the last page."""
         # The call here is safe because it's guarded by skip_if
         await self.show_page(interaction, self.source.get_max_pages() - 1)  # type: ignore  # noqa: PGH003
-
-    @discord.ui.button(label='Quit', style=discord.ButtonStyle.red)
-    async def stop_pages(self, interaction: discord.Interaction, _: discord.ui.Button[Self]) -> None:
-        """Stop the pagination session."""
-        await interaction.response.defer()
-        await interaction.delete_original_response()
-        self.stop()

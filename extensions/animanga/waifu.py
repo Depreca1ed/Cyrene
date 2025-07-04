@@ -6,14 +6,19 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Paginator, WaifuFavouriteEntry, WaifuNotFoundError
+from utilities.bases.cog import MafuCog
+from utilities.errors import WaifuNotFoundError
+from utilities.pagination import Paginator
+from utilities.types import WaifuFavouriteEntry
 
 from .views import RemoveFavButton, WaifuPageSource, WaifuSearchView
 
 if TYPE_CHECKING:
     import aiohttp
 
-    from utils import Context, Mafuyu
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
+
 
 __all__ = ('Waifu',)
 
@@ -50,12 +55,12 @@ async def waifu_autocomplete(
     return [app_commands.Choice(name=char[0].title(), value=char[1]) for char in characters]
 
 
-class Waifu(BaseCog):
+class Waifu(MafuCog):
     @commands.hybrid_group(name='waifu', help='Get waifu images with an option to smash or pass', fallback='get')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.autocomplete(waifu=waifu_autocomplete)
-    async def waifu(self, ctx: Context, *, waifu: str | None) -> None:
+    async def waifu(self, ctx: MafuContext, *, waifu: str | None) -> None:
         if waifu:
             waifu = waifu.replace(' ', '_')
             characters = await get_waifu(ctx.bot.session, waifu)
@@ -63,7 +68,7 @@ class Waifu(BaseCog):
         await WaifuSearchView.start(ctx, query=waifu)
 
     @waifu.command(name='favourites', help="Get your or user's favourited waifus", aliases=['fav'], with_app_command=True)
-    async def waifu_favourites(self, ctx: Context, user: discord.User = commands.Author) -> None:
+    async def waifu_favourites(self, ctx: MafuContext, user: discord.User = commands.Author) -> None:
         show_nsfw = (
             ctx.channel.is_nsfw()
             if not isinstance(
@@ -74,11 +79,15 @@ class Waifu(BaseCog):
         )
 
         query = """SELECT * FROM WaifuFavourites WHERE user_id = $1""" + (' AND nsfw = $2' if show_nsfw is False else '')  # noqa: S608
+        args = [
+            user.id,
+        ]
 
+        if show_nsfw is False:
+            args.append(show_nsfw)
         fav_entries = await self.bot.pool.fetch(
             query,
-            user.id,
-            show_nsfw,
+            *args,
         )
 
         if not fav_entries:

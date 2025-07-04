@@ -6,16 +6,22 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utils import AlreadyBlacklistedError, BaseCog, BlacklistData, BotEmojis, NotBlacklistedError
-from utils.errors import MafuyuError
+from utilities.bases.cog import MafuCog
+from utilities.constants import BotEmojis
+from utilities.converters import TimeConverter
+from utilities.errors import AlreadyBlacklistedError, MafuyuError, NotBlacklistedError
+from utilities.types import BlacklistData
 
 if TYPE_CHECKING:
-    from utils import Context, Mafuyu
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
 
+dt_param = commands.parameter(converter=TimeConverter, default=None)
 
-class Blacklist(BaseCog):
+
+class Blacklist(MafuCog):
     _command_attempts: dict[int, int]
 
     def __init__(self, bot: Mafuyu) -> None:
@@ -43,7 +49,7 @@ class Blacklist(BaseCog):
         description='The command which handles bot blacklists',
     )
     @commands.is_owner()
-    async def blacklist_cmd(self, ctx: Context) -> None:
+    async def blacklist_cmd(self, ctx: MafuContext) -> None:
         bl_guild_count = len([
             entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'guild'
         ])
@@ -54,7 +60,7 @@ class Blacklist(BaseCog):
 
     @blacklist_cmd.command(name='show', description='Get information about a blacklist entry if any', aliases=['info'])
     async def blacklist_info(
-        self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild
+        self, ctx: MafuContext, snowflake: discord.User | discord.Member | discord.Guild
     ) -> discord.Message:
         bl = self.bot.is_blacklisted(snowflake)
         if not bl:
@@ -66,33 +72,29 @@ class Blacklist(BaseCog):
     @blacklist_cmd.command(name='add', description='Add a user or server to the blacklist')
     async def blacklist_add(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         snowflake: discord.User | discord.Member | discord.Guild,
-        until: str | None,
+        until: datetime.datetime | None = dt_param,
         *,
         reason: str = 'No reason provided',
     ) -> None:
         if snowflake.id in WHITELISTED_GUILDS:
             msg = 'You cannot blacklist this guilld.'
             raise commands.CheckFailure(msg)
-        bl_until = None
-        if until:
-            bl_until = await self._handle_datetime_argument(ctx, until)
-            if not bl_until:
-                return
 
         try:
-            await self.add(snowflake, lasts_until=bl_until, reason=reason)
+            await self.add(snowflake, lasts_until=until, reason=reason)
 
         except AlreadyBlacklistedError as err:
             content = str(err)
             await ctx.reply(content)
 
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
-        return
 
     @blacklist_cmd.command(name='remove', description='Remove a user or server from blacklist')
-    async def blacklist_remove(self, ctx: Context, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
+    async def blacklist_remove(
+        self, ctx: MafuContext, snowflake: discord.User | discord.Member | discord.Guild | int
+    ) -> None:
         try:
             await self.remove(snowflake)
 
@@ -103,32 +105,37 @@ class Blacklist(BaseCog):
 
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
-    async def bot_check_once(self, ctx: Context) -> bool:
+    async def bot_check_once(self, ctx: MafuContext) -> bool:
         """
         Blacklist check ran every command.
 
         Parameters
         ----------
-        ctx : Context
-            The commands.Context from the check
+        ctx : MafuContext
+            The commands.MafuContext from the check
 
         Returns
         -------
         bool
             If the command should be run
 
+        Raises
+        ------
+        MafuyuError
+            Error raised to ignore
+
         """
         if data := self.bot.is_blacklisted(ctx.author):
-            if await self._pre_check(ctx.author, data):
-                return True
-            await self.handle_user_blacklist(ctx, ctx.author, data)
-            raise MafuyuError  # noqa: DOC501
+            if await self._pre_check(ctx.author, data) is False:
+                await self.handle_user_blacklist(ctx, ctx.author, data)
+                raise MafuyuError
+            return True
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
-            if await self._pre_check(ctx.guild, data):
-                return True
-            await self.handle_guild_blacklist(ctx, ctx.guild, data)
-            raise MafuyuError
+            if await self._pre_check(ctx.guild, data) is False:
+                await self.handle_guild_blacklist(ctx, ctx.guild, data)
+                raise MafuyuError
+            return True
 
         # TODO(Depreca1ed): Make custom errors and have them handled as ignored.
 
@@ -155,19 +162,23 @@ class Blacklist(BaseCog):
             If user is still blacklisted
 
         """
-        if data.lasts_until and datetime.datetime.now() > data.lasts_until:
+        if not data.lasts_until:
+            return False  # It's permanent
+        if datetime.datetime.now().astimezone(datetime.UTC) > data.lasts_until.astimezone(datetime.UTC):
             await self.remove(snowflake)
             return True
         return False
 
-    async def handle_user_blacklist(self, ctx: Context, user: discord.User | discord.Member, data: BlacklistData) -> None:
+    async def handle_user_blacklist(
+        self, ctx: MafuContext, user: discord.User | discord.Member, data: BlacklistData
+    ) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted user.
 
         Parameters
         ----------
-        ctx : Context
-            The commands.Context from the check
+        ctx : MafuContext
+            The commands.MafuContext from the check
         user : discord.User | discord.Member
             The blacklisted User
         data : BlacklistData
@@ -198,17 +209,17 @@ class Blacklist(BaseCog):
 
         return
 
-    async def handle_guild_blacklist(self, ctx: Context | None, guild: discord.Guild, data: BlacklistData) -> None:
+    async def handle_guild_blacklist(self, ctx: MafuContext | None, guild: discord.Guild, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted guild.
 
-        This function is also used in the on_guild_join event thus the optional context argument.
+        This function is also used in the on_guild_join event thus the optional MafuContext argument.
 
 
         Parameters
         ----------
-        ctx : Context | None
-            The commands.Context from the check. Will be optional when used in the event.
+        ctx : MafuContext | None
+            The commands.MafuContext from the check. Will be optional when used in the event.
         guild : discord.Guild
             The blacklisted Guild
         data : BlacklistData
@@ -233,24 +244,6 @@ class Blacklist(BaseCog):
 
         if channel:
             await channel.send(content=content)
-
-    async def _handle_datetime_argument(self, ctx: Context, dt: str) -> None | datetime.datetime:
-        suffixes = {
-            's': 1,
-            'm': 60,
-            'h': 3600,
-            'd': 86400,
-            'mo': 2592000,
-            'y': 2592000 * 12,
-        }
-
-        if dt[-1:] not in suffixes:
-            await ctx.reply(f"{ctx.author.mention}, i can't understand the time you provided.")
-            return None
-        parsed = suffixes[dt[-1:]]
-        c = int(dt[:-1]) if dt[-2:] != 'mo' else int(dt[-2:])
-        final = c * parsed
-        return datetime.datetime.now() + datetime.timedelta(seconds=final)
 
     async def add(
         self,
@@ -289,7 +282,7 @@ class Blacklist(BaseCog):
 
         if entry:
             check = await self._pre_check(snowflake, entry)
-            if check:
+            if check is False:
                 raise AlreadyBlacklistedError(snowflake, reason=entry.reason, until=entry.lasts_until)
         blacklist_type = 'user' if isinstance(snowflake, discord.User | discord.Member) else 'guild'
 

@@ -6,13 +6,15 @@ from typing import TYPE_CHECKING, Literal
 import discord
 from discord.ext import commands
 
-from utils import BaseCog, BotEmojis, Embed, better_string, generate_timestamp_string
+from utilities.bases.cog import MafuCog
+from utilities.constants import BotEmojis
+from utilities.embed import Embed
+from utilities.functions import fmt_str, timestamp_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from utils import Context
-
+    from utilities.bases.context import MafuContext
 
 BOT_FARM_THRESHOLD = 75
 BLACKLIST_COLOUR = discord.Colour.from_str('#ccaa88')
@@ -32,7 +34,7 @@ def guild_embed(
         description=(
             f'- **Owner:** {guild.owner.mention if guild.owner else f"<@{guild.owner_id}>"} (`{guild.owner_id}`)\n'
             f'- **ID: ** {guild.id}\n'
-            f'- **Created:** {generate_timestamp_string(guild.created_at)}\n'
+            f'- **Created:** {timestamp_str(guild.created_at, with_time=True)}\n'
             f'- **Member Count:** `{guild.member_count}`\n'
         ),
     )
@@ -47,7 +49,7 @@ def guild_embed(
         embed.colour = BLACKLIST_COLOUR
         embed_field_s.append('- This guild is blacklisted.')
 
-    embed.add_field(value=better_string(embed_field_s, seperator='\n'))
+    embed.add_field(value=fmt_str(embed_field_s, seperator='\n'))
 
     # I dont really care about the colour if they are both.
 
@@ -60,7 +62,7 @@ def find_base_channel(channels: Sequence[discord.abc.GuildChannel]) -> discord.a
     return channels[0] if channels else None
 
 
-class Guild(BaseCog):
+class Guild(MafuCog):
     @commands.Cog.listener('on_guild_join')
     async def guild_join(self, guild: discord.Guild) -> None:
         is_blacklisted = self.bot.is_blacklisted(guild)
@@ -99,7 +101,7 @@ class Guild(BaseCog):
         await self.bot.logger.send(embed=embed)
 
     @commands.command(name='leave')
-    async def guild_leave_cmd(self, ctx: Context, guild: discord.Guild = commands.CurrentGuild) -> None:
+    async def guild_leave_cmd(self, ctx: MafuContext, guild: discord.Guild = commands.CurrentGuild) -> None:
         await guild.leave()
         with contextlib.suppress(discord.Forbidden):
             await ctx.message.add_reaction(BotEmojis.GREEN_TICK)

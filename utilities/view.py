@@ -5,16 +5,30 @@ from typing import TYPE_CHECKING, Self
 
 import discord
 
-from utils import BotEmojis, Embed, better_string
+from utilities.constants import BotEmojis
+from utilities.embed import Embed
+from utilities.functions import fmt_str
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from utils import Context, Mafuyu
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 __all__ = ('BaseView', 'PermissionView')
 
-CHAR_LIMIT = 2000
+
+class BaseView(discord.ui.View):
+    message: discord.Message | None
+
+    def __init__(self, *, timeout: float = 180.0) -> None:
+        super().__init__(timeout=timeout)
+
+    async def on_timeout(self) -> None:
+        with contextlib.suppress(discord.errors.NotFound):
+            if hasattr(self, 'message') and self.message:
+                await self.message.edit(view=None)
+        self.stop()
 
 
 PERMISSIONS_STRUCTURE = {
@@ -109,22 +123,9 @@ def p_string(p: str) -> str:
     return f' **|** `{p.replace("_", " ").title()}`'
 
 
-class BaseView(discord.ui.View):
-    message: discord.Message | None
-
-    def __init__(self, *, timeout: float = 180.0) -> None:
-        super().__init__(timeout=timeout)
-
-    async def on_timeout(self) -> None:
-        with contextlib.suppress(discord.errors.NotFound):
-            if hasattr(self, 'message') and self.message:
-                await self.message.edit(view=None)
-        self.stop()
-
-
 class PermissionView(BaseView):
     def __init__(
-        self, ctx: Context, *, target: discord.Member | discord.Role | None = None, permissions: discord.Permissions
+        self, ctx: MafuContext, *, target: discord.Member | discord.Role | None = None, permissions: discord.Permissions
     ) -> None:
         self.ctx = ctx
         self.target = target
@@ -160,7 +161,7 @@ class PermissionView(BaseView):
 
             embed.add_field(
                 name=str(get_permission_emoji(permissions=current_bools)) + p_string(p) + ' Permissions',
-                value=better_string(
+                value=fmt_str(
                     ['> ' + str(get_permission_emoji(permission=perm[1])) + p_string(perm[0]) for perm in current],
                     seperator='\n',
                 )

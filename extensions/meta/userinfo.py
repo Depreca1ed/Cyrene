@@ -6,22 +6,25 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utils import BaseCog, Embed, PermissionView, better_string, generate_timestamp_string
+from utilities.bases.cog import MafuCog
+from utilities.embed import Embed
+from utilities.functions import fmt_str, timestamp_str
+from utilities.view import PermissionView
 
 if TYPE_CHECKING:
-    from utils import Context
+    from utilities.bases.context import MafuContext
 
 
 USER_DATA_OBJECT_COUNT = 5
 
 
-class Userinfo(BaseCog):
+class Userinfo(MafuCog):
     @commands.hybrid_command(name='whois', description='Get information about a user', aliases=['userinfo', 'who'])
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def whois(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         user: discord.Member | discord.User = commands.Author,
     ) -> None:
         embed = Embed(
@@ -34,7 +37,7 @@ class Userinfo(BaseCog):
         user_info: list[str | None] = [
             f'-# **Mutual Servers:** {len(user.mutual_guilds)}' if user.mutual_guilds else None,
             f'- **ID:** `{user.id}`',
-            f'- **Created:** {generate_timestamp_string(user.created_at)}',
+            f'- **Created:** {timestamp_str(user.created_at, with_time=True)}',
         ]
 
         view = None
@@ -55,14 +58,14 @@ class Userinfo(BaseCog):
             )
 
             member_info = [
-                (f'- **Joined:** {generate_timestamp_string(user.joined_at)}' if user.joined_at else None),
+                (f'- **Joined:** {timestamp_str(user.joined_at, with_time=True)}' if user.joined_at else None),
                 f'- **Roles: ** {roles_string}' if valid_roles else None,
             ]
 
             if member_info:
                 user_info.extend(member_info)
 
-        embed.description = better_string(
+        embed.description = fmt_str(
             user_info,
             seperator='\n',
         )
@@ -88,7 +91,7 @@ class Userinfo(BaseCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def avatar(
         self,
-        ctx: Context,
+        ctx: MafuContext,
         user: discord.User | discord.Member = commands.Author,
         *,
         server_avatar: bool = True,
@@ -98,7 +101,7 @@ class Userinfo(BaseCog):
         embed = Embed(title=f"{user}'s avatar", colour=user.color).set_image(url=avatar.url)
 
         filetypes = set(discord.asset.VALID_ASSET_FORMATS if avatar.is_animated() else discord.asset.VALID_STATIC_FORMATS)
-        urls_string = better_string(
+        urls_string = fmt_str(
             [f'[{filetype.upper()}]({avatar.with_format(filetype)})' for filetype in filetypes],  # pyright: ignore[reportArgumentType]
             seperator=' **|** ',
         )
@@ -110,7 +113,7 @@ class Userinfo(BaseCog):
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()
-    async def guild_avatar(self, ctx: Context) -> discord.Message:
+    async def guild_avatar(self, ctx: MafuContext) -> discord.Message:
         if not ctx.guild:
             msg = 'Guild not found'
             raise commands.GuildNotFound(msg)
@@ -123,7 +126,7 @@ class Userinfo(BaseCog):
 
         filetypes = set(discord.asset.VALID_ASSET_FORMATS if icon.is_animated() else discord.asset.VALID_STATIC_FORMATS)
 
-        urls_string = better_string(
+        urls_string = fmt_str(
             [f'[{filetype.upper()}]({icon.with_format(filetype)})' for filetype in filetypes],  # pyright: ignore[reportArgumentType]
             seperator=' **|** ',
         )

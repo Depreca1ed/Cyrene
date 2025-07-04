@@ -66,4 +66,26 @@ CREATE TABLE IF NOT EXISTS Feature (
     allowed BOOLEAN NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS Timers (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    reserved_type INTEGER,
+    expires TIMESTAMP WITH TIME ZONE NOT NULL,
+    data JSONB
+);
+
+CREATE TABLE IF NOT EXISTS GachaData (
+    user_id BIGINT PRIMARY KEY,
+    autoremind BOOLEAN DEFAULT False
+);
+
+CREATE TABLE IF NOT EXISTS GachaPulledCards (
+    user_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL,
+    card_id INTEGER NOT NULL,
+    card_name TEXT NOT NULL,
+    rarity INTEGER NOT NULL,
+    PRIMARY KEY (user_id, message_id, card_id)
+);
+
 COMMIT;

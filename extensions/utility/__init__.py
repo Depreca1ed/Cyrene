@@ -9,17 +9,18 @@ import discord
 from discord.ext import commands
 from jishaku.paginators import PaginatorInterface, WrappedFilePaginator
 
-from utils import BaseCog
+from utilities.bases.cog import MafuCog
 
 if TYPE_CHECKING:
-    from utils import Context, Mafuyu
+    from utilities.bases.bot import Mafuyu
+    from utilities.bases.context import MafuContext
 
 
-class Utility(BaseCog, name='Utility'):
+class Utility(MafuCog, name='Utility'):
     """Some useful utility commands."""
 
     @commands.command(name='file-to-pages', description='Turns a file into a pages to browse through', aliases=['ftp'])
-    async def ftp(self, ctx: Context, attachment: discord.Attachment | None) -> discord.Message | PaginatorInterface:
+    async def ftp(self, ctx: MafuContext, attachment: discord.Attachment | None) -> discord.Message | PaginatorInterface:
         if not attachment and ctx.message.reference and isinstance(ctx.message.reference.resolved, discord.Message):
             attachment = ctx.message.reference.resolved.attachments[0]
 
@@ -36,7 +37,7 @@ class Utility(BaseCog, name='Utility'):
         interface = PaginatorInterface(self.bot, paginator)
         return await interface.send_to(ctx)
 
-    async def _basic_cleanup_strategy(self, ctx: Context, search: int) -> dict[str, int]:
+    async def _basic_cleanup_strategy(self, ctx: MafuContext, search: int) -> dict[str, int]:
         count = 0
         async for msg in ctx.history(limit=search, before=ctx.message):
             if msg.author == ctx.me and not (msg.mentions or msg.role_mentions):
@@ -44,7 +45,7 @@ class Utility(BaseCog, name='Utility'):
                 count += 1
         return {'Bot': count}
 
-    async def _complex_cleanup_strategy(self, ctx: Context, search: int) -> None | Counter[str]:
+    async def _complex_cleanup_strategy(self, ctx: MafuContext, search: int) -> None | Counter[str]:
         prefixes = tuple(self.bot.get_prefixes(ctx.guild))  # thanks startswith
 
         def check(m: discord.Message) -> bool:
@@ -56,7 +57,7 @@ class Utility(BaseCog, name='Utility'):
         deleted = await ctx.channel.purge(limit=search, check=check, before=ctx.message)
         return Counter(m.author.display_name for m in deleted)
 
-    async def _regular_user_cleanup_strategy(self, ctx: Context, search: int) -> None | Counter[str]:
+    async def _regular_user_cleanup_strategy(self, ctx: MafuContext, search: int) -> None | Counter[str]:
         prefixes = tuple(self.bot.get_prefixes(ctx.guild))
 
         def check(m: discord.Message) -> bool:
@@ -70,7 +71,7 @@ class Utility(BaseCog, name='Utility'):
 
     @commands.command()
     @commands.guild_only()
-    async def cleanup(self, ctx: Context, search: int = 100) -> None:
+    async def cleanup(self, ctx: MafuContext, search: int = 100) -> None:
         strategy = self._basic_cleanup_strategy
 
         if not isinstance(ctx.author, discord.Member) or not isinstance(ctx.me, discord.Member):
