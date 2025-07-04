@@ -9,13 +9,8 @@ import jishaku
 import mystbin
 from discord.ext import commands
 
-<<<<<<< HEAD:utils/subclass.py
-import config
+from utilities.help_command import MafuHelpCommand
 
-from . import BASE_COLOUR, MafuHelpCommand
-
-=======
->>>>>>> origin/main:utilities/bases/bot.py
 if TYPE_CHECKING:
     from collections.abc import Iterable
 

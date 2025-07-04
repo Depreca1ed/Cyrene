@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any
 
 from discord.ext import commands
 
-from utils.constants import BotEmojis
-from utils.embed import Embed
-from utils.helper_functions import better_string
+from utilities.constants import BotEmojis
+from utilities.embed import Embed
+from utilities.functions import fmt_str
 
 if TYPE_CHECKING:
     from discord.app_commands import AppCommandContext, AppInstallationType
@@ -92,7 +92,7 @@ class MafuHelpCommand(commands.HelpCommand):
             allowed_installs = self._get_command_installs(command.app_command)
             embed.add_field(
                 name=f'{BotEmojis.SLASH} | Slash command',
-                value=better_string(
+                value=fmt_str(
                     [
                         '- **Can run in :** ' + ', '.join(self._get_context_strings(allowed_context))
                         if allowed_context

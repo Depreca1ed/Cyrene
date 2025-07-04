@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import contextlib
-import datetime
 import re
 from typing import TYPE_CHECKING
 
@@ -155,7 +154,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction("<:ClockGuy:1384518877358198814>")
+                await message.add_reaction('<:ClockGuy:1384518877358198814>')
 
     @commands.hybrid_group(name='gacha', description='Handles Anicord Gacha Bot', fallback='status')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)

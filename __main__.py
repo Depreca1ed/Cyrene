@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -28,6 +29,9 @@ if TYPE_CHECKING:
     from collections.abc import Generator
 
 
+log = logging.getLogger(__name__)
+
+
 @contextlib.contextmanager
 def setup_logging() -> Generator[Any, Any, Any]:
     discord.utils.setup_logging()
@@ -42,8 +46,8 @@ async def create_bot_pool() -> asyncpg.Pool[asyncpg.Record]:
 
     if not pool or pool.is_closing():
         msg = 'Failed to create a pool.'
-        raise RuntimeError(msg)
-
+        log.error(msg)
+        sys.exit()
     with Path('schema.sql').open(encoding='utf-8') as file:  # noqa: ASYNC230
         await pool.execute(file.read())
 
