@@ -6,8 +6,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN apt-get -y update
-RUN add-apt-repository ppa:zhangsongcui3371/fastfetch
-RUN apt-get -y install git fastfetch
+RUN apt-get -y install git
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
