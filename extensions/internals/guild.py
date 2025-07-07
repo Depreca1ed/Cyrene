@@ -7,14 +7,12 @@ import discord
 from discord.ext import commands
 
 from utilities.bases.cog import MafuCog
-from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from utilities.bases.context import MafuContext
 
 BOT_FARM_THRESHOLD = 75
 BLACKLIST_COLOUR = discord.Colour.from_str('#ccaa88')
@@ -99,9 +97,3 @@ class Guild(MafuCog):
         )
 
         await self.bot.logger.send(embed=embed)
-
-    @commands.command(name='leave')
-    async def guild_leave_cmd(self, ctx: MafuContext, guild: discord.Guild = commands.CurrentGuild) -> None:
-        await guild.leave()
-        with contextlib.suppress(discord.Forbidden):
-            await ctx.message.add_reaction(BotEmojis.GREEN_TICK)

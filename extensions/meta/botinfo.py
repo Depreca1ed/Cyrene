@@ -110,17 +110,3 @@ class BotInformation(MafuCog):
         embed.set_footer(text=f'Made in Python{platform.python_version()} using discord.py{discord.__version__}')
 
         await ctx.send(embed=embed)
-
-    @commands.hybrid_command(name='support', description='Get invite link to the support server for the bot')
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=True)
-    async def support(self, ctx: MafuContext) -> None:
-        await ctx.reply(str(self.bot.support_invite))
-
-    @commands.hybrid_command(
-        name='invite', description='Get the URL for inviting me to a server or adding it to your account'
-    )
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.allowed_installs(guilds=True, users=True)
-    async def invite(self, ctx: MafuContext) -> None:
-        await ctx.reply(str(self.bot.invite_url))

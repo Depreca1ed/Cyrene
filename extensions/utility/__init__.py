@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import operator
 from collections import Counter
-from io import BytesIO
 from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
-from jishaku.paginators import PaginatorInterface, WrappedFilePaginator
 
 from utilities.bases.cog import MafuCog
 
@@ -18,24 +16,6 @@ if TYPE_CHECKING:
 
 class Utility(MafuCog, name='Utility'):
     """Some useful utility commands."""
-
-    @commands.command(name='file-to-pages', description='Turns a file into a pages to browse through', aliases=['ftp'])
-    async def ftp(self, ctx: MafuContext, attachment: discord.Attachment | None) -> discord.Message | PaginatorInterface:
-        if not attachment and ctx.message.reference and isinstance(ctx.message.reference.resolved, discord.Message):
-            attachment = ctx.message.reference.resolved.attachments[0]
-
-        if not attachment:
-            raise commands.MissingRequiredArgument(commands.parameter(displayed_name='attachment'))
-
-        if attachment.size > 1024 * 1024 * 10:
-            return await ctx.send('File larged than 10MB')
-
-        if attachment.content_type and not attachment.content_type.startswith('text'):
-            return await ctx.send('Not a text document')
-
-        paginator = WrappedFilePaginator(BytesIO(await attachment.read()), max_size=1980)
-        interface = PaginatorInterface(self.bot, paginator)
-        return await interface.send_to(ctx)
 
     async def _basic_cleanup_strategy(self, ctx: MafuContext, search: int) -> dict[str, int]:
         count = 0

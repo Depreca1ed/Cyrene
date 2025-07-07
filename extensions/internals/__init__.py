@@ -30,13 +30,8 @@ class Internals(Blacklist, Developer, ErrorHandler, Guild, name='Developer'):
             await self.bot.process_commands(after)
 
     @commands.Cog.listener('on_reaction_add')
-    async def delete_message(self, reaction: discord.Reaction, user: discord.Member | discord.User) -> None:
-        if (
-            await self.bot.is_owner(user)
-            and reaction.emoji
-            and reaction.emoji == '🗑️'
-            and reaction.message.author.id == self.bot.user.id
-        ):
+    async def delete_message(self, reaction: discord.Reaction, _: discord.Member | discord.User) -> None:
+        if reaction.emoji and reaction.emoji == '🗑️' and reaction.message.author.id == self.bot.user.id:
             with contextlib.suppress(discord.HTTPException):
                 await reaction.message.delete()
 
