@@ -8,7 +8,7 @@ import discord
 from discord.ext import menus
 
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
-from extensions.misc.AnicordGacha.constants import PULL_INTERVAL, RARITY_EMOJIS
+from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import get_burn_worths
 from utilities.bases.bot import Mafuyu
 from utilities.embed import Embed
@@ -27,17 +27,14 @@ class GachaPullView(BaseView):
         self,
         ctx: MafuContext,
         user: discord.User | discord.Member,
-        pull_message: discord.Message | None,
         gacha_user: GachaUser,
     ) -> None:
         super().__init__()
         self.ctx = ctx
         self.user = user
-        self.pull_message = pull_message
         self.gacha_user = gacha_user
 
         self.__pulls_synced: bool = False
-        self.__pulls: list[PulledCard] = []
 
         self._update_display()
 
@@ -47,34 +44,10 @@ class GachaPullView(BaseView):
         ctx: MafuContext,
         *,
         user: discord.User | discord.Member,
-        pull_message: discord.Message | None,
     ) -> discord.InteractionCallbackResponse[Mafuyu] | discord.Message | None:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
-        c = cls(ctx, user, pull_message, gacha_user)
-
-        if c.pull_message:
-            is_message_syncronised: bool = bool(
-                await ctx.bot.pool.fetchval(
-                    """
-                SELECT
-                    EXISTS (
-                        SELECT
-                            *
-                        FROM
-                            GachaPulledCards
-                        WHERE
-                            user_id = $1
-                            AND message_id = $2
-                    );
-                """,
-                    user.id,
-                    c.pull_message.id,
-                )
-            )
-
-            c.__pulls_synced = is_message_syncronised
-            c._update_display()
+        c = cls(ctx, user, gacha_user)
 
         embed = c.embed()
 
@@ -88,13 +61,9 @@ class GachaPullView(BaseView):
         if self.gacha_user.timer is None:
             s.append('- You do not have a pull reminder setup yet.')
 
-        now = datetime.datetime.now(tz=datetime.UTC)
-
         next_pull = (
             self.gacha_user.timer.expires
             if self.gacha_user.timer  # If we have a pull timer already, use that
-            else self.pull_message.created_at + PULL_INTERVAL
-            if self.pull_message and self.pull_message.created_at + PULL_INTERVAL >= now
             else None
         )
 
@@ -102,20 +71,6 @@ class GachaPullView(BaseView):
             s.append(f'> **Next Pull in :** {timestamp_str(next_pull, with_time=True)}')
             if self.gacha_user.timer:
                 s.append('-# You will be reminded in DMs when you can pull again.')
-
-        if self.__pulls:
-            burn_worth = get_burn_worths(self.__pulls)
-
-            p_s: list[str] = []
-            for k, v in burn_worth.items():
-                p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
-
-            p_s.append(f'> Total: `{sum(burn_worth.values())}` blombos')
-
-            embed.add_field(
-                name='Estimated burn worth:',
-                value=fmt_str(p_s, seperator='\n'),
-            )
 
         embed.description = fmt_str(s, seperator='\n')
 
@@ -126,13 +81,7 @@ class GachaPullView(BaseView):
 
         is_timer = self.gacha_user.timer is not None
 
-        if self.pull_message:
-            self.add_item(self.remind_me_button)
-
-            if self.__pulls_synced is False:
-                self.add_item(self.sync_pulls)
-
-        elif self.pull_message is None and is_timer:
+        if is_timer:
             self.add_item(self.remind_me_button)
 
         self.remind_me_button.style = discord.ButtonStyle.red if is_timer else discord.ButtonStyle.green
@@ -163,52 +112,7 @@ class GachaPullView(BaseView):
                 view=self,
             )
 
-        if not self.pull_message:
-            # Never will occur
-            await interaction.response.defer()
-            return None
-
-        remind_time = self.pull_message.created_at + PULL_INTERVAL
-
-        self.gacha_user.timer = await self.ctx.bot.timer_manager.create_timer(
-            remind_time,
-            user=interaction.user,
-            reserved_type=ReservedTimerType.ANICORD_GACHA,
-        )
-        self._update_display()
-
-        return await interaction.response.edit_message(
-            content='Successfully created a pull reminder',
-            embed=self.embed(),
-            view=self,
-        )
-
-    @discord.ui.button(emoji='\U0001f4e5', label='Syncronize pulls', style=discord.ButtonStyle.grey)
-    async def sync_pulls(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
-        assert self.pull_message is not None
-
-        embed = self.pull_message.embeds[0]
-
-        assert embed.description is not None
-
-        pulls = [_ for _ in (PulledCard.parse_from_str(_) for _ in embed.description.split('\n')) if _ is not None]
-
-        for card in pulls:
-            await self.gacha_user.add_card(
-                self.ctx.bot.pool,
-                card=card,
-                pull_message=self.pull_message,
-            )
-            self.__pulls.append(card)
-
-        self.__pulls_synced = True
-        self._update_display()
-
-        await interaction.response.edit_message(
-            content=f'Your {len(pulls)} cards have been added to tracking database',
-            embed=self.embed(),
-            view=self,
-        )
+        return None
 
     @discord.ui.button(label='Toggle auto remind')
     async def auto_remind_toggle(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:

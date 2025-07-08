@@ -110,7 +110,7 @@ class AniCordGacha(MafuCog):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def gacha_group(self, ctx: MafuContext) -> None:
-        await GachaPullView.start(ctx, user=ctx.author, pull_message=None)
+        await GachaPullView.start(ctx, user=ctx.author)
 
     @commands.hybrid_command(
         name='statistics',
