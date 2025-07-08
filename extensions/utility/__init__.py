@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import operator
+import pathlib
+import random
 from collections import Counter
 from typing import TYPE_CHECKING
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
+from utilities.bases.bot import Mafuyu
 from utilities.bases.cog import MafuCog
 
 if TYPE_CHECKING:
@@ -16,6 +19,21 @@ if TYPE_CHECKING:
 
 class Utility(MafuCog, name='Utility'):
     """Some useful utility commands."""
+
+    def __init__(self, bot: Mafuyu) -> None:
+        super().__init__(bot)
+
+        self.avatar_rotation.start()
+
+    def cog_unload(self) -> None:
+        self.avatar_rotation.stop()
+
+    @tasks.loop(hours=12)
+    async def avatar_rotation(self) -> None:
+        files = list(pathlib.Path('assets/images/Mafuyu').iterdir())
+        avatar = random.choice(files)  # noqa: S311
+
+        await self.bot.user.edit(avatar=avatar.read_bytes())
 
     async def _basic_cleanup_strategy(self, ctx: MafuContext, search: int) -> dict[str, int]:
         count = 0
