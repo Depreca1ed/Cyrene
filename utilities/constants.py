@@ -22,6 +22,13 @@ class BotEmojis:
     GREY_TICK = discord.PartialEmoji(name='grey_tick', id=1278414780427796631)
     GREEN_TICK = discord.PartialEmoji(name='greentick', id=1297976474141200529, animated=True)
     RED_CROSS = discord.PartialEmoji(name='redcross', id=1315758805585498203, animated=True)
+
     STATUS_ONLINE = discord.PartialEmoji(name='status_online', id=1328344385783468032)
+
     PASS = discord.PartialEmoji(name='PASS', id=1339697021942108250)
     SMASH = discord.PartialEmoji(name='SMASH', id=1339697033589559296)
+
+    ON_SWITCH = discord.PartialEmoji(name='on_switch', id=1392183715420966963)
+    OFF_SWITCH = discord.PartialEmoji(name='off_switch', id=1392183726569685034)
+
+    SLASH = discord.PartialEmoji(name='slash', id=1352388308046581880)

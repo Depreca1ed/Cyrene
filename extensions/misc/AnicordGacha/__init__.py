@@ -109,7 +109,7 @@ class AniCordGacha(MafuCog):
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def gacha_group(self, ctx: MafuContext) -> None:
+    async def gacha(self, ctx: MafuContext) -> None:
         await GachaPullView.start(ctx, user=ctx.author)
 
     @commands.hybrid_command(

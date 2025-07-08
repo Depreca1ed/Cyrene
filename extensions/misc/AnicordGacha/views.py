@@ -5,12 +5,14 @@ import operator
 from typing import TYPE_CHECKING, Self
 
 import discord
+import humanize
 from discord.ext import menus
 
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
 from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import get_burn_worths
 from utilities.bases.bot import Mafuyu
+from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 from utilities.pagination import Paginator
@@ -20,6 +22,10 @@ from utilities.view import BaseView
 if TYPE_CHECKING:
     from utilities.bases.bot import Mafuyu
     from utilities.bases.context import MafuContext
+
+
+def _switch(v: bool) -> discord.PartialEmoji:  # noqa: FBT001
+    return BotEmojis.ON_SWITCH if v is True else BotEmojis.OFF_SWITCH
 
 
 class GachaPullView(BaseView):
@@ -33,8 +39,6 @@ class GachaPullView(BaseView):
         self.ctx = ctx
         self.user = user
         self.gacha_user = gacha_user
-
-        self.__pulls_synced: bool = False
 
         self._update_display()
 
@@ -51,88 +55,108 @@ class GachaPullView(BaseView):
 
         embed = c.embed()
 
-        return await ctx.reply(embed=embed, view=c, ephemeral=True)
+        return await ctx.reply(embed=embed, view=c)
 
     def embed(self) -> Embed:
-        embed = Embed(title='Anicord Gacha Bot Helper', colour=self.user.color)
+        embed = Embed(colour=self.user.color)
 
         s: list[str] = []
 
         if self.gacha_user.timer is None:
             s.append('- You do not have a pull reminder setup yet.')
+        else:
+            next_pull = self.gacha_user.timer.expires
+            s.append(f'> **Next Pull :** {timestamp_str(next_pull, with_time=True)}')
 
-        next_pull = (
-            self.gacha_user.timer.expires
-            if self.gacha_user.timer  # If we have a pull timer already, use that
-            else None
-        )
+        config: list[str] = []
 
-        if next_pull:
-            s.append(f'> **Next Pull in :** {timestamp_str(next_pull, with_time=True)}')
-            if self.gacha_user.timer:
-                s.append('-# You will be reminded in DMs when you can pull again.')
+        config.extend((
+            f'### {_switch(self.gacha_user.config_data["autoremind"])} > Auto remind',
+            f'### {_switch(self.gacha_user.config_data["custom_remind_message"])} > Custom remind message',
+            f'### {_switch(self.gacha_user.config_data["custom_pull_reaction"])} > Custom pull reaction',
+        ))
 
-        embed.description = fmt_str(s, seperator='\n')
+        embed.description = fmt_str(s, seperator='\n') + '\n' + fmt_str(config, seperator='\n')
 
         return embed
 
     def _update_display(self) -> None:
         self.clear_items()
+        self.add_item(self.primary_select)
 
-        is_timer = self.gacha_user.timer is not None
+        options: list[discord.SelectOption] = []
 
-        if is_timer:
-            self.add_item(self.remind_me_button)
-
-        self.remind_me_button.style = discord.ButtonStyle.red if is_timer else discord.ButtonStyle.green
-        self.remind_me_button.label = 'Cancel reminder' if is_timer else 'Remind me'
-
-        self.add_item(self.auto_remind_toggle)
-        self.auto_remind_toggle.style = (
-            discord.ButtonStyle.green if self.gacha_user.config_data['autoremind'] else discord.ButtonStyle.red
-        )
-
-    @discord.ui.button(emoji='\U000023f0', label='Remind me', style=discord.ButtonStyle.gray)
-    async def remind_me_button(
-        self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]
-    ) -> None | discord.InteractionCallbackResponse[Mafuyu]:
-        # Bad implementation incoming
-
-        if self.gacha_user.timer:
-            await self.ctx.bot.timer_manager.cancel_timer(
-                user=interaction.user,
-                reserved_type=ReservedTimerType.ANICORD_GACHA,
-            )
-            self.gacha_user.timer = None  # Timer gone.
-            self._update_display()
-
-            return await interaction.response.edit_message(
-                content='Successfully removed pull reminder',
-                embed=self.embed(),
-                view=self,
+        if self.gacha_user.timer is not None:
+            options.append(
+                discord.SelectOption(
+                    label='Cancel reminder',
+                    value='cancel_reminder',
+                    emoji=BotEmojis.SLASH,
+                    description='Scheduled to remind in '
+                    + humanize.naturaldelta(
+                        self.gacha_user.timer.expires - discord.utils.utcnow(),
+                    ),
+                )
             )
 
-        return None
+        options.extend((
+            discord.SelectOption(
+                label='Automatically be reminded for pulls',
+                value='autoremind',
+                emoji=_switch(self.gacha_user.config_data['autoremind']),
+                description='Placeholder for an explainer',
+            ),
+            discord.SelectOption(
+                label='Custom remind message',
+                value='custom_remind_message',
+                emoji=_switch(self.gacha_user.config_data['custom_remind_message']),
+                description='The contents of the pull remind DM',
+            ),
+            discord.SelectOption(
+                label='Custom pull reaction',
+                value='custom_pull_reaction',
+                emoji=_switch(self.gacha_user.config_data['custom_pull_reaction']),
+                description='The reaction when autoremind is ON',
+            ),
+        ))
+        self.primary_select.options = options
 
-    @discord.ui.button(label='Toggle auto remind')
-    async def auto_remind_toggle(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
-        data = await self.ctx.bot.pool.fetchrow(
-            """
-            UPDATE GachaData
-            SET
-                autoremind = $1
-            WHERE
-                user_id = $2
-            RETURNING
-                *
-            """,
-            not self.gacha_user.config_data['autoremind'],
-            interaction.user.id,
-        )
-        if data:
-            self.gacha_user = GachaUser(self.user, timer=self.gacha_user.timer, config_data=data)
-        self._update_display()
-        await interaction.response.edit_message(embed=self.embed(), view=self)
+    @discord.ui.select(
+        placeholder='Select an argument to add',
+    )
+    async def primary_select(self, interaction: discord.Interaction[Mafuyu], select: discord.ui.Select[Self]) -> None:
+        match select.values[0]:
+            case 'cancel_reminder':
+                await self.ctx.bot.timer_manager.cancel_timer(
+                    user=interaction.user,
+                    reserved_type=ReservedTimerType.ANICORD_GACHA,
+                )
+                self.gacha_user.timer = None
+                self._update_display()
+                await interaction.response.edit_message(embed=self.embed(), view=self)
+                return
+
+            case 'autoremind':
+                data = await self.ctx.bot.pool.fetchrow(
+                    """
+                    UPDATE GachaData
+                    SET
+                        autoremind = $1
+                    WHERE
+                        user_id = $2
+                    RETURNING
+                        *
+                    """,
+                    not self.gacha_user.config_data['autoremind'],
+                    interaction.user.id,
+                )
+                if data:
+                    self.gacha_user = GachaUser(self.user, timer=self.gacha_user.timer, config_data=data)
+                self._update_display()
+                await interaction.response.edit_message(embed=self.embed(), view=self)
+                return
+            case _:
+                await interaction.response.send_message('Coming soon!', ephemeral=True)
 
     async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
         if interaction.user and interaction.user.id == self.user.id:
