@@ -20,6 +20,9 @@ if TYPE_CHECKING:
     from utilities.bases.context import MafuContext
 
 
+DEFAULT_REMIND_MESSAGE: str = "Hey! It's been 6 hours since you last pulled. You should pull again"
+
+
 class AniCordGacha(MafuCog):
     def __init__(self, bot: Mafuyu) -> None:
         super().__init__(bot)
@@ -30,7 +33,11 @@ class AniCordGacha(MafuCog):
             return
         with contextlib.suppress(discord.HTTPException):
             user = await self.bot.fetch_user(timer.user_id)
-            await user.send("Hey! It's been 6 hours since you last pulled. You should pull again")
+            gacha_user = await GachaUser.from_fetched_record(self.bot.pool, user=user)
+
+            remind_message = gacha_user.config_data['custom_remind_message'] or DEFAULT_REMIND_MESSAGE
+
+            await user.send(remind_message)
 
     @commands.Cog.listener('on_message')
     async def gacha_message_listener(self, message: discord.Message) -> None:

@@ -40,7 +40,7 @@ class GachaPullView(BaseView):
         self.user = user
         self.gacha_user = gacha_user
 
-        self._update_display()
+        self.update_display()
 
     @classmethod
     async def start(
@@ -72,7 +72,7 @@ class GachaPullView(BaseView):
 
         config.extend((
             f'### {_switch(self.gacha_user.config_data["autoremind"])} > Auto remind',
-            f'### {_switch(self.gacha_user.config_data["custom_remind_message"])} > Custom remind message',
+            f'### {_switch(bool(self.gacha_user.config_data["custom_remind_message"]))} > Custom remind message',
             f'### {_switch(self.gacha_user.config_data["custom_pull_reaction"])} > Custom pull reaction',
         ))
 
@@ -80,7 +80,7 @@ class GachaPullView(BaseView):
 
         return embed
 
-    def _update_display(self) -> None:
+    def update_display(self) -> None:
         self.clear_items()
         self.add_item(self.primary_select)
 
@@ -98,7 +98,6 @@ class GachaPullView(BaseView):
                     ),
                 )
             )
-
         options.extend((
             discord.SelectOption(
                 label='Automatically be reminded for pulls',
@@ -109,7 +108,7 @@ class GachaPullView(BaseView):
             discord.SelectOption(
                 label='Custom remind message',
                 value='custom_remind_message',
-                emoji=_switch(self.gacha_user.config_data['custom_remind_message']),
+                emoji=_switch(bool(self.gacha_user.config_data['custom_remind_message'])),
                 description='The contents of the pull remind DM',
             ),
             discord.SelectOption(
@@ -132,7 +131,7 @@ class GachaPullView(BaseView):
                     reserved_type=ReservedTimerType.ANICORD_GACHA,
                 )
                 self.gacha_user.timer = None
-                self._update_display()
+                self.update_display()
                 await interaction.response.edit_message(embed=self.embed(), view=self)
                 return
 
@@ -152,8 +151,18 @@ class GachaPullView(BaseView):
                 )
                 if data:
                     self.gacha_user = GachaUser(self.user, timer=self.gacha_user.timer, config_data=data)
-                self._update_display()
+                self.update_display()
                 await interaction.response.edit_message(embed=self.embed(), view=self)
+                return
+
+            case 'custom_remind_message':
+                await interaction.response.send_modal(
+                    GachaCustomInput(
+                        self.gacha_user,
+                        self,
+                        title='Enter message',
+                    ),
+                )
                 return
             case _:
                 await interaction.response.send_message('Coming soon!', ephemeral=True)
@@ -163,6 +172,54 @@ class GachaPullView(BaseView):
             return True
         await interaction.response.send_message('This is not for you', ephemeral=True)
         return False
+
+
+class GachaCustomInput(discord.ui.Modal):
+    gacha_input: discord.ui.TextInput[GachaPullView] = discord.ui.TextInput(
+        label='Enter custom remind message',
+        style=discord.TextStyle.long,
+        placeholder='Write $CLEAR to remove it',
+        required=True,
+        max_length=500,
+    )
+
+    def __init__(self, gacha_user: GachaUser, view: GachaPullView, *, title: str) -> None:
+        self.gacha_user = gacha_user
+        self.view = view
+        self.value: str | None = None
+        super().__init__(title=title)
+
+    async def on_submit(self, interaction: discord.Interaction[Mafuyu]) -> None:
+        value = self.gacha_input.value
+
+        if value == '$CLEAR':
+            value = None
+
+        user_config = await self.view.ctx.bot.pool.fetchrow(
+            """
+            UPDATE GachaData
+            SET
+                custom_remind_message = $1
+            WHERE
+                user_id = $2
+            RETURNING
+                *
+                """,
+            value,
+            self.gacha_user.user.id,
+        )
+
+        if not user_config:
+            return
+
+        self.view.gacha_user = GachaUser(
+            self.gacha_user.user,
+            timer=self.gacha_user.timer,
+            config_data=user_config,
+        )
+        self.view.update_display()
+
+        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
 
 
 class GachaPersonalCardsSorter(menus.ListPageSource):
