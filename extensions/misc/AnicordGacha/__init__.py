@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import re
+import random
 from typing import TYPE_CHECKING
 
 import discord
@@ -111,7 +112,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction('<:ClockGuy:1384518877358198814>')
+                await message.add_reaction(random.choice(message.guild.emojis))
 
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
