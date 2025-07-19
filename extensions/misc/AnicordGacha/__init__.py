@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-import re
 import random
+import re
 from typing import TYPE_CHECKING
 
 import discord
@@ -14,6 +14,8 @@ from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, PULL_INT
 from extensions.misc.AnicordGacha.utils import check_pullall_author as check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
+from utilities.functions import fmt_str as fmt_str
+from utilities.functions import timestamp_str
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -160,3 +162,12 @@ class AniCordGacha(MafuCog):
         ]
 
         await GachaStatisticsView.start(ctx, pulls=pulls, user=user)
+
+    @commands.hybrid_command(name='nextpull', description='Tells you when you can pull again')
+    @app_commands.allowed_installs(guilds=True, users=True)
+    async def next_pull(self, ctx: MafuContext, *, user: discord.User = commands.Author) -> discord.Message:
+        gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
+
+        if gacha_user.timer:
+            return await ctx.reply(f'**Next Pull :** {timestamp_str(gacha_user.timer.expires, with_time=True)}')
+        return await ctx.reply('Now.')
