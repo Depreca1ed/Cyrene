@@ -185,7 +185,7 @@ class Mafuyu(commands.AutoShardedBot):
 
     async def refresh_vars(self) -> None:
         """Set values to some bot constants."""
-        self._support_invite = await self.fetch_invite('https://discord.gg/kpGekJquZf')
+        self._support_invite = await self.fetch_invite('https://discord.gg/MZNYBatnNU')
 
         self.appinfo = await self.application_info()
 
