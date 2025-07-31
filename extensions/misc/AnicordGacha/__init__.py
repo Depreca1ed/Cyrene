@@ -163,7 +163,7 @@ class AniCordGacha(MafuCog):
 
         await GachaStatisticsView.start(ctx, pulls=pulls, user=user)
 
-    @commands.hybrid_command(name='nextpull', description='Tells you when you can pull again')
+    @commands.hybrid_command(name='nextpull', description='Tells you when you can pull again', aliases-["np"])
     @app_commands.allowed_installs(guilds=True, users=True)
     async def next_pull(self, ctx: MafuContext, *, user: discord.User = commands.Author) -> discord.Message:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
