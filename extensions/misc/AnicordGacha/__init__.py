@@ -169,5 +169,5 @@ class AniCordGacha(MafuCog):
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         if gacha_user.timer:
-            return await ctx.reply(f'**Next Pull :** {timestamp_str(gacha_user.timer.expires, with_time=True)}')
-        return await ctx.reply('Now.')
+            return await ctx.reply(f'You can cook {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
+        return await ctx.reply('COOK! NOW!')
