@@ -10,9 +10,8 @@ if TYPE_CHECKING:
 def get_burn_worths(pulls: list[PulledCard]) -> dict[int, int]:
     burn_worth: dict[int, int] = {}
     for c in pulls:
-        c_burn_worth = c.rarity * 5
+        c_burn_worth = c.rarity * 5 if c.rarity != 6 else 1000
         burn_worth[c.rarity] = burn_worth.get(c.rarity, 0) + c_burn_worth
-    burn_worth[6] = 1000
     return {k: burn_worth[k] for k in sorted(burn_worth)}
 
 
