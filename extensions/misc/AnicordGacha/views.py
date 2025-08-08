@@ -334,7 +334,7 @@ class GachaStatisticsView(BaseView):
 
         p_s: list[str] = []
         for k, v in burn_worths.items():
-            p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int(v / (5 * k))}]`: `{v}` blombos')
+            p_s.append(f'`{k}` {RARITY_EMOJIS[k]} `[{int((30 if k == 6 else v) / (5 * k))}]`: `{v}` blombos')
 
         p_s.append(f'> Total `[{len(self.current)}]`: `{sum(burn_worths.values())}` blombos')
 
