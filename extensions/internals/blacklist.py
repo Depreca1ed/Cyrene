@@ -188,7 +188,7 @@ class Blacklist(MafuCog):
         timestamp_wording = self._timestamp_wording(data.lasts_until)
         content = (
             f'{user.mention}, you are blacklisted from using {ctx.bot.user} for `{data.reason}` {timestamp_wording}. '
-            f'If you wish to appeal this blacklist, please join the [Support Server]( {self.bot.support_invite} ).'
+            f'If you wish to appeal this blacklist, please DM one of the bot owners. ).'
         )
 
         if isinstance(ctx.channel, discord.DMChannel):
