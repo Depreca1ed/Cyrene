@@ -466,6 +466,8 @@ class ErrorHandler(MafuCog):
         error = getattr(error, 'original', error)
 
         if isinstance(error, commands.CommandNotFound) or not ctx.command:
+            if self.bot.is_blacklisted(ctx.author):
+                return None
             cmd = ctx.invoked_with
             if not cmd:
                 return None
