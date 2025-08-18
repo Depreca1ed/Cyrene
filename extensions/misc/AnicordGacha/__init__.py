@@ -15,7 +15,6 @@ from extensions.misc.AnicordGacha.utils import check_pullall_author as check_pul
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
 from utilities.functions import fmt_str as fmt_str
-from utilities.functions import timestamp_str
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -114,7 +113,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction(random.choice(message.guild.emojis))
+                await message.add_reaction(random.choice(message.guild.emojis))  # pyright: ignore[reportOptionalMemberAccess]  # noqa: S311
 
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
