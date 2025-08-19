@@ -167,6 +167,9 @@ class AniCordGacha(MafuCog):
     async def next_pull(self, ctx: MafuContext, *, user: discord.User = commands.Author) -> discord.Message:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
+        if gacha_user.config_data['autoremind'] is False:
+            return await ctx.reply('You have disabled automatic reminders for pulls.')
+
         if gacha_user.timer:
             return await ctx.reply(f'You can cook {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
         return await ctx.reply('COOK! NOW!')
