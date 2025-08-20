@@ -188,7 +188,7 @@ class Blacklist(MafuCog):
         timestamp_wording = self._timestamp_wording(data.lasts_until)
         content = (
             f'{user.mention}, you are blacklisted from using {ctx.bot.user} for `{data.reason}` {timestamp_wording}. '
-            f'If you wish to appeal this blacklist, please DM one of the bot owners. ).'
+            f'If you wish to appeal this blacklist, please DM one of the bot owners.'
         )
 
         if isinstance(ctx.channel, discord.DMChannel):
@@ -202,8 +202,8 @@ class Blacklist(MafuCog):
 
         self._command_attempts[user.id] += 1
 
-        if attempt_check >= 5:
-            await ctx.channel.send(content)
+        if attempt_check >= 10:
+            await user.send(content)
             del self._command_attempts[user.id]
             return
 
