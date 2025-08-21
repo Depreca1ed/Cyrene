@@ -171,5 +171,6 @@ class AniCordGacha(MafuCog):
             return await ctx.reply('You have disabled automatic reminders for pulls.')
 
         if gacha_user.timer:
-            return await ctx.reply(f'You can cook {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
+            name = 'You' if ctx.author.id == user.id else str(user)
+            return await ctx.reply(f'{name} can cook {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
         return await ctx.reply('COOK! NOW!')
