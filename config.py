@@ -13,7 +13,7 @@ SUGGESTIONS_WEBHOOK_TOKEN: str = getenv('SUGGESTION_WEBHOOK')
 
 DATABASE_CRED: str = getenv('POSTGRES_URI')
 
-DEFAULT_PREFIX: str = getenv('DEFAULT_PREFIX')
+DEFAULT_PREFIX: list[str] = ["m.", "M."]
 
 OWNER_IDS: list[int] = json.loads(getenv('OWNER_IDS'))
 
