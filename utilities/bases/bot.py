@@ -142,7 +142,7 @@ class Mafuyu(commands.AutoShardedBot):
             A list of prefixes for a guild if provided. Defaults to base prefix
 
         """
-        return self.prefixes.get(guild.id, [DEFAULT_PREFIX]) if guild else [DEFAULT_PREFIX]
+        return self.prefixes.get(guild.id, DEFAULT_PREFIX) if guild else DEFAULT_PREFIX
 
     def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> BlacklistData | None:
         """
