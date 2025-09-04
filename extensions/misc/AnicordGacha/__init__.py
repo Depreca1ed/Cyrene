@@ -27,6 +27,7 @@ DEFAULT_REMIND_MESSAGE: str = "Hey! It's been 6 hours since you last pulled. You
 
 class AniCordGacha(MafuCog):
     def __init__(self, bot: Mafuyu) -> None:
+        self.user_cache = {}
         super().__init__(bot)
 
     @commands.Cog.listener('on_timer_expire')
@@ -55,10 +56,11 @@ class AniCordGacha(MafuCog):
 
         if not author_id_parsed:
             return
-        user = self.bot.get_user(author_id_parsed[0])
+        user = self.bot.get_user(author_id_parsed[0]) or self.user_cache.get(author_id_parsed[0])
 
         if user is None:
-            return
+            user = await self.bot.fetch_user(author_id_parsed[0])
+            self.user_cache[author_id_parsed[0]] = user
 
         is_message_syncronised: bool = bool(
             await self.bot.pool.fetchval(
