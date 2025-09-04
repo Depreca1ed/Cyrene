@@ -55,7 +55,10 @@ class AniCordGacha(MafuCog):
 
         if not author_id_parsed:
             return
-        user = self.bot.get_user(author_id_parsed[0]) or await self.bot.fetch_user(author_id_parsed[0])
+        user = self.bot.get_user(author_id_parsed[0])
+
+        if user is None:
+            return
 
         is_message_syncronised: bool = bool(
             await self.bot.pool.fetchval(
@@ -103,7 +106,7 @@ class AniCordGacha(MafuCog):
             with contextlib.suppress(discord.HTTPException):
                 await message.add_reaction(random.choice(message.guild.emojis))  # pyright: ignore[reportOptionalMemberAccess]  # noqa: S311
 
-    async def handle_single_pull(self, message: discord.Message):
+    async def handle_single_pull(self, message: discord.Message) -> None:
         embed = message.embeds[0]
         assert embed.description is not None
 
