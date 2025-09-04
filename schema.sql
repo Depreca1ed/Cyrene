@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS GachaPulledCards (
     card_id INTEGER NOT NULL,
     card_name TEXT NOT NULL,
     rarity INTEGER NOT NULL,
+    pull_sourcce INTEGER,
     PRIMARY KEY (user_id, message_id, card_id)
 );
 

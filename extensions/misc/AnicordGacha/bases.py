@@ -1,15 +1,25 @@
 from __future__ import annotations
 
+import enum
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
-from extensions.misc.AnicordGacha.constants import PULL_LINE_REGEX, RARITY_EMOJIS
+import discord
+
+from extensions.misc.AnicordGacha.constants import PULLALL_LINE_REGEX, RARITY_EMOJIS, SINGLE_PULL_REGEX
+from utilities.embed import Embed
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
     from asyncpg import Pool, Record
     from discord import Member, Message, User
+
+
+class PullSource(enum.Enum):
+    PULLALL = 1
+    PULL = 2
+    PACK = 3
 
 
 class GachaUser:
@@ -57,12 +67,13 @@ class GachaUser:
         *,
         card: PulledCard,
         pull_message: Message,
+        source: PullSource,
     ) -> None:
         query = """
             INSERT INTO
-                GachaPulledCards (user_id, message_id, card_id, card_name, rarity)
+                GachaPulledCards (user_id, message_id, card_id, card_name, rarity, pull_source)
             VALUES
-                ($1, $2, $3, $4, $5);
+                ($1, $2, $3, $4, $5, $6);
             """
         args = (
             self.user.id,
@@ -70,6 +81,7 @@ class GachaUser:
             card.id,
             card.name,
             card.rarity,
+            source.value,
         )
         await pool.execute(query, *args)
 
@@ -83,8 +95,8 @@ class PulledCard:
     user: User | None = None
 
     @classmethod
-    def parse_from_str(cls, s: str, /) -> None | Self:
-        parsed = re.finditer(PULL_LINE_REGEX, s)
+    def parse_from_pullall_str(cls, s: str, /) -> None | Self:
+        parsed = re.finditer(PULLALL_LINE_REGEX, s)
 
         if not parsed:
             return None
@@ -98,4 +110,26 @@ class PulledCard:
 
             return cls(c_id, name, rarity)
 
+        return None
+
+    @classmethod
+    def parse_from_single_pull(cls, e: Embed | discord.Embed, /) -> None | Self:
+        name = e.title
+
+        assert name is not None
+        assert e.description is not None
+
+        parsed = re.finditer(SINGLE_PULL_REGEX, e.description)
+
+        if not parsed:
+            return None
+
+        for _ in parsed:
+            data = _.groupdict()
+
+            c_id = int(data['id'])
+            rarity = next(k for k, _ in RARITY_EMOJIS.items() if _.name == data['rarity'])
+            # NOTE: Burn worth is.... useless..
+
+            return cls(c_id, name, rarity)
         return None

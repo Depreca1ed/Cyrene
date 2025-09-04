@@ -9,8 +9,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
-from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, PULL_INTERVAL
+from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
+from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, PULL_INTERVAL, RARITY_PULL_MESSAGES
 from extensions.misc.AnicordGacha.utils import check_pullall_author as check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
 from utilities.bases.cog import MafuCog
@@ -41,21 +41,11 @@ class AniCordGacha(MafuCog):
 
             await user.send(remind_message)
 
-    @commands.Cog.listener('on_message')
-    async def gacha_message_listener(self, message: discord.Message) -> None:
-        if message.author.id != ANICORD_DISCORD_BOT:
-            return
-
-        if not message.embeds:
-            return
-
-        if (embed := message.embeds[0]) and not (
-            embed.title and embed.description and embed.title.lower() == 'cards pulled'
-        ):
-            return
+    async def handle_pullall(self, message: discord.Message) -> None:
+        embed = message.embeds[0]
         assert embed.description is not None
 
-        pulls = [_ for _ in (PulledCard.parse_from_str(_) for _ in embed.description.split('\n')) if _ is not None]
+        pulls = [_ for _ in (PulledCard.parse_from_pullall_str(_) for _ in embed.description.split('\n')) if _ is not None]
 
         lines = embed.description.split('\n')
 
@@ -65,7 +55,7 @@ class AniCordGacha(MafuCog):
 
         if not author_id_parsed:
             return
-        user = await self.bot.fetch_user(author_id_parsed[0])
+        user = self.bot.get_user(author_id_parsed[0]) or await self.bot.fetch_user(author_id_parsed[0])
 
         is_message_syncronised: bool = bool(
             await self.bot.pool.fetchval(
@@ -90,15 +80,13 @@ class AniCordGacha(MafuCog):
 
         gacha_user = await GachaUser.from_fetched_record(self.bot.pool, user=user)
 
-        __pulls: list[PulledCard] = []
-
         for card in pulls:
             await gacha_user.add_card(
                 self.bot.pool,
                 card=card,
                 pull_message=message,
+                source=PullSource.PULLALL,
             )
-            __pulls.append(card)
 
         if gacha_user.config_data['autoremind'] is True:
             new_remind_time = message.created_at + PULL_INTERVAL
@@ -114,6 +102,68 @@ class AniCordGacha(MafuCog):
 
             with contextlib.suppress(discord.HTTPException):
                 await message.add_reaction(random.choice(message.guild.emojis))  # pyright: ignore[reportOptionalMemberAccess]  # noqa: S311
+
+    async def handle_single_pull(self, message: discord.Message):
+        embed = message.embeds[0]
+        assert embed.description is not None
+
+        user = message.mentions[0]
+
+        card = PulledCard.parse_from_single_pull(embed)
+
+        if card is None:
+            return
+        is_message_syncronised: bool = bool(
+            await self.bot.pool.fetchval(
+                """
+                SELECT
+                    EXISTS (
+                        SELECT
+                            *
+                        FROM
+                            GachaPulledCards
+                        WHERE
+                            user_id = $1
+                            AND message_id = $2
+                    );
+                """,
+                user.id,
+                message.id,
+            )
+        )
+        if is_message_syncronised is True:
+            return
+
+        gacha_user = await GachaUser.from_fetched_record(self.bot.pool, user=user)
+
+        await gacha_user.add_card(
+            self.bot.pool,
+            card=card,
+            pull_message=message,
+            source=PullSource.PULL,
+        )
+
+    @commands.Cog.listener('on_message')
+    async def gacha_message_listener(self, message: discord.Message) -> None:
+        if message.author.id != ANICORD_DISCORD_BOT:
+            # if message.author.id != self.bot.user.id:
+            return None
+
+        if not message.embeds:
+            return None
+
+        embed = message.embeds[0]
+
+        if embed.title and embed.description and embed.title.lower() == 'cards pulled':
+            return await self.handle_pullall(message)
+
+        if message.content:
+            author_id_parsed = re.findall(r'<@!?([0-9]+)>', message.content)
+
+            if message.content in [f'<@{author_id_parsed[0]}> {t}' for t in RARITY_PULL_MESSAGES.values()]:
+                return await self.handle_single_pull(message)
+
+        return None
 
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
