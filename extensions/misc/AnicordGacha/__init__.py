@@ -194,7 +194,8 @@ class AniCordGacha(MafuCog):
                 message_id,
                 card_id,
                 card_name,
-                rarity
+                rarity,
+                pull_source
             FROM
                 GachaPulledCards
             WHERE
@@ -211,6 +212,7 @@ class AniCordGacha(MafuCog):
                 p['card_name'],
                 p['rarity'],
                 p['message_id'],
+                source=p['pull_source'],
             )
             for p in pull_records
         ]
