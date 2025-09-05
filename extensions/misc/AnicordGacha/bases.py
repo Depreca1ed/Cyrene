@@ -93,6 +93,7 @@ class PulledCard:
     rarity: int
     message_id: int | None = None
     user: User | None = None
+    source: PullSource | None = None
 
     @classmethod
     def parse_from_pullall_str(cls, s: str, /) -> None | Self:
