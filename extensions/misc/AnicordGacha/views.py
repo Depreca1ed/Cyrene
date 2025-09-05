@@ -8,7 +8,7 @@ import discord
 import humanize
 from discord.ext import menus
 
-from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard
+from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
 from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import get_burn_worths
 from utilities.bases.bot import Mafuyu
@@ -345,7 +345,7 @@ class GachaStatisticsView(BaseView):
         if (first_sync_time := self._get_first_pull(self.pulls)) and first_sync_time and first_sync_time.message_id:
             messages: list[int] = []
             for p in self.pulls:
-                if p.message_id and p.message_id not in messages:
+                if p.message_id and p.message_id not in messages and p.pull_source == PullSource.PULLALL:
                     messages.append(p.message_id)
 
             times_pulled = len(messages)
