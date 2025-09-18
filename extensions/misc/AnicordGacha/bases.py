@@ -5,15 +5,15 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
-import discord
-
 from extensions.misc.AnicordGacha.constants import PULLALL_LINE_REGEX, RARITY_EMOJIS, SINGLE_PULL_REGEX
-from utilities.embed import Embed
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
+    import discord
     from asyncpg import Pool, Record
     from discord import Member, Message, User
+
+    from utilities.embed import Embed
 
 
 class PullSource(enum.Enum):

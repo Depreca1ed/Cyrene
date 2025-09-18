@@ -345,7 +345,7 @@ class GachaStatisticsView(BaseView):
         if (first_sync_time := self._get_first_pull(self.pulls)) and first_sync_time and first_sync_time.message_id:
             messages: list[int] = []
             for p in self.pulls:
-                if p.message_id and p.message_id not in messages and (p.source and p.source == PullSource.PULLALL.value):
+                if p.message_id and p.message_id not in messages and (p.source and p.source == PullSource.PULLALL.value):  # pyright: ignore[reportUnnecessaryComparison]
                     messages.append(p.message_id)
 
             times_pulled = len(messages)

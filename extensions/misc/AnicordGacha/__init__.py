@@ -27,7 +27,7 @@ DEFAULT_REMIND_MESSAGE: str = "Hey! It's been 6 hours since you last pulled. You
 
 class AniCordGacha(MafuCog):
     def __init__(self, bot: Mafuyu) -> None:
-        self.user_cache = {}
+        self.user_cache: dict[int, discord.User] = {}
         super().__init__(bot)
 
     @commands.Cog.listener('on_timer_expire')
@@ -92,8 +92,8 @@ class AniCordGacha(MafuCog):
                 pull_message=message,
                 source=PullSource.PULLALL,
             )
-            if "elysia" in card.name.lower():
-                await self.bot.logger.send(f"Elysia (ID:{card.id}) pulled by {str(user)}")
+            if 'elysia' in card.name.lower():
+                await self.bot.logger.send(f'Elysia (ID:{card.id}) pulled by {user!s}')
 
         if gacha_user.config_data['autoremind'] is True:
             new_remind_time = message.created_at + PULL_INTERVAL
