@@ -108,7 +108,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction(random.choice(message.guild.emojis))  # pyright: ignore[reportOptionalMemberAccess]  # noqa: S311
+                await message.add_reaction("<a:evernight:1420473791427121292>")
 
     async def handle_single_pull(self, message: discord.Message) -> None:
         embed = message.embeds[0]
