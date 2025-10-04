@@ -92,8 +92,6 @@ class AniCordGacha(MafuCog):
                 pull_message=message,
                 source=PullSource.PULLALL,
             )
-            if 'elysia' in card.name.lower():
-                await self.bot.logger.send(f'Elysia (ID:{card.id}) pulled by {user!s}')
 
         if gacha_user.config_data['autoremind'] is True:
             new_remind_time = message.created_at + PULL_INTERVAL
