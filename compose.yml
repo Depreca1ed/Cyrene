@@ -1,5 +1,5 @@
 services:
-  mafuyu:
+  Elysia:
     build:
       context: .
     restart: unless-stopped
@@ -14,7 +14,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=mafuyu
+      - POSTGRES_DB=Mafuyu
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:

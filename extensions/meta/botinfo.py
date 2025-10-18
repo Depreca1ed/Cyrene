@@ -12,15 +12,15 @@ from discord import app_commands
 from discord.ext import commands
 from jishaku.math import natural_size
 
-from utilities.bases.cog import MafuCog
+from utilities.bases.cog import ElyCog
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 
 if TYPE_CHECKING:
-    from utilities.bases.context import MafuContext
+    from utilities.bases.context import ElyContext
 
 
-class BotInformation(MafuCog):
+class BotInformation(ElyCog):
     def get_commits(self, count: int = 5) -> list[git.Commit]:
         repo = git.Repo(pathlib.Path.cwd())
         return list(repo.iter_commits(repo.active_branch, max_count=count))
@@ -34,7 +34,7 @@ class BotInformation(MafuCog):
 
         time = round(time.timestamp())
 
-        return f'**[[`{sha1}`](https://github.com/Depreca1ed/Mafuyu/commit/{commit.hexsha})]**: {message}'
+        return f'**[[`{sha1}`](https://github.com/Depreca1ed/Elysia/commit/{commit.hexsha})]**: {message}'
 
     @commands.hybrid_command(
         name='about', aliases=['info', 'botinfo'], description='Get information about this bot', usage=''
@@ -43,7 +43,7 @@ class BotInformation(MafuCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def botinfo(
         self,
-        ctx: MafuContext,
+        ctx: ElyContext,
     ) -> None:
         bot = self.bot
 

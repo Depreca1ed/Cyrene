@@ -7,11 +7,11 @@ import parsedatetime  # pyright: ignore[reportMissingTypeStubs]
 from discord.ext import commands
 
 if TYPE_CHECKING:
-    from utilities.bases.context import MafuContext
+    from utilities.bases.context import ElyContext
 
 
 class TimeConverter(commands.Converter[datetime.datetime]):
-    async def convert(self, _: MafuContext, argument: str) -> datetime.datetime:
+    async def convert(self, _: ElyContext, argument: str) -> datetime.datetime:
         dt_obj: tuple[datetime.datetime, int] = parsedatetime.Calendar().parseDT(argument)  # pyright: ignore[reportAssignmentType, reportUnknownMemberType]
 
         if dt_obj[1] == 0:

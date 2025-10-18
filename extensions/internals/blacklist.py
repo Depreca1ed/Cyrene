@@ -6,25 +6,25 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utilities.bases.cog import MafuCog
+from utilities.bases.cog import ElyCog
 from utilities.constants import BotEmojis
 from utilities.converters import TimeConverter
-from utilities.errors import AlreadyBlacklistedError, MafuyuError, NotBlacklistedError
+from utilities.errors import AlreadyBlacklistedError, ElysiaError, NotBlacklistedError
 from utilities.types import BlacklistData
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Mafuyu
-    from utilities.bases.context import MafuContext
+    from utilities.bases.bot import Elysia
+    from utilities.bases.context import ElyContext
 
 WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
 
 dt_param = commands.parameter(converter=TimeConverter, default=None)
 
 
-class Blacklist(MafuCog):
+class Blacklist(ElyCog):
     _command_attempts: dict[int, int]
 
-    def __init__(self, bot: Mafuyu) -> None:
+    def __init__(self, bot: Elysia) -> None:
         self._command_attempts = {}
 
         super().__init__(bot)
@@ -49,7 +49,7 @@ class Blacklist(MafuCog):
         description='The command which handles bot blacklists',
     )
     @commands.is_owner()
-    async def blacklist_cmd(self, ctx: MafuContext) -> None:
+    async def blacklist_cmd(self, ctx: ElyContext) -> None:
         bl_guild_count = len([
             entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'guild'
         ])
@@ -60,7 +60,7 @@ class Blacklist(MafuCog):
 
     @blacklist_cmd.command(name='show', description='Get information about a blacklist entry if any', aliases=['info'])
     async def blacklist_info(
-        self, ctx: MafuContext, snowflake: discord.User | discord.Member | discord.Guild
+        self, ctx: ElyContext, snowflake: discord.User | discord.Member | discord.Guild
     ) -> discord.Message:
         bl = self.bot.is_blacklisted(snowflake)
         if not bl:
@@ -72,7 +72,7 @@ class Blacklist(MafuCog):
     @blacklist_cmd.command(name='add', description='Add a user or server to the blacklist')
     async def blacklist_add(
         self,
-        ctx: MafuContext,
+        ctx: ElyContext,
         snowflake: discord.User | discord.Member | discord.Guild,
         until: datetime.datetime | None = dt_param,
         *,
@@ -93,7 +93,7 @@ class Blacklist(MafuCog):
 
     @blacklist_cmd.command(name='remove', description='Remove a user or server from blacklist')
     async def blacklist_remove(
-        self, ctx: MafuContext, snowflake: discord.User | discord.Member | discord.Guild | int
+        self, ctx: ElyContext, snowflake: discord.User | discord.Member | discord.Guild | int
     ) -> None:
         try:
             await self.remove(snowflake)
@@ -105,14 +105,14 @@ class Blacklist(MafuCog):
 
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
-    async def bot_check_once(self, ctx: MafuContext) -> bool:
+    async def bot_check_once(self, ctx: ElyContext) -> bool:
         """
         Blacklist check ran every command.
 
         Parameters
         ----------
-        ctx : MafuContext
-            The commands.MafuContext from the check
+        ctx : ElyContext
+            The commands.ElyContext from the check
 
         Returns
         -------
@@ -121,20 +121,20 @@ class Blacklist(MafuCog):
 
         Raises
         ------
-        MafuyuError
+        ElysiaError
             Error raised to ignore
 
         """
         if data := self.bot.is_blacklisted(ctx.author):
             if await self._pre_check(ctx.author, data) is False:
                 await self.handle_user_blacklist(ctx, ctx.author, data)
-                raise MafuyuError
+                raise ElysiaError
             return True
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
             if await self._pre_check(ctx.guild, data) is False:
                 await self.handle_guild_blacklist(ctx, ctx.guild, data)
-                raise MafuyuError
+                raise ElysiaError
             return True
 
         # TODO(Depreca1ed): Make custom errors and have them handled as ignored.
@@ -169,16 +169,14 @@ class Blacklist(MafuCog):
             return True
         return False
 
-    async def handle_user_blacklist(
-        self, ctx: MafuContext, user: discord.User | discord.Member, data: BlacklistData
-    ) -> None:
+    async def handle_user_blacklist(self, ctx: ElyContext, user: discord.User | discord.Member, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted user.
 
         Parameters
         ----------
-        ctx : MafuContext
-            The commands.MafuContext from the check
+        ctx : ElyContext
+            The commands.ElyContext from the check
         user : discord.User | discord.Member
             The blacklisted User
         data : BlacklistData
@@ -209,17 +207,17 @@ class Blacklist(MafuCog):
 
         return
 
-    async def handle_guild_blacklist(self, ctx: MafuContext | None, guild: discord.Guild, data: BlacklistData) -> None:
+    async def handle_guild_blacklist(self, ctx: ElyContext | None, guild: discord.Guild, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted guild.
 
-        This function is also used in the on_guild_join event thus the optional MafuContext argument.
+        This function is also used in the on_guild_join event thus the optional ElyContext argument.
 
 
         Parameters
         ----------
-        ctx : MafuContext | None
-            The commands.MafuContext from the check. Will be optional when used in the event.
+        ctx : ElyContext | None
+            The commands.ElyContext from the check. Will be optional when used in the event.
         guild : discord.Guild
             The blacklisted Guild
         data : BlacklistData

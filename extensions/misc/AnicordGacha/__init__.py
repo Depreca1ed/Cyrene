@@ -13,20 +13,20 @@ from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
 from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, PULL_INTERVAL, RARITY_PULL_MESSAGES
 from extensions.misc.AnicordGacha.utils import check_pullall_author as check_pullall_author
 from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
-from utilities.bases.cog import MafuCog
+from utilities.bases.cog import ElyCog
 from utilities.functions import fmt_str as fmt_str
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Mafuyu
-    from utilities.bases.context import MafuContext
+    from utilities.bases.bot import Elysia
+    from utilities.bases.context import ElyContext
 
 
 DEFAULT_REMIND_MESSAGE: str = "Hey! It's been 6 hours since you last pulled. You should pull again"
 
 
-class AniCordGacha(MafuCog):
-    def __init__(self, bot: Mafuyu) -> None:
+class AniCordGacha(ElyCog):
+    def __init__(self, bot: Elysia) -> None:
         self.user_cache: dict[int, discord.User] = {}
         super().__init__(bot)
 
@@ -106,7 +106,7 @@ class AniCordGacha(MafuCog):
             )
 
             with contextlib.suppress(discord.HTTPException):
-                await message.add_reaction("<a:evernight:1420473791427121292>")
+                await message.add_reaction('<a:evernight:1420473791427121292>')
 
     async def handle_single_pull(self, message: discord.Message) -> None:
         embed = message.embeds[0]
@@ -173,7 +173,7 @@ class AniCordGacha(MafuCog):
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def gacha(self, ctx: MafuContext) -> None:
+    async def gacha(self, ctx: ElyContext) -> None:
         await GachaPullView.start(ctx, user=ctx.author)
 
     @commands.hybrid_command(
@@ -185,7 +185,7 @@ class AniCordGacha(MafuCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def gacha_statistics(
         self,
-        ctx: MafuContext,
+        ctx: ElyContext,
         user: discord.User | discord.Member = commands.Author,
     ) -> None:
         pull_records = await self.bot.pool.fetch(
@@ -221,7 +221,7 @@ class AniCordGacha(MafuCog):
 
     @commands.hybrid_command(name='nextpull', description='Tells you when you can pull again', aliases=['np'])
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def next_pull(self, ctx: MafuContext, *, user: discord.User = commands.Author) -> discord.Message:
+    async def next_pull(self, ctx: ElyContext, *, user: discord.User = commands.Author) -> discord.Message:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         if gacha_user.config_data['autoremind'] is False:

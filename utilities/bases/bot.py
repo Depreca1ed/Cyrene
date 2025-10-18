@@ -18,13 +18,13 @@ if TYPE_CHECKING:
     from utilities.types import BlacklistData
 
 from config import DEFAULT_PREFIX, OWNER_IDS, WEBHOOK
-from utilities.bases.context import MafuContext
+from utilities.bases.context import ElyContext
 from utilities.constants import BASE_COLOUR
 from utilities.timers import TimerManager
 
-log = logging.getLogger('Mafuyu')
+log = logging.getLogger('Elysia')
 
-__all__ = ('Mafuyu',)
+__all__ = ('Elysia',)
 
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
@@ -32,7 +32,7 @@ jishaku.Flags.NO_DM_TRACEBACK = True
 jishaku.Flags.NO_UNDERSCORE = True
 
 
-class Mafuyu(commands.AutoShardedBot):
+class Elysia(commands.AutoShardedBot):
     pool: Pool[Record]
     user: discord.ClientUser
     timer_manager: TimerManager
@@ -74,8 +74,8 @@ class Mafuyu(commands.AutoShardedBot):
         await self.load_extension('jishaku')
 
     async def get_context(
-        self, origin: discord.Message | discord.Interaction, *, cls: type[MafuContext] = MafuContext
-    ) -> MafuContext:
+        self, origin: discord.Message | discord.Interaction, *, cls: type[ElyContext] = ElyContext
+    ) -> ElyContext:
         return await super().get_context(origin, cls=cls)
 
     async def is_owner(self, user: discord.abc.User) -> bool:

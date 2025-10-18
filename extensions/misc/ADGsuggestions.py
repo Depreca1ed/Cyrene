@@ -7,14 +7,14 @@ import discord
 from discord.ext import commands
 
 from config import SUGGESTIONS_WEBHOOK_TOKEN
-from utilities.bases.cog import MafuCog
+from utilities.bases.cog import ElyCog
 from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Mafuyu
-    from utilities.bases.context import MafuContext
+    from utilities.bases.bot import Elysia
+    from utilities.bases.context import ElyContext
 
 
 class SuggestionCategories(enum.Enum):
@@ -38,7 +38,7 @@ class ADGSuggestionView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: MafuContext,
+        ctx: ElyContext,
         user: discord.User | discord.Member,
     ) -> None:
         c = cls(user)
@@ -96,7 +96,7 @@ class ADGSuggestionView(BaseView):
             discord.SelectOption(label=a.name.replace('_', ' ').title(), value=str(a.value)) for a in SuggestionCategories
         ],
     )
-    async def category_select(self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]) -> None:
+    async def category_select(self, interaction: discord.Interaction[Elysia], s: discord.ui.Select[Self]) -> None:
         val = s.values[0]
         self.suggestion_data['category'] = val
 
@@ -106,17 +106,17 @@ class ADGSuggestionView(BaseView):
         await interaction.response.edit_message(embed=e, view=self)
 
     @discord.ui.button(emoji=BotEmojis.RED_CROSS, style=discord.ButtonStyle.red)
-    async def cancel_button(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def cancel_button(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
         await interaction.response.defer()
         self.stop()
         await interaction.delete_original_response()
 
     @discord.ui.button(emoji='\U0000270d', style=discord.ButtonStyle.gray)
-    async def write_suggestion(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def write_suggestion(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
         await interaction.response.send_modal(ADGSuggestionModal(view=self))
 
     @discord.ui.button(emoji=BotEmojis.GREEN_TICK, style=discord.ButtonStyle.green)
-    async def send_suggestion(self, interaction: discord.Interaction[Mafuyu], _: discord.ui.Button[Self]) -> None:
+    async def send_suggestion(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
         embed = self.embed()
 
         webhook = discord.Webhook.from_url(SUGGESTIONS_WEBHOOK_TOKEN, session=interaction.client.session)
@@ -173,7 +173,7 @@ class ADGSuggestionModal(discord.ui.Modal, title='Provide suggestion detail'):
         self.suggestion_description.default = self.view.suggestion_data['description']
         super().__init__()
 
-    async def on_submit(self, interaction: discord.Interaction[Mafuyu]) -> None:
+    async def on_submit(self, interaction: discord.Interaction[Elysia]) -> None:
         sug_title = self.suggestion_title.value
         sug_description = self.suggestion_description.value
 
@@ -185,7 +185,7 @@ class ADGSuggestionModal(discord.ui.Modal, title='Provide suggestion detail'):
         await interaction.response.edit_message(embed=e, view=self.view)
 
 
-class ADGSuggestions(MafuCog):
+class ADGSuggestions(ElyCog):
     @commands.command(name='suggest', hidden=True)
-    async def suggest(self, ctx: MafuContext) -> None:
+    async def suggest(self, ctx: ElyContext) -> None:
         await ADGSuggestionView.start(ctx, ctx.author)

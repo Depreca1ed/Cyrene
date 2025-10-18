@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 import discord
 from discord.ext import commands
 
-from utilities.bases.cog import MafuCog
+from utilities.bases.cog import ElyCog
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 
@@ -60,7 +60,7 @@ def find_base_channel(channels: Sequence[discord.abc.GuildChannel]) -> discord.a
     return channels[0] if channels else None
 
 
-class Guild(MafuCog):
+class Guild(ElyCog):
     @commands.Cog.listener('on_guild_join')
     async def guild_join(self, guild: discord.Guild) -> None:
         is_blacklisted = self.bot.is_blacklisted(guild)

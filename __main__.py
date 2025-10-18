@@ -22,7 +22,7 @@ import discord
 from discord.ext import commands
 
 from config import DATABASE_CRED, TEST_TOKEN, TOKEN
-from utilities.bases.bot import Mafuyu
+from utilities.bases.bot import Elysia
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -50,7 +50,7 @@ async def create_bot_pool() -> asyncpg.Pool[asyncpg.Record]:
     return pool
 
 
-async def _callable_prefix(bot: Mafuyu, message: discord.Message) -> list[str]:
+async def _callable_prefix(bot: Elysia, message: discord.Message) -> list[str]:
     prefixes = commands.when_mentioned(bot, message)
 
     prefixes.extend(bot.get_prefixes(message.guild))
@@ -78,7 +78,7 @@ def run(*, production: bool) -> None:
                 'extensions.misc',
             ]
 
-            async with Mafuyu(
+            async with Elysia(
                 command_prefix=_callable_prefix,
                 extensions=extensions,
                 allowed_mentions=allowed_mentions,

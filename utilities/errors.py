@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 __all__ = (
     'AlreadyBlacklistedError',
     'FeatureDisabledError',
-    'MafuyuError',
+    'ElysiaError',
     'NotBlacklistedError',
     'PrefixAlreadyPresentError',
     'PrefixNotInitialisedError',
@@ -21,30 +21,30 @@ __all__ = (
 )
 
 
-class MafuyuError(discord.ClientException): ...
+class ElysiaError(discord.ClientException): ...
 
 
-class FeatureDisabledError(commands.CheckFailure, MafuyuError):
+class FeatureDisabledError(commands.CheckFailure, ElysiaError):
     def __init__(self) -> None:
         super().__init__('This feature is not enabled in this server.')
 
 
-class PrefixNotInitialisedError(MafuyuError):
+class PrefixNotInitialisedError(ElysiaError):
     def __init__(self, guild: discord.Guild) -> None:
         super().__init__(f'Prefixes were not initialised for {guild.id}')
 
 
-class PrefixAlreadyPresentError(commands.CommandError, MafuyuError):
+class PrefixAlreadyPresentError(commands.CommandError, ElysiaError):
     def __init__(self, prefix: str) -> None:
         super().__init__(f"'{prefix} is an already present prefix.'")
 
 
-class PrefixNotPresentError(commands.CommandError, MafuyuError):
+class PrefixNotPresentError(commands.CommandError, ElysiaError):
     def __init__(self, prefix: str, guild: discord.Guild) -> None:
         super().__init__(f'{prefix} is not present in guild: {guild.id}')
 
 
-class AlreadyBlacklistedError(MafuyuError):
+class AlreadyBlacklistedError(ElysiaError):
     def __init__(
         self,
         snowflake: discord.User | discord.Member | discord.Guild,
@@ -60,18 +60,18 @@ class AlreadyBlacklistedError(MafuyuError):
         super().__init__(string)
 
 
-class NotBlacklistedError(MafuyuError):
+class NotBlacklistedError(ElysiaError):
     def __init__(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
         self.snowflake = snowflake
         super().__init__(f'{snowflake} is not blacklisted.')
 
 
-class UnderMaintenanceError(commands.CheckFailure, MafuyuError):
+class UnderMaintenanceError(commands.CheckFailure, ElysiaError):
     def __init__(self) -> None:
         super().__init__('The bot is currently under maintenance.')
 
 
-class WaifuNotFoundError(commands.CommandError, MafuyuError):
+class WaifuNotFoundError(commands.CommandError, ElysiaError):
     def __init__(self, waifu: str | None = None, json: dict[Any, Any] | str | None = None) -> None:
         waifu = waifu.replace('@everyone', '@\u200beveryone').replace('@here', '@\u200bhere') if waifu else None
         self.waifu = waifu

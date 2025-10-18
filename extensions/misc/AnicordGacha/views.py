@@ -11,7 +11,7 @@ from discord.ext import menus
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
 from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
 from extensions.misc.AnicordGacha.utils import get_burn_worths
-from utilities.bases.bot import Mafuyu
+from utilities.bases.bot import Elysia
 from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
@@ -20,8 +20,8 @@ from utilities.timers import ReservedTimerType
 from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Mafuyu
-    from utilities.bases.context import MafuContext
+    from utilities.bases.bot import Elysia
+    from utilities.bases.context import ElyContext
 
 
 def _switch(v: bool) -> discord.PartialEmoji:  # noqa: FBT001
@@ -31,7 +31,7 @@ def _switch(v: bool) -> discord.PartialEmoji:  # noqa: FBT001
 class GachaPullView(BaseView):
     def __init__(
         self,
-        ctx: MafuContext,
+        ctx: ElyContext,
         user: discord.User | discord.Member,
         gacha_user: GachaUser,
     ) -> None:
@@ -45,10 +45,10 @@ class GachaPullView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: MafuContext,
+        ctx: ElyContext,
         *,
         user: discord.User | discord.Member,
-    ) -> discord.InteractionCallbackResponse[Mafuyu] | discord.Message | None:
+    ) -> discord.InteractionCallbackResponse[Elysia] | discord.Message | None:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         c = cls(ctx, user, gacha_user)
@@ -123,7 +123,7 @@ class GachaPullView(BaseView):
     @discord.ui.select(
         placeholder='Select an argument to add',
     )
-    async def primary_select(self, interaction: discord.Interaction[Mafuyu], select: discord.ui.Select[Self]) -> None:
+    async def primary_select(self, interaction: discord.Interaction[Elysia], select: discord.ui.Select[Self]) -> None:
         match select.values[0]:
             case 'cancel_reminder':
                 await self.ctx.bot.timer_manager.cancel_timer(
@@ -167,7 +167,7 @@ class GachaPullView(BaseView):
             case _:
                 await interaction.response.send_message('Coming soon!', ephemeral=True)
 
-    async def interaction_check(self, interaction: discord.Interaction[Mafuyu]) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction[Elysia]) -> bool:
         if interaction.user and interaction.user.id == self.user.id:
             return True
         await interaction.response.send_message('This is not for you', ephemeral=True)
@@ -189,7 +189,7 @@ class GachaCustomInput(discord.ui.Modal):
         self.value: str | None = None
         super().__init__(title=title)
 
-    async def on_submit(self, interaction: discord.Interaction[Mafuyu]) -> None:
+    async def on_submit(self, interaction: discord.Interaction[Elysia]) -> None:
         value = self.gacha_input.value
 
         if value == '$CLEAR':
@@ -225,7 +225,7 @@ class GachaCustomInput(discord.ui.Modal):
 class GachaPersonalCardsSorter(menus.ListPageSource):
     def __init__(
         self,
-        bot: Mafuyu,
+        bot: Elysia,
         entries: list[PulledCard],
         *,
         sort_type: int,
@@ -295,7 +295,7 @@ class GachaStatisticsView(BaseView):
 
     sort_type: int | None
 
-    ctx: MafuContext
+    ctx: ElyContext
 
     def __init__(
         self,
@@ -313,7 +313,7 @@ class GachaStatisticsView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: MafuContext,
+        ctx: ElyContext,
         *,
         pulls: list[PulledCard],
         user: discord.User | discord.Member,
@@ -408,8 +408,8 @@ class GachaStatisticsView(BaseView):
         ],
     )
     async def view_select(
-        self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]
-    ) -> discord.InteractionCallbackResponse[Mafuyu] | None:
+        self, interaction: discord.Interaction[Elysia], s: discord.ui.Select[Self]
+    ) -> discord.InteractionCallbackResponse[Elysia] | None:
         if s.values:
             match int(s.values[0]):
                 case 1:
@@ -456,7 +456,7 @@ class GachaStatisticsView(BaseView):
             ),
         ],
     )
-    async def sort_select(self, interaction: discord.Interaction[Mafuyu], s: discord.ui.Select[Self]) -> None:
+    async def sort_select(self, interaction: discord.Interaction[Elysia], s: discord.ui.Select[Self]) -> None:
         self.sort_type = int(s.values[0])
         await interaction.response.defer()
 

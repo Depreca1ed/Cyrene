@@ -10,7 +10,7 @@ from utilities.functions import fmt_str
 if TYPE_CHECKING:
     import asyncpg
 
-    from utilities.bases.bot import Mafuyu
+    from utilities.bases.bot import Elysia
 
 __all__ = ('Embed',)
 
@@ -63,7 +63,7 @@ class Embed(discord.Embed):
         return cls(title=title, description=description, colour=ERROR_COLOUR)
 
     @classmethod
-    async def logger(cls, bot: Mafuyu, record: asyncpg.Record) -> Self:
+    async def logger(cls, bot: Elysia, record: asyncpg.Record) -> Self:
         """
         Generate an embed logged to the error logger.
 
@@ -71,7 +71,7 @@ class Embed(discord.Embed):
 
         Parameters
         ----------
-        bot : Mafuyu
+        bot : Elysia
             The bot this embed belongs to
         record : asyncpg.Record
             The record of the error

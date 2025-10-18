@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     from discord.ext import commands
 
-    from utilities.bases.context import MafuContext
+    from utilities.bases.context import ElyContext
 
 
 __all__ = (
@@ -50,7 +50,7 @@ def format_tb(error: Exception) -> str:
     return ''.join(traceback.format_exception(type(error), error, error.__traceback__))
 
 
-def get_command_signature(ctx: MafuContext, command: commands.Command[Any, ..., Any], /) -> str:
+def get_command_signature(ctx: ElyContext, command: commands.Command[Any, ..., Any], /) -> str:
     """
     Retrieve the signature portion of the help page.
 
