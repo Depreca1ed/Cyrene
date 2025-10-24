@@ -91,17 +91,4 @@ CREATE TABLE IF NOT EXISTS GachaPulledCards (
     PRIMARY KEY (user_id, message_id, card_id)
 );
 
-CREATE TABLE IF NOT EXISTS ADGSuggestions (
-    id SERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    -- Feature data
-    feature_category INTEGER NOT NULL,
-    feature_title TEXT NOT NULL,
-    feature_description TEXT NOT NULL,
-    -- Message relations
-    webhook_message BIGINT NOT NULL,
-    -- Developer data\
-    feature_status INTEGER NOT NULL
-);
-
 COMMIT;
