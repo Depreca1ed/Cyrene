@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import datetime
-import operator
 from typing import TYPE_CHECKING, Self
 
 import discord
 import humanize
-from discord.ext import menus
 
 from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
 from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
@@ -15,7 +13,6 @@ from utilities.bases.bot import Elysia
 from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
-from utilities.pagination import Paginator
 from utilities.timers import ReservedTimerType
 from utilities.view import BaseView
 
@@ -73,7 +70,6 @@ class GachaPullView(BaseView):
         config.extend((
             f'### {_switch(self.gacha_user.config_data["autoremind"])} > Auto remind',
             f'### {_switch(bool(self.gacha_user.config_data["custom_remind_message"]))} > Custom remind message',
-            f'### {_switch(self.gacha_user.config_data["custom_pull_reaction"])} > Custom pull reaction',
         ))
 
         embed.description = fmt_str(s, seperator='\n') + '\n' + fmt_str(config, seperator='\n')
@@ -206,73 +202,6 @@ class GachaCustomInput(discord.ui.Modal):
         await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
 
 
-class GachaPersonalCardsSorter(menus.ListPageSource):
-    def __init__(
-        self,
-        bot: Elysia,
-        entries: list[PulledCard],
-        *,
-        sort_type: int,
-        user: discord.User | discord.Member,
-    ) -> None:
-        self.bot = bot
-        self.sort_type = sort_type
-        self.user = user
-
-        entries_sorted = list(enumerate(self.sort_cards(entries)))
-        super().__init__(entries_sorted, per_page=10)
-
-    async def format_page(
-        self,
-        _: Paginator,
-        entry: list[tuple[int, list[tuple[str, int]] | list[tuple[tuple[int, str, int], int]]]],
-    ) -> Embed:
-        embed = Embed(
-            title='Most pulled cards',
-            description='These are your most pulled cards sorted according to what is selected',
-            colour=self.user.color,
-        )
-
-        embed.set_thumbnail(url=self.user.display_avatar.url)
-
-        match self.sort_type:
-            case 2:
-                embed.add_field(
-                    name='Sorted by character',
-                    value='\n'.join([f'{i[0] + 1}. **{i[1][0]}** \n  - Pulled `{i[1][1]}` times' for i in entry]),
-                )
-            case _:
-                embed.add_field(
-                    name='Sorted on per card basis',
-                    value='\n'.join([
-                        (
-                            f'{i[0] + 1}. {RARITY_EMOJIS[int(i[1][0][2])]} **{i[1][0][0]} ({i[1][0][1]})**\n'  # pyright: ignore[reportArgumentType, reportGeneralTypeIssues]
-                            f'  - Pulled `{i[1][1]}` times'
-                        )
-                        for i in entry
-                    ]),
-                )
-
-        return embed
-
-    def sort_cards(self, entries: list[PulledCard]) -> list[tuple[str, int]] | list[tuple[tuple[int, str, int], int]]:
-        match self.sort_type:
-            case 2:
-                c2: dict[str, int] = {}
-
-                for card in entries:
-                    c2[card.name or 'Misc'] = c2.get(card.name or 'Misc', 0) + 1
-
-                return sorted(c2.items(), key=operator.itemgetter(1), reverse=True)
-            case _:  # Also handles 1
-                c1: dict[tuple[int, str, int], int] = {}
-
-                for card in entries:
-                    c1[card.id, card.name, card.rarity] = c1.get((card.id, card.name, card.rarity), 0) + 1
-
-                return sorted(c1.items(), key=operator.itemgetter(1), reverse=True)
-
-
 class GachaStatisticsView(BaseView):
     current: list[PulledCard]
     query: datetime.timedelta | tuple[datetime.datetime | None, datetime.datetime | None] | None
@@ -292,7 +221,6 @@ class GachaStatisticsView(BaseView):
         self.sort_type = None
         super().__init__()
         self.clear_items()
-        self.add_item(self.view_select)
 
     @classmethod
     async def start(
@@ -371,91 +299,3 @@ class GachaStatisticsView(BaseView):
             ),
             None,
         )
-
-    @discord.ui.select(
-        placeholder='Select a view',
-        min_values=1,
-        max_values=1,
-        options=[
-            discord.SelectOption(
-                label='View total pulls with rarity and pull rate',
-                value='1',
-                description="See how much you've pulled and how much you've gained along with the rate of pulls per day",
-                emoji=RARITY_EMOJIS[1],
-            ),
-            discord.SelectOption(
-                label='View most owned',
-                value='2',
-                description="See what cards you've pulled multiple times",
-                emoji=RARITY_EMOJIS[2],
-            ),
-        ],
-    )
-    async def view_select(
-        self, interaction: discord.Interaction[Elysia], s: discord.ui.Select[Self]
-    ) -> discord.InteractionCallbackResponse[Elysia] | None:
-        if s.values:
-            match int(s.values[0]):
-                case 1:
-                    return await interaction.response.edit_message(embed=self.embed(), view=self)
-                case 2:
-                    await interaction.response.defer()
-
-                    self.sort_type = 1
-
-                    v = Paginator(
-                        GachaPersonalCardsSorter(
-                            interaction.client,
-                            self.current,
-                            sort_type=self.sort_type,
-                            user=self.user,
-                        ),
-                        ctx=self.ctx,
-                    )
-
-                    v.add_item(self.sort_select)
-
-                    v.add_item(s)
-
-                    await v.start(message=self.message)
-
-                case _:
-                    pass
-        return None
-
-    @discord.ui.select(
-        placeholder='Sort by',
-        min_values=1,
-        max_values=1,
-        options=[
-            discord.SelectOption(
-                label='Card',
-                value='1',
-                emoji=RARITY_EMOJIS[1],
-            ),
-            discord.SelectOption(
-                label='Character',
-                value='2',
-                emoji=RARITY_EMOJIS[2],
-            ),
-        ],
-    )
-    async def sort_select(self, interaction: discord.Interaction[Elysia], s: discord.ui.Select[Self]) -> None:
-        self.sort_type = int(s.values[0])
-        await interaction.response.defer()
-
-        v = Paginator(
-            GachaPersonalCardsSorter(
-                interaction.client,
-                self.current,
-                sort_type=self.sort_type,
-                user=self.user,
-            ),
-            ctx=self.ctx,
-        )
-
-        v.add_item(s)
-
-        v.add_item(self.view_select)
-
-        await v.start(message=self.message)
