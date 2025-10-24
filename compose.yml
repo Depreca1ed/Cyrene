@@ -1,5 +1,6 @@
 services:
-  Elysia:
+  elysia:
+    container_name: "Elysia"
     build:
       context: .
     restart: unless-stopped
