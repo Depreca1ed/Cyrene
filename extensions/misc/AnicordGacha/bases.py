@@ -130,7 +130,6 @@ class PulledCard:
 
             c_id = int(data['id'])
             rarity = next(k for k, _ in RARITY_EMOJIS.items() if _.name == data['rarity'])
-            # NOTE: Burn worth is.... useless..
 
             return cls(c_id, name, rarity)
         return None

@@ -228,5 +228,5 @@ class AniCordGacha(ElyCog):
 
         if gacha_user.timer:
             name = 'You' if ctx.author.id == user.id else str(user)
-            return await ctx.reply(f'{name} can cook {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
-        return await ctx.reply('COOK! NOW!')
+            return await ctx.reply(f'{name} can summon wives {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
+        return await ctx.reply('GO MIKU GO! GET EM!')
