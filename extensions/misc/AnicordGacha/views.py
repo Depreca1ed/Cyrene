@@ -111,12 +111,6 @@ class GachaPullView(BaseView):
                 emoji=_switch(bool(self.gacha_user.config_data['custom_remind_message'])),
                 description='The contents of the pull remind DM',
             ),
-            discord.SelectOption(
-                label='Custom pull reaction',
-                value='custom_pull_reaction',
-                emoji=_switch(self.gacha_user.config_data['custom_pull_reaction']),
-                description='The reaction when autoremind is ON',
-            ),
         ))
         self.primary_select.options = options
 
@@ -153,16 +147,6 @@ class GachaPullView(BaseView):
                     self.gacha_user = GachaUser(self.user, timer=self.gacha_user.timer, config_data=data)
                 self.update_display()
                 await interaction.response.edit_message(embed=self.embed(), view=self)
-                return
-
-            case 'custom_remind_message':
-                await interaction.response.send_modal(
-                    GachaCustomInput(
-                        self.gacha_user,
-                        self,
-                        title='Enter message',
-                    ),
-                )
                 return
             case _:
                 await interaction.response.send_message('Coming soon!', ephemeral=True)
