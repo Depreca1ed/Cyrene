@@ -11,8 +11,8 @@ if TYPE_CHECKING:
 
 __all__ = (
     'AlreadyBlacklistedError',
-    'FeatureDisabledError',
     'ElysiaError',
+    'FeatureDisabledError',
     'NotBlacklistedError',
     'PrefixAlreadyPresentError',
     'PrefixNotInitialisedError',

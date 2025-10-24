@@ -21,3 +21,4 @@ gitpython
 python-dotenv
 click
 ruff
+pyright

@@ -50,8 +50,6 @@ class Embed(discord.Embed):
             The title for the embed
         description : str | None, optional
             The description for the embed
-        ctx : Context | None, optional
-            The context for the embed, if applicable
 
         Returns
         -------
