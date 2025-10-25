@@ -6,7 +6,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from utilities.bases.cog import CyCog
 from utilities.errors import WaifuNotFoundError
 from utilities.pagination import Paginator
 from utilities.types import WaifuFavouriteEntry
@@ -16,8 +16,8 @@ from .views import RemoveFavButton, WaifuPageSource, WaifuSearchView
 if TYPE_CHECKING:
     import aiohttp
 
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 
 __all__ = ('Waifu',)
@@ -45,7 +45,7 @@ async def get_waifu(session: aiohttp.ClientSession, waifu: str) -> list[tuple[st
 
 
 async def waifu_autocomplete(
-    interaction: discord.Interaction[Elysia],
+    interaction: discord.Interaction[Cyrene],
     current: str,
 ) -> list[app_commands.Choice[str]]:
     try:
@@ -55,12 +55,12 @@ async def waifu_autocomplete(
     return [app_commands.Choice(name=char[0].title(), value=char[1]) for char in characters]
 
 
-class Waifu(ElyCog):
+class Waifu(CyCog):
     @commands.hybrid_group(name='waifu', help='Get waifu images with an option to smash or pass', fallback='get')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.autocomplete(waifu=waifu_autocomplete)
-    async def waifu(self, ctx: ElyContext, *, waifu: str | None) -> None:
+    async def waifu(self, ctx: CyContext, *, waifu: str | None) -> None:
         if waifu:
             waifu = waifu.replace(' ', '_')
             characters = await get_waifu(ctx.bot.session, waifu)
@@ -68,7 +68,7 @@ class Waifu(ElyCog):
         await WaifuSearchView.start(ctx, query=waifu)
 
     @waifu.command(name='favourites', help="Get your or user's favourited waifus", aliases=['fav'], with_app_command=True)
-    async def waifu_favourites(self, ctx: ElyContext, user: discord.User = commands.Author) -> None:
+    async def waifu_favourites(self, ctx: CyContext, user: discord.User = commands.Author) -> None:
         show_nsfw = (
             ctx.channel.is_nsfw()
             if not isinstance(

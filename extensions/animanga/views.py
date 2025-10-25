@@ -18,19 +18,19 @@ from utilities.view import BaseView
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 __all__ = ('WaifuSearchView',)
 
 
 class WaifuBase(BaseView):
-    ctx: ElyContext
+    ctx: CyContext
     current: WaifuResult
 
     def __init__(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         session: ClientSession,
         *,
         nsfw: bool,
@@ -51,7 +51,7 @@ class WaifuBase(BaseView):
         self.pass_emoji = self.passbutton.emoji = BotEmojis.PASS
 
     @classmethod
-    async def start(cls, ctx: ElyContext, *, query: None | str = None) -> Self | None:
+    async def start(cls, ctx: CyContext, *, query: None | str = None) -> Self | None:
         inst = cls(
             ctx,
             ctx.bot.session,
@@ -122,8 +122,8 @@ class WaifuBase(BaseView):
         style=discord.ButtonStyle.green,
     )
     async def smashbutton(
-        self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]
-    ) -> discord.InteractionCallbackResponse[Elysia] | None:
+        self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Cyrene] | None:
         if interaction.user in self.smashers:
             try:
                 await interaction.client.pool.execute(
@@ -171,8 +171,8 @@ class WaifuBase(BaseView):
         style=discord.ButtonStyle.red,
     )
     async def passbutton(
-        self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]
-    ) -> discord.InteractionCallbackResponse[Elysia] | None:
+        self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Cyrene] | None:
         if interaction.user in self.passers:
             results = await interaction.client.pool.fetch(
                 """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
@@ -209,7 +209,7 @@ class WaifuBase(BaseView):
         return None
 
     @discord.ui.button(emoji='🔁', style=discord.ButtonStyle.grey)
-    async def _next(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
+    async def _next(self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]) -> None:
         self.smashers.clear()
         self.passers.clear()
         try:
@@ -274,7 +274,7 @@ class WaifuSearchView(WaifuBase):
 
 
 class WaifuPageSource(menus.ListPageSource):
-    def __init__(self, bot: Elysia, entries: list[WaifuFavouriteEntry]) -> None:
+    def __init__(self, bot: Cyrene, entries: list[WaifuFavouriteEntry]) -> None:
         self.bot = bot
         super().__init__(entries, per_page=1)
 
@@ -324,7 +324,7 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
             label='Remove entry',
         )
 
-    async def callback(self, interaction: discord.Interaction[Elysia]) -> None:
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
         item: WaifuFavouriteEntry = await self.view.source.get_page(self.view.current_page)  # pyright: ignore[reportUnknownMemberType]
         await interaction.client.pool.execute(
             """DELETE FROM WaifuFavourites WHERE id = $1 AND user_id = $2 RETURNING id""",
@@ -350,15 +350,15 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
 
     def __init__(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
     ) -> None:
         self.ctx = ctx
         super().__init__(label='Add image to API', style=discord.ButtonStyle.blurple)
 
-    async def interaction_check(self, interaction: discord.Interaction[Elysia]) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction[Cyrene]) -> bool:
         return bool(await self.ctx.bot.is_owner(interaction.user))
 
-    async def callback(self, interaction: discord.Interaction[Elysia]) -> discord.InteractionCallbackResponse[Elysia]:
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> discord.InteractionCallbackResponse[Cyrene]:
         waifu = self.view.current
 
         def c(a: Literal['added', 'removed']) -> str:

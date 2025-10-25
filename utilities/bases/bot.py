@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 import logging
 from typing import TYPE_CHECKING, Self
 
@@ -15,16 +16,17 @@ if TYPE_CHECKING:
     from aiohttp import ClientSession
     from asyncpg import Pool, Record
 
-    from utilities.types import BlacklistData
+    from extensions.internals.blacklist import BlacklistData
 
-from config import DEFAULT_PREFIX, OWNER_IDS, WEBHOOK
-from utilities.bases.context import ElyContext
+
+from config import DEFAULT_PREFIX, OWNER_IDS
+from utilities.bases.context import CyContext
 from utilities.constants import BASE_COLOUR
 from utilities.timers import TimerManager
 
-log = logging.getLogger('Elysia')
+log = logging.getLogger('Cyrene')
 
-__all__ = ('Elysia',)
+__all__ = ('Cyrene',)
 
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
@@ -32,7 +34,7 @@ jishaku.Flags.NO_DM_TRACEBACK = True
 jishaku.Flags.NO_UNDERSCORE = True
 
 
-class Elysia(commands.AutoShardedBot):
+class Cyrene(commands.AutoShardedBot):
     pool: Pool[Record]
     user: discord.ClientUser
     timer_manager: TimerManager
@@ -58,6 +60,7 @@ class Elysia(commands.AutoShardedBot):
 
         self.prefixes: dict[int, list[str]] = {}
         self.blacklists: dict[int, BlacklistData] = {}
+        self.webhooks: dict[str, discord.Webhook] = {}
 
         self.session = session
         self.mystbin = mystbin.Client(session=self.session)
@@ -74,8 +77,8 @@ class Elysia(commands.AutoShardedBot):
         await self.load_extension('jishaku')
 
     async def get_context(
-        self, origin: discord.Message | discord.Interaction, *, cls: type[ElyContext] = ElyContext
-    ) -> ElyContext:
+        self, origin: discord.Message | discord.Interaction, *, cls: type[CyContext] = CyContext
+    ) -> CyContext:
         return await super().get_context(origin, cls=cls)
 
     async def is_owner(self, user: discord.abc.User) -> bool:
@@ -142,7 +145,14 @@ class Elysia(commands.AutoShardedBot):
             A list of prefixes for a guild if provided. Defaults to base prefix
 
         """
-        return self.prefixes.get(guild.id, DEFAULT_PREFIX) if guild else DEFAULT_PREFIX
+        base_prefix = self.prefixes.get(guild.id, [DEFAULT_PREFIX]) if guild else [DEFAULT_PREFIX]
+
+        prefixes: list[str] = []
+        for entry in base_prefix:
+            char_options = [(c.lower(), c.upper()) for c in entry]
+            prefixes.extend([''.join(combo) for combo in itertools.product(*char_options)])
+
+        return prefixes
 
     def is_blacklisted(self, snowflake: discord.User | discord.Member | discord.Guild | int) -> BlacklistData | None:
         """
@@ -189,6 +199,9 @@ class Elysia(commands.AutoShardedBot):
 
         self.appinfo = await self.application_info()
 
+        webhooks = await self.pool.fetch("""SELECT * FROM Webhooks""")
+        self.webhooks = {entry[0]: discord.Webhook.from_url(entry[1], session=self.session) for entry in webhooks}
+
     @property
     def owner(self) -> discord.TeamMember | discord.User:
         """
@@ -201,19 +214,6 @@ class Elysia(commands.AutoShardedBot):
 
         """
         return self.appinfo.team.owner if self.appinfo.team and self.appinfo.team.owner else self.appinfo.owner
-
-    @discord.utils.cached_property
-    def logger(self) -> discord.Webhook:
-        """
-        Return webhook logger used for sending certain logs to a channel.
-
-        Returns
-        -------
-        discord.Webhook
-            The webhook used.
-
-        """
-        return discord.Webhook.from_url(WEBHOOK, session=self.session)
 
     @property
     def support_invite(self) -> discord.Invite:

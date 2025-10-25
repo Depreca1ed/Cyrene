@@ -13,8 +13,8 @@ from utilities.embed import Embed
 from utilities.functions import fmt_str
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 from .botinfo import BotInformation
 from .serverinfo import ServerInfo
@@ -33,10 +33,10 @@ def make_image(colour: discord.Colour) -> BytesIO:
 
 
 class Meta(BotInformation, Userinfo, ServerInfo, name='Meta'):
-    """For everything related to Discord or Elysia."""
+    """For everything related to Discord or Cyrene."""
 
     @commands.command(name='colour', aliases=['color'], description='Get information about a certain colour')
-    async def colour(self, ctx: ElyContext, *, colour: discord.Colour | None = None) -> None:
+    async def colour(self, ctx: CyContext, *, colour: discord.Colour | None = None) -> None:
         colour = colour or discord.Colour.random()
 
         rgb = colour.to_rgb()
@@ -66,5 +66,5 @@ class Meta(BotInformation, Userinfo, ServerInfo, name='Meta'):
         await ctx.reply(embed=embed, file=_)
 
 
-async def setup(bot: Elysia) -> None:
+async def setup(bot: Cyrene) -> None:
     await bot.add_cog(Meta(bot))

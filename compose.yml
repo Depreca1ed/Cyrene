@@ -1,6 +1,6 @@
 services:
-  elysia:
-    container_name: "Elysia"
+  Cyrene:
+    container_name: "Cyrene"
     build:
       context: .
     restart: unless-stopped
@@ -15,7 +15,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=Mafuyu
+      - POSTGRES_DB=Cyrene
     volumes:
       - db:/var/lib/postgresql/data
     healthcheck:

@@ -9,18 +9,18 @@ from discord.ext import commands
 if TYPE_CHECKING:
     from asyncpg import Pool, Record
 
-    from utilities.bases.bot import Elysia  # noqa: F401
+    from utilities.bases.bot import Cyrene  # noqa: F401
 
 
-class ElyContext(commands.Context['Elysia']):
-    @discord.utils.copy_doc(commands.Context['Elysia'].reply)
+class CyContext(commands.Context['Cyrene']):
+    @discord.utils.copy_doc(commands.Context['Cyrene'].reply)
     async def reply(self, content: str | None = None, **kwargs: Any) -> discord.Message:
         try:
             return await super().reply(content=content, **kwargs)
         except discord.HTTPException:
             return await super().send(content=content, **kwargs)
 
-    @discord.utils.copy_doc(commands.Context['Elysia'].send)
+    @discord.utils.copy_doc(commands.Context['Cyrene'].send)
     async def send(
         self,
         content: None | str = None,

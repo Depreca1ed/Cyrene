@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, Any, Self
 import discord
 from discord.ext import commands, menus
 
-from utilities.bases.cog import ElyCog
+from config import DEFAULT_WEBHOOK
+from utilities.bases.cog import CyCog
 from utilities.constants import ERROR_COLOUR, BotEmojis
 from utilities.embed import Embed
-from utilities.errors import ElysiaError, WaifuNotFoundError
+from utilities.errors import CyreneError, WaifuNotFoundError
 from utilities.functions import fmt_str, format_tb, get_command_signature
 from utilities.pagination import Paginator
 from utilities.view import BaseView
@@ -22,8 +23,8 @@ from utilities.view import BaseView
 if TYPE_CHECKING:
     from asyncpg import Record
 
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 log = logging.getLogger(__name__)
 
 
@@ -60,7 +61,7 @@ class Argument:
 
 
 class CommandInvokeView(BaseView):
-    def __init__(self, *, ctx: ElyContext, command: commands.Command[Any, Any, Any]) -> None:
+    def __init__(self, *, ctx: CyContext, command: commands.Command[Any, Any, Any]) -> None:
         super().__init__(timeout=180.0)
         self.ctx = ctx
         self.command = command
@@ -69,8 +70,8 @@ class CommandInvokeView(BaseView):
 
     @discord.ui.button(label='Run ', style=discord.ButtonStyle.gray, emoji=BotEmojis.GREY_TICK)
     async def run_command(
-        self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]
-    ) -> discord.InteractionCallbackResponse[Elysia] | None:
+        self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Cyrene] | None:
         can_run = False
 
         try:
@@ -106,7 +107,7 @@ class CommandInvokeView(BaseView):
         await self.ctx.invoke(self.command, *invoked_with)
         return await interaction.response.defer()
 
-    async def interaction_check(self, interaction: discord.Interaction[Elysia]) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction[Cyrene]) -> bool:
         return interaction.user == self.ctx.author
 
 
@@ -134,8 +135,8 @@ class MissingArgumentModal(discord.ui.Modal):
         super().__init__(title=title, timeout=timeout)
 
     async def on_submit(
-        self, interaction: discord.Interaction[Elysia]
-    ) -> discord.InteractionCallbackResponse[Elysia] | None:
+        self, interaction: discord.Interaction[Cyrene]
+    ) -> discord.InteractionCallbackResponse[Cyrene] | None:
         try:
             converted = await commands.run_converters(
                 self.handler.ctx,
@@ -160,7 +161,7 @@ class MissingArgumentHandler(discord.ui.View):
     def __init__(
         self,
         error: commands.MissingRequiredArgument,
-        ctx: ElyContext,
+        ctx: CyContext,
         *,
         timeout: float | None = 180,
     ) -> None:
@@ -216,7 +217,7 @@ class MissingArgumentHandler(discord.ui.View):
     @discord.ui.select(
         placeholder='Select an argument to add',
     )
-    async def argument_selector(self, interaction: discord.Interaction[Elysia], _: discord.ui.Select[Self]) -> None:
+    async def argument_selector(self, interaction: discord.Interaction[Cyrene], _: discord.ui.Select[Self]) -> None:
         modal = MissingArgumentModal(
             argument=self.arguments[self.argument_selector.values[0]],
             handler=self,
@@ -244,18 +245,18 @@ class MissingArgumentHandler(discord.ui.View):
             except Exception as err:
                 self.ctx.bot.dispatch('command_error', self.ctx, err)
 
-    async def interaction_check(self, interaction: discord.Interaction[Elysia]) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction[Cyrene]) -> bool:
         return interaction.user == self.ctx.author
 
 
 class ErrorView(BaseView):
-    def __init__(self, error_record: Record, ctx: ElyContext) -> None:
+    def __init__(self, error_record: Record, ctx: CyContext) -> None:
         self.error_record = error_record
         self.ctx = ctx
         super().__init__()
 
     @discord.ui.button(label='Wanna know more?', style=discord.ButtonStyle.grey)
-    async def inform_button(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
+    async def inform_button(self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]) -> None:
         embed = Embed(
             description=f'```py\n{self.error_record["error"]}```',
             colour=ERROR_COLOUR,
@@ -280,7 +281,7 @@ class ErrorView(BaseView):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(label='Get notified', style=discord.ButtonStyle.green)
-    async def notified_button(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
+    async def notified_button(self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]) -> None:
         is_user_present = await interaction.client.pool.fetchrow(
             """SELECT * FROM ErrorReminders WHERE id = $1 AND user_id = $2""",
             self.error_record['id'],
@@ -308,7 +309,7 @@ class ErrorView(BaseView):
 
 
 class ErrorPageSource(menus.ListPageSource):
-    def __init__(self, bot: Elysia, entries: list[Record]) -> None:
+    def __init__(self, bot: Cyrene, entries: list[Record]) -> None:
         self.bot = bot
         entries = sorted(entries, key=operator.itemgetter('id'))
         super().__init__(entries, per_page=1)
@@ -319,7 +320,7 @@ class ErrorPageSource(menus.ListPageSource):
         return embed
 
 
-class ErrorHandler(ElyCog):
+class ErrorHandler(CyCog):
     default_errors = (
         commands.UserInputError,
         commands.DisabledCommand,
@@ -332,6 +333,18 @@ class ErrorHandler(ElyCog):
         commands.TooManyArguments,
         commands.CheckFailure,
     )
+
+    async def cog_load(self) -> None:
+        if self.bot.webhooks.get('ERROR') is None:
+            await self.bot.pool.execute(
+                """
+                    INSERT INTO Webhooks
+                    VALUES ($1, $2);
+                """,
+                'ERROR',
+                DEFAULT_WEBHOOK,
+            )
+            await self.bot.refresh_vars()
 
     def _cleanse_error_attrs(self, attrs: list[str] | str, *, seperator: str, prefix: str) -> str:
         return (
@@ -367,7 +380,7 @@ class ErrorHandler(ElyCog):
 
         return m
 
-    async def _find_closest_command(self, ctx: ElyContext, name: str) -> commands.Command[None, ..., Any] | None:
+    async def _find_closest_command(self, ctx: CyContext, name: str) -> commands.Command[None, ..., Any] | None:
         closest_cmd_name = difflib.get_close_matches(
             name,
             [_command.name for _command in self.bot.commands],
@@ -428,7 +441,7 @@ class ErrorHandler(ElyCog):
 
         embed = await Embed.logger(self.bot, record)
 
-        await self.bot.logger.send(embed=embed)
+        await self.bot.webhooks['ERROR'].send(embed=embed)
 
         return record
 
@@ -455,11 +468,11 @@ class ErrorHandler(ElyCog):
         )
 
     @commands.Cog.listener('on_command_error')
-    async def error_handler(self, ctx: ElyContext, error: commands.CommandError) -> None | discord.Message:
+    async def error_handler(self, ctx: CyContext, error: commands.CommandError) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
-            or isinstance(error, ElysiaError)
+            or isinstance(error, CyreneError)
         ):
             return None
 
@@ -584,11 +597,11 @@ class ErrorHandler(ElyCog):
         return None
 
     @commands.Cog.listener('on_command_error')
-    async def custom_errors_handler(self, ctx: ElyContext, error: ElysiaError | Exception) -> None | discord.Message:
+    async def custom_errors_handler(self, ctx: CyContext, error: CyreneError | Exception) -> None | discord.Message:
         if (
             (ctx.command and ctx.command.has_error_handler())
             or (ctx.cog and ctx.cog.has_error_handler())
-            or not isinstance(error, ElysiaError)
+            or not isinstance(error, CyreneError)
         ):
             return None
 
@@ -606,11 +619,11 @@ class ErrorHandler(ElyCog):
         description='Handles all things related to error handler logging.',
         invoke_without_command=True,
     )
-    async def errorcmd_base(self, ctx: ElyContext) -> None:
+    async def errorcmd_base(self, ctx: CyContext) -> None:
         await ctx.send_help(ctx.command)
 
     @errorcmd_base.command(name='show', description='Shows the embed for a certain error')
-    async def error_show(self, ctx: ElyContext, error_id: int | None = None) -> None:
+    async def error_show(self, ctx: CyContext, error_id: int | None = None) -> None:
         if error_id:
             error_record = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
             if not error_record:
@@ -626,7 +639,7 @@ class ErrorHandler(ElyCog):
         await paginate.start()
 
     @errorcmd_base.command(name='fix', description='Mark an error as fixed')
-    async def error_fix(self, ctx: ElyContext, error_id: int) -> None:
+    async def error_fix(self, ctx: CyContext, error_id: int) -> None:
         data = await self.bot.pool.fetchrow("""SELECT * FROM Errors WHERE id = $1""", error_id)
         if not data:
             await ctx.reply(f'Cannot find an error with the ID: `{error_id}`')

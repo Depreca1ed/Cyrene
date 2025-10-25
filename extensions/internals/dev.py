@@ -4,19 +4,19 @@ from typing import TYPE_CHECKING
 
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from utilities.bases.cog import CyCog
 from utilities.constants import BotEmojis
 from utilities.functions import format_tb
 
 if TYPE_CHECKING:
     from discord import Message
 
-    from utilities.bases.context import ElyContext
+    from utilities.bases.context import CyContext
 
 
-class Developer(ElyCog):
+class Developer(CyCog):
     @commands.command(name='reload', aliases=['re'], hidden=True)
-    async def reload_cogs(self, ctx: ElyContext) -> None | Message:
+    async def reload_cogs(self, ctx: CyContext) -> None | Message:
         try:
             await self.bot.reload_extensions(self.bot.initial_extensions)
         except commands.ExtensionError as error:

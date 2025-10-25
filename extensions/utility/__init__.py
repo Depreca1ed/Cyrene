@@ -7,21 +7,21 @@ from typing import TYPE_CHECKING
 import discord
 from discord.ext import commands
 
-from utilities.bases.bot import Elysia
-from utilities.bases.cog import ElyCog
+from utilities.bases.bot import Cyrene
+from utilities.bases.cog import CyCog
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 
-class Utility(ElyCog, name='Utility'):
+class Utility(CyCog, name='Utility'):
     """Some useful utility commands."""
 
-    def __init__(self, bot: Elysia) -> None:
+    def __init__(self, bot: Cyrene) -> None:
         super().__init__(bot)
 
-    async def _basic_cleanup_strategy(self, ctx: ElyContext, search: int) -> dict[str, int]:
+    async def _basic_cleanup_strategy(self, ctx: CyContext, search: int) -> dict[str, int]:
         count = 0
         async for msg in ctx.history(limit=search, before=ctx.message):
             if msg.author == ctx.me and not (msg.mentions or msg.role_mentions):
@@ -29,7 +29,7 @@ class Utility(ElyCog, name='Utility'):
                 count += 1
         return {'Bot': count}
 
-    async def _complex_cleanup_strategy(self, ctx: ElyContext, search: int) -> None | Counter[str]:
+    async def _complex_cleanup_strategy(self, ctx: CyContext, search: int) -> None | Counter[str]:
         prefixes = tuple(self.bot.get_prefixes(ctx.guild))  # thanks startswith
 
         def check(m: discord.Message) -> bool:
@@ -41,7 +41,7 @@ class Utility(ElyCog, name='Utility'):
         deleted = await ctx.channel.purge(limit=search, check=check, before=ctx.message)
         return Counter(m.author.display_name for m in deleted)
 
-    async def _regular_user_cleanup_strategy(self, ctx: ElyContext, search: int) -> None | Counter[str]:
+    async def _regular_user_cleanup_strategy(self, ctx: CyContext, search: int) -> None | Counter[str]:
         prefixes = tuple(self.bot.get_prefixes(ctx.guild))
 
         def check(m: discord.Message) -> bool:
@@ -55,7 +55,7 @@ class Utility(ElyCog, name='Utility'):
 
     @commands.command()
     @commands.guild_only()
-    async def cleanup(self, ctx: ElyContext, search: int = 100) -> None:
+    async def cleanup(self, ctx: CyContext, search: int = 100) -> None:
         strategy = self._basic_cleanup_strategy
 
         if not isinstance(ctx.author, discord.Member) or not isinstance(ctx.me, discord.Member):
@@ -78,5 +78,5 @@ class Utility(ElyCog, name='Utility'):
         await ctx.send('\n'.join(messages), delete_after=10)
 
 
-async def setup(bot: Elysia) -> None:
+async def setup(bot: Cyrene) -> None:
     await bot.add_cog(Utility(bot))

@@ -1,21 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from datetime import datetime
 
     import discord
 
-__all__ = ('BlacklistData', 'WaifuFavouriteEntry', 'WaifuResult')
-
-
-@dataclass
-class BlacklistData:
-    reason: str
-    lasts_until: datetime | None
-    blacklist_type: Literal['guild', 'user']
+__all__ = ('WaifuFavouriteEntry', 'WaifuResult')
 
 
 @dataclass

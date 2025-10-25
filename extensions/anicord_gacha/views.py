@@ -1,34 +1,30 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 from typing import TYPE_CHECKING, Self
 
 import discord
-import humanize
 
-from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
-from extensions.misc.AnicordGacha.constants import RARITY_EMOJIS
-from extensions.misc.AnicordGacha.utils import get_burn_worths
-from utilities.bases.bot import Elysia
-from utilities.constants import BotEmojis
+from extensions.anicord_gacha.bases import GachaUser, PulledCard
+from extensions.anicord_gacha.constants import GACHA_SERVER, RARITY_EMOJIS, PullSource
+from extensions.anicord_gacha.utils import get_burn_worths, switch
+from utilities.constants import BASE_COLOUR, BotEmojis
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
-from utilities.timers import ReservedTimerType
 from utilities.view import BaseView
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 
-def _switch(v: bool) -> discord.PartialEmoji:  # noqa: FBT001
-    return BotEmojis.ON_SWITCH if v is True else BotEmojis.OFF_SWITCH
+class GachaPullView(discord.ui.LayoutView):
+    message: discord.Message | None
 
-
-class GachaPullView(BaseView):
     def __init__(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         user: discord.User | discord.Member,
         gacha_user: GachaUser,
     ) -> None:
@@ -42,116 +38,120 @@ class GachaPullView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: ElyContext,
+        ctx: CyContext,
         *,
         user: discord.User | discord.Member,
-    ) -> discord.InteractionCallbackResponse[Elysia] | discord.Message | None:
+    ) -> discord.InteractionCallbackResponse[Cyrene] | discord.Message | None:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         c = cls(ctx, user, gacha_user)
+        return await ctx.reply(view=c)
 
-        embed = c.embed()
+    def display(self) -> discord.ui.Container[Self]:
+        container = discord.ui.Container(
+            accent_color=self.user.color if self.ctx.guild and self.ctx.guild.id == GACHA_SERVER else BASE_COLOUR
+        )
 
-        return await ctx.reply(embed=embed, view=c)
+        container.add_item(
+            discord.ui.Section(
+                fmt_str(
+                    (
+                        '## Gacha helper configuration',
+                        f'> **Next Pull :** {timestamp_str(self.gacha_user.timer.expires, with_time=True)}'
+                        if self.gacha_user.timer is not None
+                        else None,
+                    ),
+                    seperator='\n',
+                ),
+                accessory=discord.ui.Thumbnail(BotEmojis.CYRENE1.url),
+            )
+        )
 
-    def embed(self) -> Embed:
-        embed = Embed(colour=self.user.color)
+        container.add_item(
+            discord.ui.Section(
+                '### Auto pull reminder',
+                (
+                    '> -# When this option is enabled,'
+                    ' you will be notified when you are supposed '
+                    'to pull, using the time when you last did a pullall'
+                ),
+                accessory=AutoRemindButton(is_enabled=self.gacha_user.config_data['autoremind']),
+            )
+        )
 
-        s: list[str] = []
+        container.add_item(
+            discord.ui.Section(
+                '### Reminder message',
+                (
+                    '> -# You can set what message you want to be sent '
+                    'by the bot when it DMs you to remind you that you '
+                    'need to pull'
+                ),
+                accessory=ReminderMessageButton(is_enabled=bool(self.gacha_user.config_data['custom_remind_message'])),
+            )
+        )
 
-        if self.gacha_user.timer is None:
-            s.append('- You do not have a pull reminder setup yet.')
-        else:
-            next_pull = self.gacha_user.timer.expires
-            s.append(f'> **Next Pull :** {timestamp_str(next_pull, with_time=True)}')
-
-        config: list[str] = []
-
-        config.extend((
-            f'### {_switch(self.gacha_user.config_data["autoremind"])} > Auto remind',
-            f'### {_switch(bool(self.gacha_user.config_data["custom_remind_message"]))} > Custom remind message',
-        ))
-
-        embed.description = fmt_str(s, seperator='\n') + '\n' + fmt_str(config, seperator='\n')
-
-        return embed
+        return container
 
     def update_display(self) -> None:
         self.clear_items()
-        self.add_item(self.primary_select)
+        self.add_item(self.display())
 
-        options: list[discord.SelectOption] = []
-
-        if self.gacha_user.timer is not None:
-            options.append(
-                discord.SelectOption(
-                    label='Cancel reminder',
-                    value='cancel_reminder',
-                    emoji=BotEmojis.SLASH,
-                    description='Scheduled to remind in '
-                    + humanize.naturaldelta(
-                        self.gacha_user.timer.expires - discord.utils.utcnow(),
-                    ),
-                )
-            )
-        options.extend((
-            discord.SelectOption(
-                label='Automatically be reminded for pulls',
-                value='autoremind',
-                emoji=_switch(self.gacha_user.config_data['autoremind']),
-                description='Placeholder for an explainer',
-            ),
-            discord.SelectOption(
-                label='Custom remind message',
-                value='custom_remind_message',
-                emoji=_switch(bool(self.gacha_user.config_data['custom_remind_message'])),
-                description='The contents of the pull remind DM',
-            ),
-        ))
-        self.primary_select.options = options
-
-    @discord.ui.select(
-        placeholder='Select an argument to add',
-    )
-    async def primary_select(self, interaction: discord.Interaction[Elysia], select: discord.ui.Select[Self]) -> None:
-        match select.values[0]:
-            case 'cancel_reminder':
-                await self.ctx.bot.timer_manager.cancel_timer(
-                    user=interaction.user,
-                    reserved_type=ReservedTimerType.ANICORD_GACHA,
-                )
-                self.gacha_user.timer = None
-                self.update_display()
-                await interaction.response.edit_message(embed=self.embed(), view=self)
-                return
-
-            case 'autoremind':
-                data = await self.ctx.bot.pool.fetchrow(
-                    """
-                    UPDATE GachaData
-                    SET
-                        autoremind = $1
-                    WHERE
-                        user_id = $2
-                    RETURNING
-                        *
-                    """,
-                    not self.gacha_user.config_data['autoremind'],
-                    interaction.user.id,
-                )
-                if data:
-                    self.gacha_user = GachaUser(self.user, timer=self.gacha_user.timer, config_data=data)
-                self.update_display()
-                await interaction.response.edit_message(embed=self.embed(), view=self)
-                return
-            case _:
-                await interaction.response.send_message('Coming soon!', ephemeral=True)
-
-    async def interaction_check(self, interaction: discord.Interaction[Elysia]) -> bool:
+    async def interaction_check(self, interaction: discord.Interaction[Cyrene]) -> bool:
         if interaction.user and interaction.user.id == self.user.id:
             return True
         await interaction.response.send_message('This is not for you', ephemeral=True)
         return False
+
+    async def on_timeout(self) -> None:
+        with contextlib.suppress(discord.errors.NotFound):
+            if hasattr(self, 'message') and self.message:
+                await self.message.edit(view=None)
+        self.stop()
+
+
+class AutoRemindButton(discord.ui.Button[GachaPullView]):
+    view: GachaPullView
+
+    def __init__(self, *, is_enabled: bool) -> None:
+        self.is_enabled = is_enabled
+        super().__init__(style=discord.ButtonStyle.gray, emoji=switch(self.is_enabled))
+
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
+        data = await self.view.ctx.bot.pool.fetchrow(
+            """
+            UPDATE GachaData
+            SET
+                autoremind = $1
+            WHERE
+                user_id = $2
+            RETURNING
+                *
+            """,
+            not self.view.gacha_user.config_data['autoremind'],
+            interaction.user.id,
+        )
+        if data:
+            self.view.gacha_user = GachaUser(self.view.user, timer=self.view.gacha_user.timer, config_data=data)
+        self.view.update_display()
+        await interaction.response.edit_message(view=self.view)
+
+
+class ReminderMessageButton(discord.ui.Button[GachaPullView]):
+    view: GachaPullView
+
+    def __init__(self, *, is_enabled: bool) -> None:
+        self.is_enabled = is_enabled
+        super().__init__(style=discord.ButtonStyle.gray, emoji=switch(self.is_enabled))
+
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
+        await interaction.response.send_modal(
+            GachaCustomInput(
+                self.view.gacha_user,
+                self.view,
+                title='Enter message',
+            ),
+        )
 
 
 class GachaCustomInput(discord.ui.Modal):
@@ -169,7 +169,7 @@ class GachaCustomInput(discord.ui.Modal):
         self.value: str | None = None
         super().__init__(title=title)
 
-    async def on_submit(self, interaction: discord.Interaction[Elysia]) -> None:
+    async def on_submit(self, interaction: discord.Interaction[Cyrene]) -> None:
         value = self.gacha_input.value
 
         if value == '$CLEAR':
@@ -199,7 +199,7 @@ class GachaCustomInput(discord.ui.Modal):
         )
         self.view.update_display()
 
-        await interaction.response.edit_message(embed=self.view.embed(), view=self.view)
+        await interaction.response.edit_message(view=self.view)
 
 
 class GachaStatisticsView(BaseView):
@@ -208,7 +208,7 @@ class GachaStatisticsView(BaseView):
 
     sort_type: int | None
 
-    ctx: ElyContext
+    ctx: CyContext
 
     def __init__(
         self,
@@ -225,7 +225,7 @@ class GachaStatisticsView(BaseView):
     @classmethod
     async def start(
         cls,
-        ctx: ElyContext,
+        ctx: CyContext,
         *,
         pulls: list[PulledCard],
         user: discord.User | discord.Member,
@@ -241,7 +241,10 @@ class GachaStatisticsView(BaseView):
     def embed(self) -> Embed:
         burn_worths = get_burn_worths(self.current)
 
-        embed = Embed(title=f'Pulled cards statistics for {self.user}', colour=self.user.color)
+        embed = Embed(
+            title=f'Pulled cards statistics for {self.user}',
+            colour=self.user.color if self.ctx.guild and self.ctx.guild.id == GACHA_SERVER else None,
+        )
         embed.set_thumbnail(url=self.user.display_avatar.url)
 
         p_s: list[str] = []

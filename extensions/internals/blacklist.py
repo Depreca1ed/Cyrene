@@ -1,30 +1,43 @@
 from __future__ import annotations
 
 import datetime
+import enum
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import discord
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from utilities.bases.cog import CyCog
 from utilities.constants import BotEmojis
 from utilities.converters import TimeConverter
-from utilities.errors import AlreadyBlacklistedError, ElysiaError, NotBlacklistedError
-from utilities.types import BlacklistData
+from utilities.errors import AlreadyBlacklistedError, CyreneError, NotBlacklistedError
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 WHITELISTED_GUILDS = [1219060126967664754, 774561547930304536]
 
 dt_param = commands.parameter(converter=TimeConverter, default=None)
 
 
-class Blacklist(ElyCog):
+@dataclass
+class BlacklistData:
+    reason: str
+    lasts_until: datetime.datetime | None
+    blacklist_type: int
+
+
+class BlackListType(enum.IntEnum):
+    GUILD = 1
+    USER = 2
+
+
+class Blacklist(CyCog):
     _command_attempts: dict[int, int]
 
-    def __init__(self, bot: Elysia) -> None:
+    def __init__(self, bot: Cyrene) -> None:
         self._command_attempts = {}
 
         super().__init__(bot)
@@ -49,30 +62,35 @@ class Blacklist(ElyCog):
         description='The command which handles bot blacklists',
     )
     @commands.is_owner()
-    async def blacklist_cmd(self, ctx: ElyContext) -> None:
+    async def blacklist_cmd(self, ctx: CyContext) -> None:
         bl_guild_count = len([
-            entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'guild'
+            entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == BlackListType.GUILD
         ])
-        bl_user_count = len([entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == 'user'])
+        bl_user_count = len([
+            entry for entry in self.bot.blacklists if self.bot.blacklists[entry].blacklist_type == BlackListType.USER
+        ])
 
         content = f'Currently, `{bl_guild_count}` servers and `{bl_user_count}` users are blacklisted.'
         await ctx.reply(content=content)
 
     @blacklist_cmd.command(name='show', description='Get information about a blacklist entry if any', aliases=['info'])
     async def blacklist_info(
-        self, ctx: ElyContext, snowflake: discord.User | discord.Member | discord.Guild
+        self, ctx: CyContext, snowflake: discord.User | discord.Member | discord.Guild
     ) -> discord.Message:
         bl = self.bot.is_blacklisted(snowflake)
+
         if not bl:
             return await ctx.reply(f'{snowflake} is not blacklisted')
+
         timestamp_wording = self._timestamp_wording(bl.lasts_until)
         content = f'`{snowflake}` is blacklisted from using this bot for `{bl.reason}` {timestamp_wording}.'
+
         return await ctx.reply(content)
 
     @blacklist_cmd.command(name='add', description='Add a user or server to the blacklist')
     async def blacklist_add(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         snowflake: discord.User | discord.Member | discord.Guild,
         until: datetime.datetime | None = dt_param,
         *,
@@ -92,9 +110,7 @@ class Blacklist(ElyCog):
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
     @blacklist_cmd.command(name='remove', description='Remove a user or server from blacklist')
-    async def blacklist_remove(
-        self, ctx: ElyContext, snowflake: discord.User | discord.Member | discord.Guild | int
-    ) -> None:
+    async def blacklist_remove(self, ctx: CyContext, snowflake: discord.User | discord.Member | discord.Guild | int) -> None:
         try:
             await self.remove(snowflake)
 
@@ -105,14 +121,14 @@ class Blacklist(ElyCog):
 
         await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
 
-    async def bot_check_once(self, ctx: ElyContext) -> bool:
+    async def bot_check_once(self, ctx: CyContext) -> bool:
         """
         Blacklist check ran every command.
 
         Parameters
         ----------
-        ctx : ElyContext
-            The commands.ElyContext from the check
+        ctx : CyContext
+            The commands.CyContext from the check
 
         Returns
         -------
@@ -121,20 +137,20 @@ class Blacklist(ElyCog):
 
         Raises
         ------
-        ElysiaError
+        CyreneError
             Error raised to ignore
 
         """
         if data := self.bot.is_blacklisted(ctx.author):
             if await self._pre_check(ctx.author, data) is False:
                 await self.handle_user_blacklist(ctx, ctx.author, data)
-                raise ElysiaError
+                raise CyreneError
             return True
 
         if ctx.guild and (data := self.bot.is_blacklisted(ctx.guild)):
             if await self._pre_check(ctx.guild, data) is False:
                 await self.handle_guild_blacklist(ctx, ctx.guild, data)
-                raise ElysiaError
+                raise CyreneError
             return True
 
         # TODO(Depreca1ed): Make custom errors and have them handled as ignored.
@@ -169,14 +185,14 @@ class Blacklist(ElyCog):
             return True
         return False
 
-    async def handle_user_blacklist(self, ctx: ElyContext, user: discord.User | discord.Member, data: BlacklistData) -> None:
+    async def handle_user_blacklist(self, ctx: CyContext, user: discord.User | discord.Member, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted user.
 
         Parameters
         ----------
-        ctx : ElyContext
-            The commands.ElyContext from the check
+        ctx : CyContext
+            The commands.CyContext from the check
         user : discord.User | discord.Member
             The blacklisted User
         data : BlacklistData
@@ -207,17 +223,17 @@ class Blacklist(ElyCog):
 
         return
 
-    async def handle_guild_blacklist(self, ctx: ElyContext | None, guild: discord.Guild, data: BlacklistData) -> None:
+    async def handle_guild_blacklist(self, ctx: CyContext | None, guild: discord.Guild, data: BlacklistData) -> None:
         """
         Handle the actions to be done when the bot comes across a blacklisted guild.
 
-        This function is also used in the on_guild_join event thus the optional ElyContext argument.
+        This function is also used in the on_guild_join event thus the optional CyContext argument.
 
 
         Parameters
         ----------
-        ctx : ElyContext | None
-            The commands.ElyContext from the check. Will be optional when used in the event.
+        ctx : CyContext | None
+            The commands.CyContext from the check. Will be optional when used in the event.
         guild : discord.Guild
             The blacklisted Guild
         data : BlacklistData
@@ -282,7 +298,7 @@ class Blacklist(ElyCog):
             check = await self._pre_check(snowflake, entry)
             if check is False:
                 raise AlreadyBlacklistedError(snowflake, reason=entry.reason, until=entry.lasts_until)
-        blacklist_type = 'user' if isinstance(snowflake, discord.User | discord.Member) else 'guild'
+        blacklist_type = BlackListType.USER if isinstance(snowflake, discord.User | discord.Member) else BlackListType.GUILD
 
         await self.bot.pool.execute(
             """INSERT INTO

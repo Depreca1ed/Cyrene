@@ -7,18 +7,18 @@ from discord.ext import commands
 if TYPE_CHECKING:
     from discord import Emoji, PartialEmoji
 
-    from utilities.bases.bot import Elysia
+    from utilities.bases.bot import Cyrene
 
-__all__ = ('ElyCog',)
+__all__ = ('CyCog',)
 
 
-class ElyCog(commands.Cog):
-    bot: Elysia
+class CyCog(commands.Cog):
+    bot: Cyrene
     emoji: str | PartialEmoji | Emoji | None
 
     def __init__(
         self,
-        bot: Elysia,
+        bot: Cyrene,
         emoji: str | PartialEmoji | Emoji | None = None,
     ) -> None:
         self.bot = bot

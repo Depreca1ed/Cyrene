@@ -5,20 +5,20 @@ from typing import TYPE_CHECKING
 from discord import app_commands
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from utilities.bases.cog import CyCog
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 
 if TYPE_CHECKING:
-    from utilities.bases.context import ElyContext
+    from utilities.bases.context import CyContext
 
 
-class ServerInfo(ElyCog):
+class ServerInfo(CyCog):
     @commands.hybrid_command(name='serverinfo', description='Get information about the server')
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()
-    async def serverinfo(self, ctx: ElyContext) -> None:
+    async def serverinfo(self, ctx: CyContext) -> None:
         if not ctx.guild:
             msg = 'Guild not found'
             raise commands.GuildNotFound(msg)

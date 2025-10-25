@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import enum
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Self
 
-from extensions.misc.AnicordGacha.constants import PULLALL_LINE_REGEX, RARITY_EMOJIS, SINGLE_PULL_REGEX
+from extensions.anicord_gacha.constants import PULLALL_LINE_REGEX, RARITY_EMOJIS, SINGLE_PULL_REGEX, PullSource
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
@@ -14,12 +13,6 @@ if TYPE_CHECKING:
     from discord import Member, Message, User
 
     from utilities.embed import Embed
-
-
-class PullSource(enum.Enum):
-    PULLALL = 1
-    PULL = 2
-    PACK = 3
 
 
 class GachaUser:

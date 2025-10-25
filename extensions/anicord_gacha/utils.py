@@ -3,8 +3,12 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from utilities.constants import BotEmojis
+
 if TYPE_CHECKING:
-    from extensions.misc.AnicordGacha.bases import PulledCard
+    import discord
+
+    from extensions.anicord_gacha.bases import PulledCard
 
 
 def get_burn_worths(pulls: list[PulledCard]) -> dict[int, int]:
@@ -26,3 +30,7 @@ def check_pullall_author(author_id: int, embed_description: str) -> bool:
         return False
 
     return int(author_id_parsed[0]) == author_id
+
+
+def switch(v: bool) -> discord.PartialEmoji:  # noqa: FBT001
+    return BotEmojis.ON_SWITCH if v is True else BotEmojis.OFF_SWITCH

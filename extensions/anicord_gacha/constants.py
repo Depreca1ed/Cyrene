@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import enum
 
 import discord
 
@@ -24,6 +25,7 @@ RARITY_EMOJIS = {
     6: discord.PartialEmoji(id=1259689874961862688, name='BlackStar'),
 }
 
+GACHA_SERVER = 1242232552845086782
 
 HOLLOW_STAR = discord.PartialEmoji(name='HollowStar', id=1259556949867888660)
 
@@ -35,3 +37,9 @@ RARITY_PULL_MESSAGES = {
     5: 'Holycow!!! A Legendary Card!! You hit the Jackpot!!! CONGRATS! \U0001f44f',
     6: "Wait...WHAT!?! This Card doesn't even exist in our Database, HOW DID YOU GET THIS!?",
 }
+
+
+class PullSource(enum.Enum):
+    PULLALL = 1
+    PULL = 2
+    PACK = 3

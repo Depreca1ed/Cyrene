@@ -8,24 +8,22 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from extensions.misc.AnicordGacha.bases import GachaUser, PulledCard, PullSource
-from extensions.misc.AnicordGacha.constants import ANICORD_DISCORD_BOT, PULL_INTERVAL, RARITY_PULL_MESSAGES
-from extensions.misc.AnicordGacha.utils import check_pullall_author as check_pullall_author
-from extensions.misc.AnicordGacha.views import GachaPullView, GachaStatisticsView
-from utilities.bases.cog import ElyCog
-from utilities.functions import fmt_str as fmt_str
+from extensions.anicord_gacha.bases import GachaUser, PulledCard, PullSource
+from extensions.anicord_gacha.constants import ANICORD_DISCORD_BOT, PULL_INTERVAL, RARITY_PULL_MESSAGES
+from extensions.anicord_gacha.views import GachaPullView, GachaStatisticsView
+from utilities.bases.cog import CyCog
 from utilities.timers import ReservedTimerType, Timer
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 
 DEFAULT_REMIND_MESSAGE: str = "Hey! It's been 6 hours since you last pulled. You should pull again"
 
 
-class AniCordGacha(ElyCog):
-    def __init__(self, bot: Elysia) -> None:
+class AniCordGacha(CyCog):
+    def __init__(self, bot: Cyrene) -> None:
         self.user_cache: dict[int, discord.User] = {}
         super().__init__(bot)
 
@@ -150,7 +148,6 @@ class AniCordGacha(ElyCog):
     @commands.Cog.listener('on_message')
     async def gacha_message_listener(self, message: discord.Message) -> None:
         if message.author.id != ANICORD_DISCORD_BOT:
-            # if message.author.id != self.bot.user.id:
             return None
 
         if not message.embeds:
@@ -172,7 +169,7 @@ class AniCordGacha(ElyCog):
     @commands.hybrid_command(name='gacha', description='Handles Anicord Gacha Bot')
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def gacha(self, ctx: ElyContext) -> None:
+    async def gacha(self, ctx: CyContext) -> None:
         await GachaPullView.start(ctx, user=ctx.author)
 
     @commands.hybrid_command(
@@ -184,7 +181,7 @@ class AniCordGacha(ElyCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def gacha_statistics(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         user: discord.User | discord.Member = commands.Author,
     ) -> None:
         pull_records = await self.bot.pool.fetch(
@@ -220,7 +217,7 @@ class AniCordGacha(ElyCog):
 
     @commands.hybrid_command(name='nextpull', description='Tells you when you can pull again', aliases=['np'])
     @app_commands.allowed_installs(guilds=True, users=True)
-    async def next_pull(self, ctx: ElyContext, *, user: discord.User = commands.Author) -> discord.Message:
+    async def next_pull(self, ctx: CyContext, *, user: discord.User = commands.Author) -> discord.Message:
         gacha_user = await GachaUser.from_fetched_record(ctx.bot.pool, user=user)
 
         if gacha_user.config_data['autoremind'] is False:
@@ -230,3 +227,7 @@ class AniCordGacha(ElyCog):
             name = 'You' if ctx.author.id == user.id else str(user)
             return await ctx.reply(f'{name} can summon wives {discord.utils.format_dt(gacha_user.timer.expires, "R")}')
         return await ctx.reply('GO MIKU GO! GET EM!')
+
+
+async def setup(bot: Cyrene) -> None:
+    await bot.add_cog(AniCordGacha(bot))

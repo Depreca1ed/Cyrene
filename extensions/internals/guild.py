@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Literal
 import discord
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from config import DEFAULT_WEBHOOK
+from utilities.bases.cog import CyCog
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 
@@ -60,7 +61,19 @@ def find_base_channel(channels: Sequence[discord.abc.GuildChannel]) -> discord.a
     return channels[0] if channels else None
 
 
-class Guild(ElyCog):
+class Guild(CyCog):
+    async def cog_load(self) -> None:
+        if self.bot.webhooks.get('GUILD') is None:
+            await self.bot.pool.execute(
+                """
+                    INSERT INTO Webhooks
+                    VALUES ($1, $2);
+                """,
+                'GUILD',
+                DEFAULT_WEBHOOK,
+            )
+            await self.bot.refresh_vars()
+
     @commands.Cog.listener('on_guild_join')
     async def guild_join(self, guild: discord.Guild) -> None:
         is_blacklisted = self.bot.is_blacklisted(guild)
@@ -73,7 +86,7 @@ class Guild(ElyCog):
             is_bot_farm=is_bot_farm,
         )
 
-        await self.bot.logger.send(embed=embed)
+        await self.bot.webhooks['GUILD'].send(embed=embed)
 
         if not is_bot_farm:
             return
@@ -96,4 +109,4 @@ class Guild(ElyCog):
             is_bot_farm=is_bot_farm,
         )
 
-        await self.bot.logger.send(embed=embed)
+        await self.bot.webhooks['GUILD'].send(embed=embed)

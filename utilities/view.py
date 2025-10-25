@@ -12,8 +12,8 @@ from utilities.functions import fmt_str
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from utilities.bases.bot import Elysia
-    from utilities.bases.context import ElyContext
+    from utilities.bases.bot import Cyrene
+    from utilities.bases.context import CyContext
 
 __all__ = ('BaseView', 'PermissionView')
 
@@ -125,7 +125,7 @@ def p_string(p: str) -> str:
 
 class PermissionView(BaseView):
     def __init__(
-        self, ctx: ElyContext, *, target: discord.Member | discord.Role | None = None, permissions: discord.Permissions
+        self, ctx: CyContext, *, target: discord.Member | discord.Role | None = None, permissions: discord.Permissions
     ) -> None:
         self.ctx = ctx
         self.target = target
@@ -134,7 +134,7 @@ class PermissionView(BaseView):
         super().__init__()
 
     @discord.ui.button(label='Permissions', emoji='\U0001f6e1', style=discord.ButtonStyle.grey)
-    async def permission_button(self, interaction: discord.Interaction[Elysia], _: discord.ui.Button[Self]) -> None:
+    async def permission_button(self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]) -> None:
         embed = Embed(title=f'Permissions for {self.target}' if self.target else None)
 
         permissions = list(self.permissions)

@@ -10,7 +10,7 @@ import asyncpg
 import discord
 
 if TYPE_CHECKING:
-    from utilities.bases.bot import Elysia
+    from utilities.bases.bot import Cyrene
 
 
 __all__ = (
@@ -74,7 +74,7 @@ class Timer:
 
 
 class TimerManager:
-    def __init__(self, loop: AbstractEventLoop, bot: Elysia) -> None:
+    def __init__(self, loop: AbstractEventLoop, bot: Cyrene) -> None:
         self.loop = loop
         self.bot = bot
 

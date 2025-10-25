@@ -8,13 +8,10 @@ load_dotenv()
 TOKEN: str = getenv('TOKEN')
 TEST_TOKEN: str = getenv('TEST_TOKEN')
 
-WEBHOOK: str = getenv('WEBHOOK')
-SUGGESTIONS_WEBHOOK_TOKEN: str = getenv('SUGGESTION_WEBHOOK')
+DEFAULT_WEBHOOK: str = getenv('WEBHOOK')
 
-DATABASE_CRED: str = getenv('POSTGRES_URI')
-
-DEFAULT_PREFIX: list[str] = ['m.', 'M.']
+DEFAULT_PREFIX: str = getenv('DEFAULT_PREFIX')
 
 OWNER_IDS: list[int] = json.loads(getenv('OWNER_IDS'))
 
-TOPGG: str = getenv('TOPGG')
+DATABASE_CRED: str = getenv('POSTGRES_URI')

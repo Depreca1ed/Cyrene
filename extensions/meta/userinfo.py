@@ -6,25 +6,25 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from utilities.bases.cog import ElyCog
+from utilities.bases.cog import CyCog
 from utilities.embed import Embed
 from utilities.functions import fmt_str, timestamp_str
 from utilities.view import PermissionView
 
 if TYPE_CHECKING:
-    from utilities.bases.context import ElyContext
+    from utilities.bases.context import CyContext
 
 
 USER_DATA_OBJECT_COUNT = 5
 
 
-class Userinfo(ElyCog):
+class Userinfo(CyCog):
     @commands.hybrid_command(name='whois', description='Get information about a user', aliases=['userinfo', 'who'])
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.allowed_installs(guilds=True, users=True)
     async def whois(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         user: discord.Member | discord.User = commands.Author,
     ) -> None:
         embed = Embed(
@@ -91,7 +91,7 @@ class Userinfo(ElyCog):
     @app_commands.allowed_installs(guilds=True, users=True)
     async def avatar(
         self,
-        ctx: ElyContext,
+        ctx: CyContext,
         user: discord.User | discord.Member = commands.Author,
         *,
         server_avatar: bool = True,
@@ -113,7 +113,7 @@ class Userinfo(ElyCog):
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.allowed_installs(guilds=True, users=False)
     @commands.guild_only()
-    async def guild_avatar(self, ctx: ElyContext) -> discord.Message:
+    async def guild_avatar(self, ctx: CyContext) -> discord.Message:
         if not ctx.guild:
             msg = 'Guild not found'
             raise commands.GuildNotFound(msg)

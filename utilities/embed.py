@@ -10,7 +10,7 @@ from utilities.functions import fmt_str
 if TYPE_CHECKING:
     import asyncpg
 
-    from utilities.bases.bot import Elysia
+    from utilities.bases.bot import Cyrene
 
 __all__ = ('Embed',)
 
@@ -61,7 +61,7 @@ class Embed(discord.Embed):
         return cls(title=title, description=description, colour=ERROR_COLOUR)
 
     @classmethod
-    async def logger(cls, bot: Elysia, record: asyncpg.Record) -> Self:
+    async def logger(cls, bot: Cyrene, record: asyncpg.Record) -> Self:
         """
         Generate an embed logged to the error logger.
 
@@ -69,7 +69,7 @@ class Embed(discord.Embed):
 
         Parameters
         ----------
-        bot : Elysia
+        bot : Cyrene
             The bot this embed belongs to
         record : asyncpg.Record
             The record of the error
@@ -80,10 +80,6 @@ class Embed(discord.Embed):
             The generated embed
 
         """
-        error_link = await bot.create_paste(
-            filename=f'error{record["id"]}.py',
-            content=record['full_error'],
-        )
 
         logger_embed = cls(
             title=f'Error #{record["id"]}',
@@ -93,7 +89,6 @@ class Embed(discord.Embed):
                 else 'Error message was too long to be shown'
             ),
             colour=0xFF0000 if record['fixed'] is False else 0x00FF00,
-            url=error_link.url,
         )
 
         logger_embed.add_field(
