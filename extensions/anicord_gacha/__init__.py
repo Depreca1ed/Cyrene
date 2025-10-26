@@ -82,9 +82,12 @@ class AniCordGacha(CyCog):
 
         gacha_user = await GachaUser.from_fetched_record(self.bot.pool, user=user)
 
-        pulls = list(set(pulls))
+        unique_only: list[PulledCard] = []
 
         for card in pulls:
+            if card in unique_only:
+                continue
+            unique_only.append(card)
             await gacha_user.add_card(
                 self.bot.pool,
                 card=card,
