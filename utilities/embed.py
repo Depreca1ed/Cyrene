@@ -80,7 +80,6 @@ class Embed(discord.Embed):
             The generated embed
 
         """
-
         logger_embed = cls(
             title=f'Error #{record["id"]}',
             description=(
