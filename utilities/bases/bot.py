@@ -26,8 +26,6 @@ from utilities.timers import TimerManager
 
 log = logging.getLogger('Cyrene')
 
-__all__ = ('Cyrene',)
-
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
 jishaku.Flags.NO_DM_TRACEBACK = True
