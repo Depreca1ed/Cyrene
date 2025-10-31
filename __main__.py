@@ -66,7 +66,7 @@ def run(*, production: bool) -> None:
                 'extensions.internals',
                 'extensions.meta',
                 'extensions.utility',
-                'extensions.anicord_gacha',
+                'extensions.tracksy',
             ]
 
             async with Cyrene(
