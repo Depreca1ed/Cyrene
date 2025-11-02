@@ -7,7 +7,7 @@ import discord
 
 ANICORD_DISCORD_BOT = 1257717266355851384
 
-PULL_INTERVAL = datetime.timedelta(hours=6)
+PULL_INTERVAL = datetime.timedelta(hours=7)
 
 
 PULLALL_LINE_REGEX = r'Name: `(?P<name>.+)` Rarity: <:(?P<rarity>[a-zA-Z0-9]+):.+>.+ ID: `(?P<id>[0-9]+)`'
