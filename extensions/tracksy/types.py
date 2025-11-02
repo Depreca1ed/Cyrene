@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import enum
-from typing import Literal, NamedTuple
+from typing import TYPE_CHECKING, Literal, NamedTuple
+
+if TYPE_CHECKING:
+    import discord
 
 
 class PullType(enum.IntEnum):
@@ -15,3 +18,9 @@ class Card(NamedTuple):
     id: int
     name: str
     rarity: int | Literal['EVENT']
+
+
+class Pull(NamedTuple):
+    type: PullType
+    user: discord.User | discord.Member
+    cards: list[Card]

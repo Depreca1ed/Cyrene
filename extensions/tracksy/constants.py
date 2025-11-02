@@ -17,8 +17,7 @@ WEEKLY_PULL_REGEX = r"""\#\# (?P<name>.+)
 \*\*ID:\*\* `(?P<id>[0-9]+)`
 
 \*\*Rarity:\*\* <:(?P<rarity>[a-zA-Z0-9]+):.+>
-\*\*Burn Worth:\*\* (?P<burn_worth>[0-9]+)
-"""
+\*\*Burn Worth:\*\* (?P<burn_worth>[0-9]+)"""
 
 PACK_PULL_REGEX = r"""ID: `(?P<id>[0-9]+)`
 Name: (?P<name>.+)

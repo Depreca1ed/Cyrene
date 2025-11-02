@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from utilities.bases.cog import CyCog
+from typing import TYPE_CHECKING
+
+from extensions.tracksy.tracker import Tracker
+
+if TYPE_CHECKING:
+    from utilities.bases.bot import Cyrene
 
 
-class Tracksy(CyCog): ...
+class Tracksy(Tracker, name='Tracksy'): ...
+
+
+async def setup(bot: Cyrene) -> None:
+    await bot.add_cog(Tracksy(bot))
