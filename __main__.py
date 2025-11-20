@@ -66,6 +66,7 @@ def run(*, production: bool) -> None:
                 'extensions.internals',
                 'extensions.meta',
                 'extensions.utility',
+                'extensions.realmsphere',
             ]
 
             async with Cyrene(
