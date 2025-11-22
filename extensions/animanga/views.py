@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Literal, Self
+from typing import TYPE_CHECKING, Self, TypedDict
 
 import discord
 from asyncpg.exceptions import UniqueViolationError
@@ -17,6 +17,7 @@ from utilities.view import BaseView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
+    from discord.ui.label import Label
 
     from utilities.bases.bot import Cyrene
     from utilities.bases.context import CyContext
@@ -77,7 +78,7 @@ class WaifuBase(BaseView):
         inst.ctx = ctx
 
         if await inst.ctx.bot.is_owner(ctx.author):
-            inst.add_item(APIWaifuAddButton(inst.ctx))
+            inst.add_item(RealmSphereWaifuAddButton(inst.ctx))
 
         inst.message = await ctx.reply(embed=embed, view=inst)
 
@@ -345,7 +346,7 @@ class RemoveFavButton(discord.ui.Button[Paginator]):
         self.view.stop()
 
 
-class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
+class RealmSphereWaifuAddButton(discord.ui.Button[WaifuBase]):
     view: WaifuBase
 
     def __init__(
@@ -353,40 +354,112 @@ class APIWaifuAddButton(discord.ui.Button[WaifuBase]):
         ctx: CyContext,
     ) -> None:
         self.ctx = ctx
-        super().__init__(label='Add image to API', style=discord.ButtonStyle.blurple)
+        super().__init__(label='Add image to Realm Sphere', style=discord.ButtonStyle.blurple)
 
     async def interaction_check(self, interaction: discord.Interaction[Cyrene]) -> bool:
         return bool(await self.ctx.bot.is_owner(interaction.user))
 
-    async def callback(self, interaction: discord.Interaction[Cyrene]) -> discord.InteractionCallbackResponse[Cyrene]:
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
         waifu = self.view.current
 
-        def c(a: Literal['added', 'removed']) -> str:
-            return (
-                f'Successfully {a} [#{waifu.image_id}]'
-                f'(<https://danbooru.donmai.us/posts/{waifu.image_id}>) to the API Image List'
-                f"\n-# If you don' know what it is, Ask {self.ctx.bot.owner.mention}"
-            )
+        v = CardCreationView(waifu)
+        await interaction.response.send_message(view=v)
 
-        try:
-            await interaction.client.pool.execute(
-                """INSERT INTO
-                        WaifuAPIEntries (file_url, added_by, nsfw)
-                    VALUES
-                        ($1, $2, $3)
-                        """,
-                waifu.url,
-                interaction.user.id,
-                self.view.nsfw,
-            )
-        except UniqueViolationError:
-            await interaction.client.pool.execute("""DELETE FROM WaifuAPIEntries WHERE file_url = $1""", waifu.url)
-            return await interaction.response.send_message(
-                c('removed'),
-                ephemeral=True,
-            )
 
-        return await interaction.response.send_message(
-            c('added'),
-            ephemeral=True,
+class PartialCardData(TypedDict):
+    name: str | None
+    rarity: int
+    characters: list[str]
+
+
+class CardCreationView(discord.ui.LayoutView):
+    def __init__(self, waifu_data: WaifuResult) -> None:
+        self.waifu_data = waifu_data
+        self.data: PartialCardData = {
+            'name': self.waifu_data.parse_string_lists(self.waifu_data.characters)[0],
+            'rarity': 0,
+            'characters': self.waifu_data.parse_string_lists(self.waifu_data.characters),
+        }
+        super().__init__()
+        self.display()
+
+    def display(self) -> None:
+        self.clear_items()
+
+        container = discord.ui.Container(accent_color=0xFFFFFF)
+
+        container.add_item(discord.ui.TextDisplay('## Card Creation via Danbooru'))
+
+        container.add_item(
+            discord.ui.Section(
+                discord.ui.TextDisplay(f'- **Name: ** {self.data["name"]}'),
+                accessory=EditInfoButton(self.data, 'name'),
+            )
         )
+
+        container.add_item(
+            discord.ui.Section(
+                discord.ui.TextDisplay(f'- **Rarity: ** {self.data["rarity"]}'),
+                accessory=EditInfoButton(self.data, 'rarity'),
+            )
+        )
+
+        container.add_item(
+            discord.ui.Section(
+                discord.ui.TextDisplay(f'- **Characters: ** {", ".join(self.data["characters"])}'),
+                accessory=EditInfoButton(self.data, 'characters'),
+            )
+        )
+
+        container.add_item(discord.ui.MediaGallery(discord.MediaGalleryItem(self.waifu_data.url)))
+
+        self.add_item(container)
+
+
+class EditInfoButton(discord.ui.Button[CardCreationView]):
+    view: CardCreationView
+
+    def __init__(self, data: PartialCardData, key: str) -> None:
+        self.data = data
+        self.key = key
+        super().__init__(
+            style=discord.ButtonStyle.gray,
+            emoji='\U0000270d',
+        )
+
+    async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
+        modal = EditModal(self.view, self.data, self.key)
+        await interaction.response.send_modal(modal)
+
+
+class EditModal(discord.ui.Modal, title='Edit data'):
+    data_input: Label[CardCreationView] = discord.ui.Label(
+        text='',
+        component=discord.ui.TextInput(),
+    )
+
+    def __init__(self, view: CardCreationView, data: PartialCardData, key: str) -> None:
+        self.view = view
+        self.data = data
+        self.key = key
+
+        assert isinstance(self.data_input.component, discord.ui.TextInput)
+
+        self.data_input.text = self.key
+        self.data_input.component.default = str(
+            self.data[self.key] if not isinstance(self.data[self.key], list) else ','.join(self.data[self.key])
+        )
+
+        super().__init__()
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        assert isinstance(self.data_input.component, discord.ui.TextInput)
+
+        self.view.data[self.key] = (
+            self.data_input.component.value
+            if not isinstance(self.data[self.key], list)
+            else self.data_input.component.value.split(',')
+        )
+
+        self.view.display()
+        await interaction.response.edit_message(view=self.view)
