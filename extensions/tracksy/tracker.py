@@ -297,8 +297,6 @@ class Tracker(CyCog):
                     case PackPullView.LIST_VIEW:
                         lines = description.splitlines()
 
-                        del lines[0]  # Author line
-
                         for line in lines:
                             parsed_data = next(re.finditer(PACK_LIST_PULL_REGEX, line)).groupdict()
 
