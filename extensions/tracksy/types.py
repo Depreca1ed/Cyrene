@@ -3,11 +3,9 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
-from discord import TextChannel
-
 if TYPE_CHECKING:
     import discord
-    from discord.types.channel import Channel
+    from discord import TextChannel
 
 
 class PullType(enum.IntEnum):
