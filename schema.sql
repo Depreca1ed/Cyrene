@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS GachaPulledCards (
         card_id INTEGER NOT NULL,
         card_name TEXT NOT NULL,
         rarity INTEGER NOT NULL,
-        pull_source INTEGER NOT NULL,
+        pull_source INTEGER NOT NULL
 );
 
 COMMIT;
