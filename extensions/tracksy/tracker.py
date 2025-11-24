@@ -151,6 +151,7 @@ class Tracker(CyCog):
 
             case PullType.PACK:
                 content = content.replace("'s pack opening!", '')
+                content = content.replace("'s Pack Opening!", '')
                 # TODO: Use Regex
                 user = [_ for _ in self.bot.users if _.name == content]
                 return user[0] if user else None
