@@ -3,8 +3,11 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Literal, NamedTuple
 
+from discord import TextChannel
+
 if TYPE_CHECKING:
     import discord
+    from discord.types.channel import Channel
 
 
 class PullType(enum.IntEnum):
@@ -19,13 +22,23 @@ class PackPullView(enum.IntEnum):
     LIST_VIEW = 2
 
 
-class Card(NamedTuple):
+class PartialCard(NamedTuple):
     id: int
     name: str
     rarity: int | Literal['EVENT']
 
 
+class Card(NamedTuple):
+    channel: TextChannel
+    message: int
+    user: discord.User | discord.Member
+    id: int
+    name: str
+    rarity: int
+    source: PullType
+
+
 class Pull(NamedTuple):
     type: PullType
     user: discord.User | discord.Member
-    cards: list[Card]
+    cards: list[PartialCard]
