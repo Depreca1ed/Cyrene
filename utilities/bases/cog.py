@@ -9,8 +9,6 @@ if TYPE_CHECKING:
 
     from utilities.bases.bot import Cyrene
 
-__all__ = ('CyCog',)
-
 
 class CyCog(commands.Cog):
     bot: Cyrene
