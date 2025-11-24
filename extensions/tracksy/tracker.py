@@ -8,6 +8,7 @@ from discord.ext import commands
 from extensions.tracksy.constants import (
     ANICORD_DISCORD_BOT,
     ANICORD_GACHA_SERVER,
+    PACK_LIST_PULL_REGEX,
     PACK_PAGE_PULL_REGEX,
     PULLALL_LINE_REGEX,
     RARITY_EMOJIS,
@@ -299,7 +300,7 @@ class Tracker(CyCog):
                         del lines[0]  # Author line
 
                         for line in lines:
-                            parsed_data = next(re.finditer(PULLALL_LINE_REGEX, line)).groupdict()
+                            parsed_data = next(re.finditer(PACK_LIST_PULL_REGEX, line)).groupdict()
 
                             pulls.append(
                                 PartialCard(
