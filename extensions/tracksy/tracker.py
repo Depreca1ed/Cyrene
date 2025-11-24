@@ -8,7 +8,7 @@ from discord.ext import commands
 from extensions.tracksy.constants import (
     ANICORD_DISCORD_BOT,
     ANICORD_GACHA_SERVER,
-    PACK_PULL_REGEX,
+    PACK_PAGE_PULL_REGEX,
     PULLALL_LINE_REGEX,
     RARITY_EMOJIS,
     SINGLE_PULL_REGEX,
@@ -218,7 +218,7 @@ class Tracker(CyCog):
                         pack_pulls: dict[int, Card] = {}
 
                         def evaluate_pull_from_pack_page(pg: int, desc: str) -> None:
-                            parsed_data = next(re.finditer(PACK_PULL_REGEX, desc)).groupdict()
+                            parsed_data = next(re.finditer(PACK_PAGE_PULL_REGEX, desc)).groupdict()
 
                             pack_pulls[pg] = Card(
                                 int(parsed_data['id']),
@@ -267,8 +267,20 @@ class Tracker(CyCog):
                         pulls.extend(list(pack_pulls.values()))
 
                     case PackPullView.LIST_VIEW:
-                        ...
-                        # TODO: Write logic
+                        lines = description.splitlines()
+
+                        del lines[0]  # Author line
+
+                        for line in lines:
+                            parsed_data = next(re.finditer(PULLALL_LINE_REGEX, line)).groupdict()
+
+                            pulls.append(
+                                Card(
+                                    int(parsed_data['id']),
+                                    parsed_data['name'],
+                                    {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
+                                )
+                            )
 
         # We have accounted for all the pulls now.
         return pulls

@@ -19,10 +19,12 @@ WEEKLY_PULL_REGEX = r"""\#\# (?P<name>.+)
 \*\*Rarity:\*\* <:(?P<rarity>[a-zA-Z0-9]+):.+>
 \*\*Burn Worth:\*\* (?P<burn_worth>[0-9]+)"""
 
-PACK_PULL_REGEX = r"""ID: `(?P<id>[0-9]+)`
+PACK_PAGE_PULL_REGEX = r"""ID: `(?P<id>[0-9]+)`
 Name: (?P<name>.+)
 Rarity: <:(?P<rarity>[a-zA-Z0-9]+):.+>*
 """
+
+PACK_LIST_PULL_REGEX = r'`[0-9]\.` \*\*(?P<name>.+)\*\* - <:(?P<rarity>[a-zA-Z0-9]+):.+>.+ - ID: `(?P<id>[0-9]+)`*'
 
 RARITY_EMOJIS = {
     1: discord.PartialEmoji(id=1259718293410021446, name='RedStar'),
