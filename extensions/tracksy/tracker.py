@@ -14,7 +14,7 @@ from extensions.tracksy.constants import (
     SINGLE_PULL_REGEX,
     WEEKLY_PULL_REGEX,
 )
-from extensions.tracksy.types import Card, Pull, PullType
+from extensions.tracksy.types import Card, PackPullView, Pull, PullType
 from utilities.bases.cog import CyCog
 
 if TYPE_CHECKING:
@@ -196,66 +196,79 @@ class Tracker(CyCog):
                     )
                 )
             case PullType.PACK:
-                # NOTE: Tracking for packs is... basically its not instant, There is a wait_for involved,
-                # No performance cost just its not a continuoud function
                 footer = embed.footer.text
                 if footer is None:
                     return None
 
-                footer = footer.replace('Page ', '')
+                pack_view = (
+                    PackPullView.LIST_VIEW
+                    if footer == 'Click a button below to view the card image'
+                    else PackPullView.PAGED_VIEW
+                )
 
-                total_pages = int(footer.split('/')[-1])
+                match pack_view:
+                    case PackPullView.PAGED_VIEW:
+                        # NOTE: Tracking for packs is... basically its not instant, There is a wait_for involved,
+                        # No performance cost just its not a continuoud function
 
-                pack_pulls: dict[int, Card] = {}
+                        footer = footer.replace('Page ', '')
 
-                def evaluate_pull_from_pack_page(pg: int, desc: str) -> None:
-                    parsed_data = next(re.finditer(PACK_PULL_REGEX, desc)).groupdict()
+                        total_pages = int(footer.split('/')[-1])
 
-                    pack_pulls[pg] = Card(
-                        int(parsed_data['id']),
-                        parsed_data['name'],
-                        {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
-                    )
+                        pack_pulls: dict[int, Card] = {}
 
-                page = int(footer.split('/', maxsplit=1)[0])
+                        def evaluate_pull_from_pack_page(pg: int, desc: str) -> None:
+                            parsed_data = next(re.finditer(PACK_PULL_REGEX, desc)).groupdict()
 
-                evaluate_pull_from_pack_page(page, description)
+                            pack_pulls[pg] = Card(
+                                int(parsed_data['id']),
+                                parsed_data['name'],
+                                {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
+                            )
 
-                while True:
+                        page = int(footer.split('/', maxsplit=1)[0])
 
-                    def check(msg: RawMessageUpdateEvent) -> bool:
-                        return msg.message.id == message.id
+                        evaluate_pull_from_pack_page(page, description)
 
-                    try:
-                        msg_data: RawMessageUpdateEvent = await self.bot.wait_for(
-                            'raw_message_edit', timeout=60.0, check=check
-                        )
-                        post_edit_message = msg_data.message
+                        while True:
 
-                    except TimeoutError:
-                        break
+                            def check(msg: RawMessageUpdateEvent) -> bool:
+                                return msg.message.id == message.id
 
-                    else:
-                        post_edit_embed: discord.Embed | None = (
-                            post_edit_message.embeds[0] if post_edit_message.embeds else None
-                        )
-                        if (
-                            not post_edit_embed
-                            or not post_edit_embed.description
-                            or not post_edit_embed.title
-                            or not post_edit_embed.footer.text
-                        ):
-                            break  # Getting types out of the way
+                            try:
+                                msg_data: RawMessageUpdateEvent = await self.bot.wait_for(
+                                    'raw_message_edit', timeout=60.0, check=check
+                                )
+                                post_edit_message = msg_data.message
 
-                        page = int(post_edit_embed.footer.text.replace('Page ', '').split('/', maxsplit=1)[0])
+                            except TimeoutError:
+                                break
 
-                        evaluate_pull_from_pack_page(page, post_edit_embed.description)
+                            else:
+                                post_edit_embed: discord.Embed | None = (
+                                    post_edit_message.embeds[0] if post_edit_message.embeds else None
+                                )
+                                if (
+                                    not post_edit_embed
+                                    or not post_edit_embed.description
+                                    or not post_edit_embed.title
+                                    or not post_edit_embed.footer.text
+                                ):
+                                    break  # Getting types out of the way
 
-                        if page == total_pages:
-                            break
-                        continue
+                                page = int(post_edit_embed.footer.text.replace('Page ', '').split('/', maxsplit=1)[0])
 
-                pulls.extend(list(pack_pulls.values()))
+                                evaluate_pull_from_pack_page(page, post_edit_embed.description)
+
+                                if page == total_pages:
+                                    break
+                                continue
+
+                        pulls.extend(list(pack_pulls.values()))
+
+                    case PackPullView.LIST_VIEW:
+                        ...
+                        # TODO: Write logic
 
         # We have accounted for all the pulls now.
         return pulls

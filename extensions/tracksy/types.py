@@ -13,6 +13,9 @@ class PullType(enum.IntEnum):
     PACK = 3
     WEEKLY_PULL = 4
 
+class PackPullView(enum.IntEnum):
+    PAGED_VIEW = 1
+    LIST_VIEW = 2
 
 class Card(NamedTuple):
     id: int
