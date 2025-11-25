@@ -204,15 +204,18 @@ class Tracker(CyCog):
                         )
                     )
             case PullType.SINGLE_PULL:
-                parsed_data = next(re.finditer(SINGLE_PULL_REGEX, description)).groupdict()
-
-                pulls.append(
-                    PartialCard(
-                        int(parsed_data['id']),
-                        title,
-                        {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
+                try:
+                    parsed_data = next(re.finditer(SINGLE_PULL_REGEX, description)).groupdict()
+                except StopIteration:
+                    pass
+                else:
+                    pulls.append(
+                        PartialCard(
+                            int(parsed_data['id']),
+                            title,
+                            {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
+                        )
                     )
-                )
             case PullType.WEEKLY_PULL:
                 parsed_data = next(re.finditer(WEEKLY_PULL_REGEX, description)).groupdict()
 
@@ -243,6 +246,11 @@ class Tracker(CyCog):
 
                         total_pages = int(footer.split('/')[-1])
 
+                        try:
+                            parsed_data = next(re.finditer(PACK_PAGE_PULL_REGEX, description)).groupdict()
+                        except StopIteration:
+                            return None  # Stop if the pack doesnt support regex we have
+
                         pack_pulls: dict[int, PartialCard] = {}
 
                         def evaluate_pull_from_pack_page(pg: int, desc: str) -> None:
@@ -255,6 +263,9 @@ class Tracker(CyCog):
                             )
 
                         page = int(footer.split('/', maxsplit=1)[0])
+
+                        if page != 1:
+                            return None  # We clearly are trying to parse a pack which won't move
 
                         evaluate_pull_from_pack_page(page, description)
 
