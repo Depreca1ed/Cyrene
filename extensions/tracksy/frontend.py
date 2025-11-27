@@ -71,9 +71,13 @@ class GachaStatisticsView(BaseView):
             value=fmt_str(p_s, seperator='\n'),
         )
 
-        if (first_sync_time := self._get_first_pull(self.pulls)) and first_sync_time and first_sync_time.message:
-            messages: list[int] = []
-            for p in self.pulls:
+        messages: list[int] = []
+
+        pullalls = [p for p in self.pulls if p.source == PullType.PULLALL]
+
+        if (first_sync_time := self._get_first_pull(pullalls)) and first_sync_time and first_sync_time.message:
+            messages = []
+            for p in pullalls:
                 if p.message and p.message not in messages and (p.source and p.source == PullType.PULLALL):
                     messages.append(p.message)
 
@@ -88,6 +92,7 @@ class GachaStatisticsView(BaseView):
                 rate = times_pulled
 
             embed.add_field(
+                name='Stats for pullall',
                 value=fmt_str(
                     (
                         '- **Syncing Since:** '
@@ -101,6 +106,42 @@ class GachaStatisticsView(BaseView):
                     seperator='\n',
                 ),
             )
+
+        pack_pulls = [p for p in self.pulls if p.source == PullType.PACK]
+
+        if (first_sync_time := self._get_first_pull(pack_pulls)) and first_sync_time and first_sync_time.message:
+            messages = []
+            for p in pack_pulls:
+                if p.message and p.message not in messages and (p.source and p.source == PullType.PACK):
+                    messages.append(p.message)
+
+            times_pulled = len(messages)
+
+            days = (
+                datetime.datetime.now(tz=datetime.UTC) - discord.utils.snowflake_time(first_sync_time.message)
+            ).total_seconds() / 86400
+
+            rate = times_pulled / days
+            if days <= 1:
+                rate = times_pulled
+
+            embed.add_field(
+                name='Packs stats',
+                value=fmt_str(
+                    (
+                        '- **Syncing Since:** '
+                        + timestamp_str(
+                            discord.utils.snowflake_time(first_sync_time.message),
+                            with_time=True,
+                        ),
+                        f'  - **Rate :** {rate:.2f} packs(s) per day',
+                        f'  - **Total :** {times_pulled} packs(s)',
+                    ),
+                    seperator='\n',
+                ),
+            )
+
+        embed.set_footer(text='This ui sucks ass')
 
         return embed
 
