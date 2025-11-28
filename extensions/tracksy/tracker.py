@@ -315,7 +315,7 @@ class Tracker(CyCog):
                                 PartialCard(
                                     int(parsed_data['id']),
                                     parsed_data['name'],
-                                    {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']],
+                                    {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']] if parsed_data["rarity"] is not None else parsed_data["rarity_event"],
                                 )
                             )
 
