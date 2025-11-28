@@ -33,4 +33,5 @@ RARITY_EMOJIS = {
     4: discord.PartialEmoji(id=1259718164862996573, name='PurpleStar'),
     5: discord.PartialEmoji(id=1259557105220976772, name='RainbowStar'),
     6: discord.PartialEmoji(id=1259689874961862688, name='BlackStar'),
+    7: discord.PartialEmoji(id=1310733539003596832, name='bORGy'),
 }
