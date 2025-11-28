@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 def get_burn_worths(pulls: list[Card]) -> dict[int, int]:
     burn_worth: dict[int, int] = {}
     for c in pulls:
-        c_burn_worth = c.rarity * 5 if c.rarity != 6 else 1000
+        c_burn_worth = 1 if c.rarity == 7 else (c.rarity * 5 if c.rarity != 6 else 1000)
         burn_worth[c.rarity] = burn_worth.get(c.rarity, 0) + c_burn_worth
     return {k: burn_worth[k] for k in sorted(burn_worth)}
 
