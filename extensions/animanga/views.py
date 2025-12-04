@@ -7,6 +7,8 @@ import discord
 from asyncpg.exceptions import UniqueViolationError
 from discord.ext import menus
 
+from extensions.realmsphere.constants import RARITY_COLOURS
+from extensions.realmsphere.types import CardFlags
 from utilities.constants import BotEmojis
 from utilities.embed import Embed
 from utilities.errors import WaifuNotFoundError
@@ -17,7 +19,6 @@ from utilities.view import BaseView
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
-    from discord.ui.label import Label
 
     from utilities.bases.bot import Cyrene
     from utilities.bases.context import CyContext
@@ -369,97 +370,144 @@ class RealmSphereWaifuAddButton(discord.ui.Button[WaifuBase]):
 class PartialCardData(TypedDict):
     name: str | None
     rarity: int
-    characters: list[str]
+    characters: str
 
 
 class CardCreationView(discord.ui.LayoutView):
+    control_buttons = discord.ui.ActionRow()
+
     def __init__(self, waifu_data: WaifuResult) -> None:
         self.waifu_data = waifu_data
         self.data: PartialCardData = {
             'name': self.waifu_data.parse_string_lists(self.waifu_data.characters)[0],
             'rarity': 0,
-            'characters': self.waifu_data.parse_string_lists(self.waifu_data.characters),
+            'characters': self.waifu_data.characters,
         }
+        self.creation_logs: list[str] = []
+        self.completed: bool = False
         super().__init__()
         self.display()
 
     def display(self) -> None:
         self.clear_items()
 
-        container = discord.ui.Container(accent_color=0xFFFFFF)
+        container = discord.ui.Container(
+            accent_color=0xFFFFFF if not self.data.get('rarity') else RARITY_COLOURS[int(self.data['rarity'])]
+        )
 
         container.add_item(discord.ui.TextDisplay('## Card Creation via Danbooru'))
 
         container.add_item(
             discord.ui.Section(
-                discord.ui.TextDisplay(f'- **Name: ** {self.data["name"]}'),
-                accessory=EditInfoButton(self.data, 'name'),
-            )
-        )
-
-        container.add_item(
-            discord.ui.Section(
-                discord.ui.TextDisplay(f'- **Rarity: ** {self.data["rarity"]}'),
-                accessory=EditInfoButton(self.data, 'rarity'),
-            )
-        )
-
-        container.add_item(
-            discord.ui.Section(
-                discord.ui.TextDisplay(f'- **Characters: ** {", ".join(self.data["characters"])}'),
-                accessory=EditInfoButton(self.data, 'characters'),
+                discord.ui.TextDisplay(
+                    fmt_str(
+                        (f'- **{k.title()}:** {v}' for k, v in self.data.items()),
+                        seperator='\n',
+                    )
+                ),
+                accessory=EditInfoButton(self.data),
             )
         )
 
         container.add_item(discord.ui.MediaGallery(discord.MediaGalleryItem(self.waifu_data.url)))
 
+        if self.creation_logs:
+            container.add_item(discord.ui.Separator())
+
+            container.add_item(discord.ui.TextDisplay('```\n' + '\n'.join(self.creation_logs) + '```'))
+
+        container.add_item(discord.ui.Separator())
+
+        if self.completed is False:
+            container.add_item(self.control_buttons)  # pyright: ignore[reportUnknownMemberType]
+
         self.add_item(container)
+
+    @control_buttons.button(label='Create card', style=discord.ButtonStyle.green, emoji=BotEmojis.GREEN_TICK)
+    async def create_card(
+        self, interaction: discord.Interaction[Cyrene], _: discord.ui.Button[Self]
+    ) -> discord.InteractionCallbackResponse[Cyrene] | None:
+        self.creation_logs.append('[INFO] Starting creation')
+
+        name = self.data['name']
+        self.creation_logs.append(f'[INFO] Name: {name}')
+
+        rarity = int(self.data['rarity'])
+        self.creation_logs.append(f'[INFO] Rarity: {rarity}')
+
+        characters = self.waifu_data.parse_string_lists(self.data['characters'])
+        self.creation_logs.append(f'[INFO] Characters: {", ".join(characters)}')
+
+        card_data = await interaction.client.pool.fetchrow(
+            """
+            INSERT INTO Cards (card_name, rarity, flag)
+            VALUES ($1, $2, $3)
+            RETURNING *;
+            """,
+            name,
+            rarity,
+            CardFlags.NORMAL,
+        )
+        if not card_data:
+            self.creation_logs.append('[ERROR] Insertion returned None')
+            self.display()
+            return await interaction.response.edit_message(view=self)
+
+        card_id = card_data['id']
+        self.creation_logs.append(f'[INFO] Card created with ID: {card_id}')
+
+        for character in characters:
+            await interaction.client.pool.execute(
+                """INSERT INTO CardCharactersRelation VALUES ($1, $2);""",
+                card_id,
+                character,
+            )
+        self.creation_logs.append('[INFO] Character relations created')
+
+        self.completed = True
+
+        self.display()
+
+        return await interaction.response.edit_message(view=self)
 
 
 class EditInfoButton(discord.ui.Button[CardCreationView]):
     view: CardCreationView
 
-    def __init__(self, data: PartialCardData, key: str) -> None:
+    def __init__(self, data: PartialCardData) -> None:
         self.data = data
-        self.key = key
         super().__init__(
             style=discord.ButtonStyle.gray,
             emoji='\U0000270d',
         )
 
     async def callback(self, interaction: discord.Interaction[Cyrene]) -> None:
-        modal = EditModal(self.view, self.data, self.key)
+        modal = EditModal(self.view, self.data)
         await interaction.response.send_modal(modal)
 
 
 class EditModal(discord.ui.Modal, title='Edit data'):
-    data_input: Label[CardCreationView] = discord.ui.Label(
-        text='',
-        component=discord.ui.TextInput(),
-    )
-
-    def __init__(self, view: CardCreationView, data: PartialCardData, key: str) -> None:
+    def __init__(self, view: CardCreationView, data: PartialCardData) -> None:
         self.view = view
         self.data = data
-        self.key = key
-
-        assert isinstance(self.data_input.component, discord.ui.TextInput)
-
-        self.data_input.text = self.key
-        self.data_input.component.default = str(
-            self.data[self.key] if not isinstance(self.data[self.key], list) else ','.join(self.data[self.key])
-        )
 
         super().__init__()
+        for k, v in self.data.items():
+            self.add_item(
+                discord.ui.Label(
+                    text=k,
+                    component=discord.ui.TextInput(default=str(v) if v is not None else None),
+                )
+            )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
-        assert isinstance(self.data_input.component, discord.ui.TextInput)
+        for child in self.children:
+            assert isinstance(child, discord.ui.Label)
 
-        self.view.data[self.key] = (
-            self.data_input.component.value
-            if not isinstance(self.data[self.key], list)
-            else self.data_input.component.value.split(',')
-        )
+            label_input = child.component
+            assert isinstance(label_input, discord.ui.TextInput)
+
+            self.view.data[child.text] = label_input.value
 
         self.view.display()
         await interaction.response.edit_message(view=self.view)
