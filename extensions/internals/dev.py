@@ -23,3 +23,8 @@ class Developer(CyCog):
             return await ctx.reply(format_tb(error))
         else:
             return await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
+
+    @commands.command()
+    async def maintenance(self, ctx: CyContext) -> None:
+        self.bot.maintenance = not self.bot.maintenance
+        return await ctx.message.add_reaction(BotEmojis.GREEN_TICK)
