@@ -26,8 +26,6 @@ from utilities.timers import TimerManager
 
 log = logging.getLogger('Cyrene')
 
-__all__ = ('Cyrene',)
-
 jishaku.Flags.FORCE_PAGINATOR = True
 jishaku.Flags.HIDE = True
 jishaku.Flags.NO_DM_TRACEBACK = True
@@ -47,6 +45,7 @@ class Cyrene(commands.AutoShardedBot):
         intents: discord.Intents,
         allowed_mentions: discord.AllowedMentions,
         session: ClientSession,
+        maintenance: bool = False,
     ) -> None:
         super().__init__(
             command_prefix=command_prefix,
@@ -57,6 +56,8 @@ class Cyrene(commands.AutoShardedBot):
             enable_debug_events=True,
             help_command=commands.MinimalHelpCommand(),
         )
+
+        self.maintenance = maintenance
 
         self.prefixes: dict[int, list[str]] = {}
         self.blacklists: dict[int, BlacklistData] = {}
@@ -75,6 +76,8 @@ class Cyrene(commands.AutoShardedBot):
 
         await self.load_extensions(self.initial_extensions)
         await self.load_extension('jishaku')
+
+        self.add_check(self.maintenance_check)
 
     async def get_context(
         self, origin: discord.Message | discord.Interaction, *, cls: type[CyContext] = CyContext
@@ -172,6 +175,12 @@ class Cyrene(commands.AutoShardedBot):
 
         """
         return self.blacklists.get(snowflake if isinstance(snowflake, int) else snowflake.id, None)
+
+    async def maintenance_check(self, ctx: CyContext) -> bool:
+        if self.maintenance is False or await self.is_owner(ctx.author) is True:
+            return True
+        await ctx.reply('Bot is under maintenance', delete_after=10.0)
+        return False
 
     async def create_paste(self, filename: str, content: str) -> mystbin.Paste:
         """

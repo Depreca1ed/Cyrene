@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from utilities.bases.bot import Cyrene
     from utilities.bases.context import CyContext
 
-__all__ = ('BaseView', 'PermissionView')
-
 
 class BaseView(discord.ui.View):
     message: discord.Message | None

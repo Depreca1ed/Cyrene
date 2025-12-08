@@ -31,7 +31,12 @@ class Internals(Blacklist, Developer, ErrorHandler, Guild, name='Developer'):
 
     @commands.Cog.listener('on_reaction_add')
     async def delete_message(self, reaction: discord.Reaction, _: discord.Member | discord.User) -> None:
-        if reaction.emoji and reaction.emoji == '🗑️' and reaction.message.author.id == self.bot.user.id:
+        if (
+            reaction.emoji
+            and reaction.emoji == '🗑️'
+            and reaction.message.author.id == self.bot.user.id
+            and _.id == 688293803613880334
+        ):
             with contextlib.suppress(discord.HTTPException):
                 await reaction.message.delete()
 

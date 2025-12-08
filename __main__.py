@@ -67,6 +67,7 @@ def run(*, production: bool) -> None:
                 'extensions.meta',
                 'extensions.utility',
                 'extensions.realmsphere',
+                'extensions.tracksy',
             ]
 
             async with Cyrene(

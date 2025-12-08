@@ -331,7 +331,6 @@ class ErrorHandler(CyCog):
         commands.NotOwner,
         commands.NSFWChannelRequired,
         commands.TooManyArguments,
-        commands.CheckFailure,
     )
 
     async def cog_load(self) -> None:
@@ -564,6 +563,9 @@ class ErrorHandler(CyCog):
                 str(error),
                 delete_after=getattr(error, 'retry_after', None),
             )
+
+        if isinstance(error, commands.CheckFailure):
+            return None
 
         log.error(
             'Ignoring exception in running %s',

@@ -66,4 +66,14 @@ CREATE TABLE IF NOT EXISTS WaifuAPIEntries (
         nsfw BOOLEAN NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS GachaPulledCards (
+        channel_id BIGINT NOT NULL,
+        message_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        card_id INTEGER NOT NULL,
+        card_name TEXT NOT NULL,
+        rarity INTEGER NOT NULL,
+        pull_source INTEGER NOT NULL
+);
+
 COMMIT;
