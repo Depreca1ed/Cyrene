@@ -24,7 +24,11 @@ Name: (?P<name>.+)
 Rarity: <:(?P<rarity>[a-zA-Z0-9]+):.+>*
 """
 
-PACK_LIST_PULL_REGEX = r'`[0-9]\.` \*\*(?P<name>.+)\*\* - ((<:(?P<rarity>[a-zA-Z0-9]+):.+>.+)|(?P<rarity_event>EVENT)) - ID: `(?P<id>[0-9]+)`*'
+PACK_LIST_PULL_REGEX = (
+    r'`[0-9]\.` \*\*(?P<name>.+)\*\* - ((<:(?P<rarity>[a-zA-Z0-9]+):.+>.+)|(?P<rarity_event>EVENT)) - ID: `(?P<id>[0-9]+)`*'
+)
+
+PACK_LIST_PULL_TITLE_REGEX = r"(?i)(.+)'s pack opening.+"
 
 RARITY_EMOJIS = {
     1: discord.PartialEmoji(id=1259718293410021446, name='RedStar'),

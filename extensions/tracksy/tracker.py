@@ -9,6 +9,7 @@ from extensions.tracksy.constants import (
     ANICORD_DISCORD_BOT,
     ANICORD_GACHA_SERVER,
     PACK_LIST_PULL_REGEX,
+    PACK_LIST_PULL_TITLE_REGEX,
     PACK_PAGE_PULL_REGEX,
     PULLALL_LINE_REGEX,
     RARITY_EMOJIS,
@@ -151,10 +152,11 @@ class Tracker(CyCog):
                 return self.bot.get_user(int(author_id_match[0]))
 
             case PullType.PACK:
-                content = content.replace("'s pack opening!", '')
-                content = content.replace("'s Pack Opening!", '')
-                # TODO: Use Regex
-                user = [_ for _ in self.bot.users if _.name == content]
+                author_name_match = re.findall(PACK_LIST_PULL_TITLE_REGEX, content)
+                if not author_name_match:
+                    return None
+
+                user = [_ for _ in self.bot.users if _.name == author_name_match[0]]
                 return user[0] if user else None
 
     async def evaluate_pulls(
@@ -315,7 +317,9 @@ class Tracker(CyCog):
                                 PartialCard(
                                     int(parsed_data['id']),
                                     parsed_data['name'],
-                                    {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']] if parsed_data["rarity"] is not None else parsed_data["rarity_event"],
+                                    {emoji.name: rarity for rarity, emoji in RARITY_EMOJIS.items()}[parsed_data['rarity']]
+                                    if parsed_data['rarity'] is not None
+                                    else parsed_data['rarity_event'],
                                 )
                             )
 
